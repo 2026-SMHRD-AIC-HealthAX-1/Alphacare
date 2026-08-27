@@ -1,0 +1,15 @@
+# OS & IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# 보안 및 환경 변수 (절대 Git에 올리지 않음)
+.env
+.env.local
+.env.*.local
+
+# Frontend (React)
+frontend/node_modules/
+frontend/dist/
+frontend/build/
