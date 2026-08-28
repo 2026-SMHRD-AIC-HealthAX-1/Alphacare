@@ -13,3 +13,11 @@ Thumbs.db
 frontend/node_modules/
 frontend/dist/
 frontend/build/
+
+#Python
+.venv/
+venv/
+AI/.venv/
+AI/venv/
+__pycache__/
+*.pyc

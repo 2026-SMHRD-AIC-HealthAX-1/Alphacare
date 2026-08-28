@@ -10,9 +10,6 @@ export default function Navbar() {
         </Link>
       </div>
 
-      {/* 상담페이지 이동 */}
-      
-
       {/* 로그인, 회원가입 버튼 */}
       <div className="navbar-end gap-2">
         <Link to="/SignUp" className="btn">
