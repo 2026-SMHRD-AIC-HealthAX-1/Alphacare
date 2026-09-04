@@ -1,23 +1,45 @@
-# OS & IDE
+# OS & IDE Files
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
-# 보안 및 환경 변수 (절대 Git에 올리지 않음)
+# Security & Environment Variables (보안 및 로컬 설정)
 .env
 .env.local
+.env.development.local
+.env.test.local
+.env.production.local
 .env.*.local
+*.local
 
-# Frontend (React)
+# Dependencies & Build Outputs (의존성 패키지 및 빌드 결과물)
+node_modules/
 frontend/node_modules/
+dist/
+dist-ssr/
+build/
 frontend/dist/
 frontend/build/
 
-#Python
+# Python & AI Environment
 .venv/
 venv/
 AI/.venv/
 AI/venv/
 __pycache__/
 *.pyc
+
+# Logs & Debugging
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*

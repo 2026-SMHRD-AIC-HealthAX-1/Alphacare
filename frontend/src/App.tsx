@@ -12,7 +12,7 @@ import FindPw from './pages/FindPw';
 export default function App() {
   return (
     <Router basename = "/Feely">
-{/* routes 링크 패치 path뒤에 있는거 사용하면 됨 */}
+      {/* routes 링크 패치 path뒤에 있는거 사용하면 됨 */}
       <Routes>
         <Route element={<Layout />}>
         <Route path="/" element={<MainPage />} />
