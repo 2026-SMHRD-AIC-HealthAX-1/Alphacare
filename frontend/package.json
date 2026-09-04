@@ -6,10 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "predeploy" : "npm run build",
-    "deploy" : "gh-pages -d dist"
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
+    "axios": "^1.20.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.2"
