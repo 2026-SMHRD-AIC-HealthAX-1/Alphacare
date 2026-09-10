@@ -6,6 +6,8 @@ import { checkDuplicateId, signupUser } from "../API/auth";
 export default function SignupPage() {
   //기능 구현 부분
 
+  //회원가입 완료시 페이지 자동이동을 위한 navigate
+  //Link와 다른점은 link는 직접 UI를 클릭할때 발생하지만 nav는 코드 로직 실행 결과에 따라 발생
   const navigate = useNavigate();
 
   //입력 필드 기본 값 선언
