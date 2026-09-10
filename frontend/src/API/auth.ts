@@ -5,7 +5,7 @@ import {UserData} from "./user"
 
 //아이디 중복 확인
 export const checkDuplicateId = async (userId : string) : Promise<boolean> => {
-  const response = await api.get<[UserData]>("/user", {
+  const response = await api.get<[UserData]>("/api/user", {
     params : { ID : userId },
   });    
   return response.data.length > 0;
@@ -13,6 +13,8 @@ export const checkDuplicateId = async (userId : string) : Promise<boolean> => {
 
 //회원가입
 export const signupUser = async (newUser : UserData) : Promise<UserData> => {
-  const response = await api.post<UserData>("/user", newUser);
+  const response = await api.post<UserData>("/api/user", newUser);
   return response.data
 }
+
+//로그인

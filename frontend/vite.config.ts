@@ -8,6 +8,17 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  server : {
+    //백엔드 CORS 연동
+    proxy : {
+      '/api' : {
+        target : "http://localhost:8079/",
+        changeOrigin : true,
+      }
+    },
+      //프론트엔드 포트 고정
+      port : 4000,
+      strictPort : true
+  },
   base : "/Feely"
-})
-
+});
