@@ -1,7 +1,7 @@
 // import { Link } from "react-router-dom";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { checkDuplicateId, signupUser } from "../API/auth";
+import { checkDuplicateId, signupUser } from "../../API/auth";
 
 export default function SignupPage() {
   //기능 구현 부분
