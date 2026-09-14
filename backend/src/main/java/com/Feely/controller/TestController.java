@@ -14,11 +14,13 @@ import java.util.Map;
 @RequestMapping("/api")
 public class TestController {
 	
-    @GetMapping("/test")
-    public ResponseEntity<String> testConnection() {
-        System.out.println("========== [메인페이지 통신 테스트 요청 수신] ==========");
-        return ResponseEntity.ok("통신 성공");
-      }
+	@PostMapping("/test")
+	public ResponseEntity<String> testConnection(@RequestBody Map<String, Object> paramMap) {
+	    System.out.println("========== [전송 데이터 로그 출력] ==========");
+	    paramMap.forEach((key, value) -> System.out.println(key + " : " + value));
+	    System.out.println("===========================================");
+	    return ResponseEntity.ok("데이터 수신 성공");
+	}
     
     //테스트용 회원가입 로직 -> API로 데이터가 잘 넘어오는지 확인하고, 무슨 데이터가 넘어왔는지 log찍기
     /*
