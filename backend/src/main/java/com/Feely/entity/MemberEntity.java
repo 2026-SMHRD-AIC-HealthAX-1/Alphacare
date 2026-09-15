@@ -18,10 +18,12 @@ import lombok.NonNull;
 
 @Entity
 @Table(
-name = "MEMBER",
-uniqueConstraints = @UniqueConstraint(columnNames = {"ID", "PHONE"})
+    name = "MEMBER",
+    uniqueConstraints = {
+        @UniqueConstraint(columnNames = "ID"),
+        @UniqueConstraint(columnNames = "PHONE")
+        }
 ) // Unique Key 정의
-
 public class MemberEntity {
 
     @Id 
@@ -79,8 +81,7 @@ public class MemberEntity {
     private String role;
     
     @Column (
-        name = "MILEAGE",
-        nullable = false
+        name = "MILEAGE"
     )
     private int mileage;
 

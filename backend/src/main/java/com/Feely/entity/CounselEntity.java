@@ -37,12 +37,10 @@ public class CounselEntity {
 
     @ManyToOne
     @NonNull
-    @Column (
-        nullable = false
-    )
     @JoinColumn (
         name = "MEMBER_NO",
-        referencedColumnName = "MEMBER_NO"
+        referencedColumnName = "MEMBER_NO",
+        nullable = false
     )
     private MemberEntity member;
 
