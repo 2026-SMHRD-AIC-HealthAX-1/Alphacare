@@ -23,25 +23,26 @@ export default function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-white">
-      <div className="w-full px-3 sm:px-6 py-3 flex items-center justify-between">
+    <header className="sticky top-0 z-50 w-full h-[70px] bg-white border-b border-gray-200">
+      <div className="w-full px-1 sm:px-5 py-2 flex items-center justify-between">
         {/* 로고 */}
         <div className="flex items-center">
           <Link to="/">
-            <img src={logo} alt="Feely Logo" className="h-20 w-auto object-contain" />
+            <img src={logo} alt="Feely Logo" className="h-16 w-auto object-contain -translate-y-2" />
           </Link>
         </div>
 
         {/* 다크모드 토글 버튼 */}
         <button
           onClick={toggleDarkMode}
-          className="ml-3 px-2.5 py-1 text-xs border rounded-md border-gray-300 dark:border-gray-600 hover:opacity-80 transition-all"
+          className="ml-3 px-2.5 py-1 text-xs border rounded-md border-gray-300 dark:border-gray-600 hover:opacity-80 transition-all -translate-y-2
+          flex items-center jstify-center"
         >
           {isDark ? "☀️ Light" : "🌙 Dark"}
         </button>
 
         {/* 페이지 이동 글씨 */}
-        <nav className="flex items-center gap-1 sm:gap-3 text-xs sm:text-base font-medium whitespace-nowrap ml-auto">
+        <nav className="flex items-center gap-1 sm:gap-3 text-xs sm:text-base font-medium whitespace-nowrap ml-auto -translate-y-3">
           {/* 상담 페이지 */}
           <Link to="/Counsel" className="hover:underline">
             상담하기
