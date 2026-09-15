@@ -35,6 +35,9 @@ AI/venv/
 __pycache__/
 *.pyc
 
+# DB 설정
+application.properties
+
 # Logs & Debugging
 logs
 *.log
