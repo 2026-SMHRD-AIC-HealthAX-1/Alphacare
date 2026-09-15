@@ -21,7 +21,10 @@ public class CounselEntity {
     
     @Id
     @GeneratedValue (strategy = GenerationType.IDENTITY)
+    // DB에서 직접 1000번부터 생성되게 바꿔주기
     private Long counselNo;
+
+    private Long memberNo;
 
     private String sumPath;
     private String startImagePath;

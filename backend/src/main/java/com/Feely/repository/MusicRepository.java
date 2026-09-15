@@ -6,7 +6,7 @@ import org.springframework.stereotype.Repository;
 import com.Feely.entity.CounselEntity;
 
 // 사용시, @Autowired 로 연결
-@Repository
-public interface CounselRepository extends JpaRepository<CounselEntity, Long> {
+@Repository 
+public interface MusicRepository extends JpaRepository<CounselEntity, Long>{
 
 }
