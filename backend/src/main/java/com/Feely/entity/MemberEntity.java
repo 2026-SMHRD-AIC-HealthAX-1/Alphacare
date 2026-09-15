@@ -1,5 +1,6 @@
 package com.Feely.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -19,32 +20,68 @@ import lombok.NonNull;
 @Table(
 name = "MEMBER",
 uniqueConstraints = @UniqueConstraint(columnNames = {"ID", "PHONE"})
-)
+) // Unique Key 정의
 
 public class MemberEntity {
 
     @Id 
     @GeneratedValue (strategy = GenerationType.IDENTITY)
+    @Column (
+        name = "MEMBER_NO"
+    )
     // DB에서 직접 1000번부터 생성되게 바꿔주기
     private Long memberNo;
 
-    @NonNull 
+    @NonNull
+    @Column (
+        name = "ID",
+        length = 100,
+        nullable = false
+    )
     private String id;
     
     @NonNull 
+    @Column (
+        name = "PW",
+        length = 300,
+        nullable = false
+    )
     private String pw;
     
     @NonNull 
+    @Column (
+        name = "NAME",
+        length = 50,
+        nullable = false
+    )
     private String name;
     
     @NonNull 
+    @Column (
+        name = "PHONE",
+        length = 100,
+        nullable = false
+    )
     private String phone;
 
+    @Column (
+        name = "SNS",
+        length = 500
+    )
     private String sns;
     
-    @NonNull 
+    @NonNull
+    @Column (
+        name = "ROLE",
+        length = 10,
+        nullable = false
+    )
     private String role;
     
-    private int point;
+    @Column (
+        name = "MILEAGE",
+        nullable = false
+    )
+    private int mileage;
 
 }
