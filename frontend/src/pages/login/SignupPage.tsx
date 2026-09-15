@@ -120,7 +120,7 @@ export default function SignupPage() {
   //디자인 구현부분
   return (
     <div className="min-h-[calc(100vh-80px)] flex flex-col items-center justify-center px-4 py-8 sm:py-12">
-      <div className="w-full max-w-2xl space-y-4 sm:space-y-6">
+      <div className="w-full max-w-xl ax -auto space-y-4 sm:space-y-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-center text-[#1F6170]">
           회원가입
         </h1>
@@ -137,7 +137,7 @@ export default function SignupPage() {
                 value={userId}
                 onChange={renameCheckId}
                 placeholder="아이디를 입력해주세요"
-                className="flex-1 min-w-0 border rounded-md px-3 py-2 text-sm focus:outline-none"
+                className="w-64  border rounded-md px-3 py-2 text-sm focus:outline-none"
               />
               <button
                 type="button" onClick={clickCheckDuplicate}
@@ -159,7 +159,7 @@ export default function SignupPage() {
                 value={userPw}
                 onChange={(e) => setuserPw(e.target.value)}
                 placeholder="비밀번호를 입력해주세요"
-                className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none"
+                className="w-64 border rounded-md px-3 py-2 text-sm focus:outline-none"
               />
               <span className="text-xs text-gray-500 pl-1">
                 영어, 숫자, 특수문자로 구성된 8자리 이상
@@ -177,8 +177,8 @@ export default function SignupPage() {
                 type="password"
                 value={pwConfirm}
                 onChange={(e) => setPwConfirm(e.target.value)}
-                placeholder="비밀번호를 다시한번 입력해주세요."
-                className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none"
+                placeholder="비밀번호를 다시 입력해주세요."
+                className="w-64 border rounded-md px-3 py-2 text-sm focus:outline-none"
               />
             </div>
           </div>
@@ -194,7 +194,7 @@ export default function SignupPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="이름을 입력해주세요."
-                className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none"
+                className="w-64 border rounded-md px-3 py-2 text-sm focus:outline-none"
               />
             </div>
           </div>
@@ -211,23 +211,23 @@ export default function SignupPage() {
                 onChange={checkTel}
                 maxLength={11}
                 placeholder="`-`을 제외한 전화번호를 입력해주세요"
-                className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none"
+                className="w-64 border rounded-md px-3 py-2 text-sm focus:outline-none"
               />
             </div>
           </div>
 
           {/* 하단 버튼 */}
           <div className="flex flex-col items-center gap-3 pt-6 w-full">
-            <div className="w-full max-w-[520px] flex flex-col gap-3">
+            <div className="w-64 flex flex-col gap-3 mx-auto">
               <button
                 type="submit"
-                className="w-full py-3 bg-[#1F6170] text-white font-bold text-base sm:text-lg rounded-lg shadow-sm hover:opacity-90 transition-opacity"
+                className="w-64 py-3 bg-[#1F6170] text-white font-bold text-base sm:text-lg rounded-lg shadow-sm hover:opacity-90 transition-opacity"
               >
                 회원가입
               </button>
               <button
                 type="button"
-                className="w-full py-3 bg-[#F7E600] text-black font-bold text-base sm:text-lg rounded-lg shadow-sm hover:brightness-90 transition-all"
+                className="w-64 py-3 bg-[#F7E600] text-black font-bold text-base sm:text-lg rounded-lg shadow-sm hover:brightness-90 transition-all"
               >
                 카카오톡 회원가입
               </button>

@@ -1,9 +1,10 @@
 import { useState } from "react";
 import EmotionGraph from "./EmotionCalender";
 import CounselCalendar from "./WeeklyReport";
+import Mshop from "./Mshop";
 
 export default function MyPage() {
-  const [activeMenu, setActiveMenu] = useState<"profile" | "graph" | "calendar">("graph");
+  const [activeMenu, setActiveMenu] = useState<"profile" | "graph" | "calendar" | "Mshop">("graph");
 
   return (
     <div className="flex max-w-7xl mx-auto py-4 px-2 sm:px-6 gap-8 min-h-[750px]">
@@ -36,6 +37,16 @@ export default function MyPage() {
         >
           상담 캘린더
         </button>
+
+        <button
+          onClick={() => setActiveMenu("Mshop")}
+          className={`w-full text-left py-2.5 px-3 rounded-lg text-base transition-colors ${activeMenu === "Mshop"
+            ? "text-[#1F6170] font-bold dark:text-teal-400"
+            : "text-gray-600 dark:text-gray-400 hover:text-[#1F6170]"
+            }`}
+        >
+          마일리지 샵
+        </button>
       </aside>
 
       {/* 2. 메인 콘텐츠 영역 */}
@@ -48,6 +59,7 @@ export default function MyPage() {
         )}
         {activeMenu === "graph" && <EmotionGraph />}
         {activeMenu === "calendar" && <CounselCalendar />}
+        {activeMenu === "Mshop" && <Mshop />}
       </main>
     </div>
   );

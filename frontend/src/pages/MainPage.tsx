@@ -35,6 +35,7 @@ export default function MainPage() {
             }}
             className="relative w-full h-full flex items-center justify-center"
           >
+
             {/* 메인 이미지 */}
             <img
               src={mainimg} // 실제 이미지 경로 입력
