@@ -16,7 +16,7 @@ export default function SignupPage() {
   const [userPw, setuserPw] = useState("");
   const [pwConfirm, setPwConfirm] = useState("");
   const [name, setName] = useState("");
-  const [tel, setTel] = useState("");
+  const [phone, setphone] = useState("");
 
   //아이디 입력칸 수정 시 중복확인 상태 초기화
   const renameCheckId = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -54,9 +54,9 @@ export default function SignupPage() {
   }
 
   //휴대폰 번호 숫자가 아닌 문자 제거
-  const checkTel = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const checkphone = (e: React.ChangeEvent<HTMLInputElement>) => {
     const onlyNum = e.target.value.replace(/[^0-9]/g, "");
-    setTel(onlyNum);
+    setphone(onlyNum);
   }
 
   //회원가입
@@ -64,14 +64,14 @@ export default function SignupPage() {
     e.preventDefault();
     //아이디 규칙, 영어, 숫자, 특수문자로만 구성된 8자리
     const pwRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])[A-Za-z\d!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]{8,}$/;
-    const telRegex = /^010\d{8}$/;
-    
+    const phoneRegex = /^010\d{8}$/;
+
     //빈칸 확인
-    if (!userId || !userPw || !pwConfirm || !name || !tel) {
+    if (!userId || !userPw || !pwConfirm || !name || !phone) {
       alert("모든 입력칸을 채워주세요")
       return;
     }
-    
+
     //아이디 중복확인 여부 검사
     if (!checkId) {
       alert("아이디 중복확인을 해주세요")
@@ -91,31 +91,31 @@ export default function SignupPage() {
     }
 
     //휴대폰 번호 11자리 확인
-    if (!telRegex.test(tel)) {
+    if (!phoneRegex.test(phone)) {
       alert("휴대폰 번호 11자리를 정확히 입력해주세요")
       return;
     }
 
     try {
-      const today = new Date().toISOString().split("T")[0];
-
-      await signupUser({
-        ID: userId,
+      // shryu 명세서 규격(id, pw, name, phone)으로 전송
+      const result = await signupUser({
+        id: userId,
+        pw: userPw,
         kakaoID: "",
-        PW: userPw,
         name: name,
-        tel: tel,
-        signDate: today,
+        phone: phone,
       });
-
-      alert("회원가입이 완료되었습니다.")
-      navigate("/");
-
-    } catch (error) {
-      console.error("회원가입 오류 : ", error)
-      alert("회원가입 도중 오류가 발생했습니다.")
+      if (result.joinFlag) {
+        alert("회원가입이 완료되었습니다!");
+        navigate("/Login"); // 로그인 페이지로 이동
+      } else {
+        alert("회원가입에 실패했습니다.");
+      }
+    } catch (error: any) {
+      console.error("회원가입 오류 : ", error);
+      alert("회원가입 처리 중 서버 오류가 발생했습니다.");
     }
-  }
+  };
 
   //디자인 구현부분
   return (
@@ -206,9 +206,9 @@ export default function SignupPage() {
             </label>
             <div className="flex-1 w-full">
               <input
-                type="tel"
-                value={tel}
-                onChange={checkTel}
+                type="phone"
+                value={phone}
+                onChange={checkphone}
                 maxLength={11}
                 placeholder="`-`을 제외한 전화번호를 입력해주세요"
                 className="w-64 border rounded-md px-3 py-2 text-sm focus:outline-none"
