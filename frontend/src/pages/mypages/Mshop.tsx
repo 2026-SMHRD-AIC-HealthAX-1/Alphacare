@@ -16,6 +16,7 @@ import baemin_10000 from "../../assets/baemin_10000.png";
 
 export default function Mshop() {
     const [showHistory, setShowHistory] = useState(false);
+    const [selectedProduct, setSelectedProduct] = useState(null);
 
     const mileageHistory = [
         { date: "2026-09-01", type: "적립", point: "+500" },
@@ -134,6 +135,7 @@ export default function Mshop() {
                             </p>
 
                             <button
+                            onClick={() => setSelectedProduct(item)}
                                 className="w-full mt-3 bg-[#1F6170] text-white py-2 rounded-lg"
                             >
                                 교환하기
@@ -188,6 +190,82 @@ export default function Mshop() {
 
                     </div>
                 )}
+                {/* 상품 교환 확인 모달 */}
+{selectedProduct && (
+    <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
+
+        <div className="bg-white rounded-xl p-6 w-[450px] shadow-lg">
+
+            {/* 제목 */}
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold">
+                    상품 교환
+                </h2>
+
+                <button
+                    onClick={() => setSelectedProduct(null)}
+                    className="text-xl text-gray-500"
+                >
+                    ✕
+                </button>
+            </div>
+
+            {/* 안내 문구 */}
+            <div className="text-center mb-6">
+                <p className="text-lg font-semibold mb-2">
+                    해당 상품으로 교환하시겠습니까?
+                </p>
+
+                <p className="text-[#1F6170] font-bold mb-3">
+                    {selectedProduct.name}
+                </p>
+
+                <p className="text-sm text-gray-500">
+                    교환한 마일리지는 환불되지않습니다.<br />
+                    교환한 상품은 등록하신 핸드폰번호로 발송됩니다.
+                </p>
+            </div>
+
+            {/* 마일리지 정보 */}
+            <div className="border rounded-lg p-4 mb-6">
+                <div className="flex justify-between mb-3">
+                    <span className="text-gray-500">
+                        보유마일리지
+                    </span>
+
+                    <span className="font-bold">
+                        12,500 P
+                    </span>
+                </div>
+
+                <div className="flex justify-between">
+                    <span className="text-gray-500">
+                        상품가격
+                    </span>
+
+                    <span className="font-bold text-[#1F6170]">
+                        {selectedProduct.point}
+                    </span>
+                </div>
+            </div>
+
+            {/* 최종 교환 버튼 */}
+            <button
+                onClick={() => {
+                    console.log("상품 교환:", selectedProduct.name);
+
+                    // 실제 교환 API 연결 부분
+                    setSelectedProduct(null);
+                }}
+                className="w-full bg-[#1F6170] text-white py-3 rounded-lg font-semibold"
+            >
+                교환하기
+            </button>
+
+        </div>
+
+    </div>
+)}
 
             </main>
         </div>
