@@ -17,6 +17,6 @@ export interface CounselDataPayload {
 // 상담 데이터 백엔드 POST 전송 함수
 export const sendCounselData = async (data: CounselDataPayload) => {
   //api주소 설정 해야함
-  const response = await api.post("/api/test", data);
+  const response = await api.post("/api/counsel", data);
   return response.data;
 };

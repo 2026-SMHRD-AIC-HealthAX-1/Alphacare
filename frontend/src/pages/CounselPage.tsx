@@ -66,7 +66,7 @@ export default function CounselPage() {
 
     return {
       counselId: 101,
-      userId: 1,
+      userId: 1000,
       counselDate: formattedDate,
       sessionTurn: 1,
       summary:

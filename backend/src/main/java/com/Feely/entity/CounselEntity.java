@@ -3,8 +3,6 @@ package com.Feely.entity;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -140,9 +138,6 @@ public class CounselEntity {
         name = "COUNSEL_DTTM",
         nullable = false,
         updatable = false
-    )
-    @JsonFormat (
-        pattern = "yyyy-MM-dd HH:mm"
     )
     private LocalDateTime counselDttm;
     // 상담 시작 시간을 저장하는 컬럼이므로 @CreationTimestamp 쓰지않음
