@@ -11,12 +11,20 @@ import gs25_10000 from "../../assets/gs25_10000.png";
 import baemin_5000 from "../../assets/baemin_5000.png";
 import baemin_10000 from "../../assets/baemin_10000.png";
 
+import Feely_Diary from "../../assets/Feely_Diary.png";
+import Feely_Diary_Detail from "../../assets/Feely_Diary_Detail.png";
+
 
 {/* 보유 마일리지, 적립내역 회원번호와 연동필요, 금액권 재고 연동 필요, 금액권 교환 후 마일리지 차감내역 확인필요 */}
+const diaryImages = [
+    Feely_Diary,
+    Feely_Diary_Detail
+];
 
 export default function Mshop() {
     const [showHistory, setShowHistory] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
+    const [diaryIndex, setDiaryIndex] = useState(0);
 
     const mileageHistory = [
         { date: "2026-09-01", type: "적립", point: "+500" },
@@ -65,6 +73,11 @@ export default function Mshop() {
             image: baemin_10000,
             point: "10,000P",
         },
+        {
+            name: "Feely Diary",
+            image: Feely_Diary,
+            point: "20,000P",
+        }
     ];
     return (
         <div className="flex max-w-7xl mx-auto py-4 px-2 sm:px-6 gap-8 min-h-[750px]">
@@ -108,41 +121,173 @@ export default function Mshop() {
 
                 {/* 상품권 목록 */}
                 <div className="border rounded-xl overflow-hidden">
-                    <div className = "grid grid-cols-4">
+                    <div className = "grid grid-cols-4 items-start">
 
-                    {products.map((item, idx) => (
-                        <div
-                        key={idx}
-                        className={`
-                        p-4
-                        flex flex-col items-center
-                        border-b border-gray-200
-                        ${idx % 4 !== 3 ? "border-r border-gray-200" : ""}
-                        `}
-                        >
-                            <img
-                                src={item.image}
-                                alt={item.name}
-                                className="w-full h-40 object-contain"
-                            />
+                   {products.map((item, idx) => {
 
-                            <p className="font-semibold mt-3 text-center">
-                                {item.name}
-                            </p>
+    // Feely Diary
+    if (item.name === "Feely Diary") {
+        return (
+            <React.Fragment key={idx}>
 
-                            <p className="text-[#1F6170] font-bold text-center mt-2">
-                                {item.point}
-                            </p>
+                {/* 다이어리 이미지 : 3칸 */}
+<div className="col-span-3 h-[350px] p-0 m-0 border-b border-gray-200 overflow-hidden relative">
 
-                            <button
-                            onClick={() => setSelectedProduct(item)}
-                                className="w-full mt-3 bg-[#1F6170] text-white py-2 rounded-lg"
-                            >
-                                교환하기
-                            </button>
-                            </div>
-                        
-                    ))}
+    {/* 이미지 */}
+    <img
+        src={diaryImages[diaryIndex]}
+        alt={item.name}
+        className="w-full h-full block object-cover"
+    />
+
+    {/* 왼쪽 화살표 */}
+    <button
+    onClick={() =>
+        setDiaryIndex(
+            diaryIndex === 0
+                ? diaryImages.length - 1
+                : diaryIndex - 1
+        )
+    }
+    className="absolute left-3 top-1/2 -translate-y-1/2
+               w-7 h-7 rounded-full
+               bg-white/70
+               hover:bg-white transition
+               flex items-center justify-center"
+>
+    <span className="relative -left-[1px] -top-[2px]
+                     text-xl font-light text-gray-500
+                     leading-none">
+        ‹
+    </span>
+</button>
+    
+
+    {/* 오른쪽 화살표 */}
+    <button
+    onClick={() =>
+        setDiaryIndex(
+            diaryIndex === diaryImages.length - 1
+                ? 0
+                : diaryIndex + 1
+        )
+    }
+    className="absolute right-3 top-1/2 -translate-y-1/2
+               w-7 h-7 rounded-full
+               bg-white/70
+               hover:bg-white transition
+               flex items-center justify-center"
+>
+    <span className="relative left-[1px] -top-[2px]
+                     text-xl font-light text-gray-500
+                     leading-none">
+        ›
+    </span>
+</button>
+
+</div>
+
+     {/* 다이어리 상품정보 : 1칸 */}
+<div className="col-span-1 h-[350px] p-4 pt-9 border-b border-gray-200">
+
+    {/* 상품명 + 가격 */}
+    <div className="w-full text-center">
+        <p className="font-semibold">
+            {item.name}
+        </p>
+
+        <p className="text-[#1F6170] font-bold mt-1">
+            20,000P
+        </p>
+    </div>
+
+    {/* 교환 옵션 */}
+    <div className="w-full mt-8">
+
+        {/* 일기형 */}
+        <div className="flex flex-col items-center mb-5">
+            <p className="text-sm text-gray-500 text-center mb-2">
+                하루의 마무리
+            </p>
+
+            <button
+                onClick={() =>
+                    setSelectedProduct({
+                        ...item,
+                        name: "Feely Diary - 일기형",
+                        point: "20,000P"
+                    })
+                }
+                className="w-[120px] bg-[#1F6170] text-white py-2 rounded-lg text-center"
+            >
+                일기형
+            </button>
+        </div>
+
+        {/* 추억형 */}
+        <div className="flex flex-col items-center">
+            <p className="text-sm text-gray-500 text-center mb-2">
+                상담기록
+            </p>
+
+            <button
+                onClick={() =>
+                    setSelectedProduct({
+                        ...item,
+                        name: "Feely Diary - 추억형",
+                        point: "20,000P"
+                    })
+                }
+                className="w-[120px] bg-[#1F6170] text-white py-2 rounded-lg text-center"
+            >
+                추억형
+            </button>
+        </div>
+
+    </div>
+
+</div>
+
+            </React.Fragment>
+        );
+    }
+
+    // 일반 상품권
+    return (
+        <div
+            key={idx}
+            className={`
+                p-4
+                flex flex-col items-center
+                border-b border-gray-200
+                ${idx % 4 !== 3 ? "border-r border-gray-200" : ""}
+            `}
+        >
+
+            <img
+                src={item.image}
+                alt={item.name}
+                className="w-full h-40 object-contain"
+            />
+
+            <p className="font-semibold mt-3 text-center">
+                {item.name}
+            </p>
+
+            <p className="text-[#1F6170] font-bold text-center mt-2">
+                {item.point}
+            </p>
+
+            <button
+                onClick={() => setSelectedProduct(item)}
+                className="w-full mt-3 bg-[#1F6170] text-white py-2 rounded-lg"
+            >
+                교환하기
+            </button>
+
+        </div>
+    );
+})}
                 </div>
                 </div>
                 
