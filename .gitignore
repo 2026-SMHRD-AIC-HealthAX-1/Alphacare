@@ -10,7 +10,6 @@ Thumbs.db
 *.sw?
 
 # Security & Environment Variables (보안 및 로컬 설정)
-.env
 .env.local
 .env.development.local
 .env.test.local
@@ -34,9 +33,6 @@ AI/.venv/
 AI/venv/
 __pycache__/
 *.pyc
-
-# DB 설정
-application.properties
 
 # Logs & Debugging
 logs
