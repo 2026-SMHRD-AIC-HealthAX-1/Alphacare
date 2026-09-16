@@ -1,15 +1,18 @@
 import React, { useState } from 'react'
-import naverpay_5000 from "../../assets/naverpay_5000.jpg";
-import naverpay_10000 from "../../assets/naverpay_10000.jpg";
+import naverpay_5000 from "../../assets/naverpay_5000.png";
+import naverpay_10000 from "../../assets/naverpay_10000.png";
 
-import coffee_5000 from "../../assets/coffee_5000.jpg";
-import coffee_10000 from "../../assets/coffee_10000.jpg";
+import coffee_5000 from "../../assets/coffee_5000.png";
+import coffee_10000 from "../../assets/coffee_10000.png";
 
-import gs25_5000 from "../../assets/gs25_5000.jpg";
-import gs25_10000 from "../../assets/gs25_10000.jpg";
+import gs25_5000 from "../../assets/gs25_5000.png";
+import gs25_10000 from "../../assets/gs25_10000.png";
 
-import baemin_5000 from "../../assets/baemin_5000.jpg";
-import baemin_10000 from "../../assets/baemin_10000.jpg";
+import baemin_5000 from "../../assets/baemin_5000.png";
+import baemin_10000 from "../../assets/baemin_10000.png";
+
+
+{/* 보유 마일리지, 적립내역 회원번호와 연동필요, 금액권 재고 연동 필요, 금액권 교환 후 마일리지 차감내역 확인필요 */}
 
 export default function Mshop() {
     const [showHistory, setShowHistory] = useState(false);
@@ -97,7 +100,7 @@ export default function Mshop() {
                 <div className="mb-8 p-4 bg-gray-50 border rounded-lg text-sm text-gray-600 leading-7">
                     <p>• 마일리지는 하루에 한 번, 상담 종료 후 자동 적립됩니다.</p>
                     <p>• 적립 내역은 마일리지 내역을 통해 확인 가능합니다.</p>
-                    <p>• 교환한 마일리지는 환불되지 않습니다.</p>
+                    <p>• 교환한 마일리지는 환불되지 않으니 교환 전 핸드폰 번호를 꼭 확인하세요.</p>
                     <p>• 유효기간 연장은 불가능합니다.</p>
                     <p>• 마일리지를 현금으로 교환할 수 없습니다.</p>
                 </div>
