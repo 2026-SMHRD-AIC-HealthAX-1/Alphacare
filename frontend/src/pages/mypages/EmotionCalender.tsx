@@ -15,7 +15,7 @@ interface CounselingLog {
 
 export default function MyPageCalendarContent() {
   const [selectedDate] = useState("2026.06.15");
-  const [date, setDate] = useState<Date> (new Date());
+  const [date, setDate] = useState<Date>(new Date());
   const calendarRef = useRef<any>(null);
 
   const [logs] = useState<CounselingLog[]>([
@@ -32,32 +32,32 @@ export default function MyPageCalendarContent() {
   ]);
 
   const formattedDate = date
-  ? `${date.getFullYear()}.${String(
+    ? `${date.getFullYear()}.${String(
       date.getMonth() + 1
     ).padStart(2, "0")}.${String(
       date.getDate()
     ).padStart(2, "0")}`
-  : "날짜를 선택하세요";
+    : "날짜를 선택하세요";
 
- useEffect(() => {
-  const calendar = calendarRef.current;
+  useEffect(() => {
+    const calendar = calendarRef.current;
 
-  if (!calendar) return;
+    if (!calendar) return;
 
-  const handleChange = () => {
-    const value = calendar.value;
+    const handleChange = () => {
+      const value = calendar.value;
 
-    if (value) {
-      setDate(new Date(value));
-    }
-  };
+      if (value) {
+        setDate(new Date(value));
+      }
+    };
 
-  calendar.addEventListener("change", handleChange);
+    calendar.addEventListener("change", handleChange);
 
-  return () => {
-    calendar.removeEventListener("change", handleChange);
-  };
-}, []);
+    return () => {
+      calendar.removeEventListener("change", handleChange);
+    };
+  }, []);
 
   return (
     <div className="flex max-w-7xl mx-auto mt-8 px-6 gap-10">
@@ -66,15 +66,52 @@ export default function MyPageCalendarContent() {
       <main className="flex-1 grid grid-cols-12 gap-8">
         {/* 좌측: 캘린더 영역 */}
 
-        <section className="col-span-4 rounded-xl p-6 flex item-start justify-center  sticky top-8 h-fit">
-          
-          <calendar-date ref={calendarRef} class="cally bg-base-100 border border-base-300 shadow-lg rounded-box">
-            <svg aria-label="Previous" class="fill-current size-4" slot="previous" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M15.75 19.5 8.25 12l7.5-7.5"></path></svg>
-            <svg aria-label="Next" class="fill-current size-4" slot="next" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="m8.25 4.5 7.5 7.5-7.5 7.5"></path></svg>
-            <calendar-month></calendar-month>
-          </calendar-date>
-        </section>
+        <section className="col-span-4 rounded-xl p-6 sticky top-8 h-fit">
 
+          <div className="relative w-fit mx-auto">
+
+            {/* 안내 문구 */}
+            <p className="absolute left-0 bottom-[calc(100%+10px)] text-[13px] text-black font-normal whitespace-nowrap">
+              상담내역을 확인할 날짜를 선택해주세요.
+            </p>
+
+            {/* 캘린더 */}
+            <calendar-date
+              ref={calendarRef}
+              class="cally bg-base-100 border border-base-300 shadow-lg rounded-box"
+            >
+              <svg
+                aria-label="Previous"
+                class="fill-current size-4"
+                slot="previous"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  fill="currentColor"
+                  d="M15.75 19.5 8.25 12l7.5-7.5"
+                />
+              </svg>
+
+              <svg
+                aria-label="Next"
+                class="fill-current size-4"
+                slot="next"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  fill="currentColor"
+                  d="m8.25 4.5 7.5 7.5-7.5 7.5"
+                />
+              </svg>
+
+              <calendar-month></calendar-month>
+            </calendar-date>
+
+          </div>
+
+        </section>
         {/* 우측: 상담 기록 이미지 규격 비교 (100px ~ 500px) */}
         <section className="col-span-8 rounded-xl p-6">
 
