@@ -33,3 +33,15 @@ export interface LoginResponse {
   loginFlag : boolean;
   member_no : number;
 }
+
+//아이디 찾기
+export interface FindIdRequest {
+  name : string;
+  tel : string;
+}
+
+//비밀번호 찾기
+export interface FindPwRequest {
+  id : string;
+  tel : string;
+}
