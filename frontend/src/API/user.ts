@@ -1,10 +1,12 @@
 //회원가입 요청 데이터 인터페이스
 export interface SignupRequest {
-  id: string;         // 사용자 아이디
-  kakaoID: string;     // 카카오 연동 아이디
-  pw: string;         // 비밀번호
-  name: string;       // 이름
-  phone: string;        // 휴대폰 번호
+  id: string;
+  pw: string;
+  kakaoID?: string;
+  name: string;
+  tel: string;
+  isDuplicate : boolean;
+  loginFlag : boolean
 }
 
 //회원가입 응답
@@ -22,20 +24,12 @@ export interface CheckDupResponse {
 export interface LoginRequest {
   id : string;
   pw : string;
+  isDuplicate? : boolean;
+  loginFlag? : boolean;
 }
 
 //로그인 응답
 export interface LoginResponse {
   loginFlag : boolean;
   member_no : number;
-}
-
-export interface MemberInfo {
-  memberNo : number;
-  id : string;
-  name : string;
-  phone: string;
-  sns? : string;
-  role: string;
-  mileage:number;
 }

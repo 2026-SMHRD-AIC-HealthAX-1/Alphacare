@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
-import { loginUser, getMemberInfo } from "../../API/auth"
 import { useState } from "react";
+import Cookies from "js-cookie";
+import { loginUser } from "../../API/auth";
 
 export default function LoginPage() {
   const [userId, setUserId] = useState("");
@@ -14,17 +15,22 @@ export default function LoginPage() {
       return;
     }
     try {
-      // 1. 로그인 요청 (memberLogin)
-      const res = await loginUser({ id: userId, pw: userPw });
-      if (res.loginFlag) {
-        // 2. 회원 기본 정보 조회 (getMember)
-        const memberInfo = await getMemberInfo(res.member_no);
+      // 1. 로그인 요청
+      const res = await loginUser({
+        id: userId,
+        pw: userPw,
+        isDuplicate: false,
+        loginFlag: false,
+      });
 
-        // 3. 브라우저 세션/로컬 스토리지에 로그인 사용자 정보 저장
-        localStorage.setItem("user", JSON.stringify(memberInfo));
-        localStorage.setItem("member_no", String(res.member_no));
-        alert(`${memberInfo.name}님, 환영합니다!`);
-        navigate("/"); // 메인 페이지로 이동
+      if (res.loginFlag) {
+        // 2. 전체 경로(path: "/")에서 접근 가능하도록 쿠키 저장 (expires: 1 = 1일 유효)
+        Cookies.set("isLoggedIn", "true", { expires: 1, path: "/" });
+        Cookies.set("userId", userId, { expires: 1, path: "/" });
+        Cookies.set("memberNo", String(res.member_no), { expires: 1, path: "/" });
+
+        alert(`${userId}님, 환영합니다!`);
+        window.location.href = "/"; // 메인 페이지 리로드 및 이동
       } else {
         alert("아이디 또는 비밀번호가 일치하지 않습니다.");
       }
