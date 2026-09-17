@@ -24,7 +24,17 @@ export default function MainPage() {
       <div ref={containerRef} className="relative h-[700vh]">
         
         {/* 화면에 고정되는 뷰포트 영역 */}
-        <div className="sticky top-0 h-screen w-full overflow-hidden flex items-center justify-center">
+        
+<motion.div
+  style={{
+    borderRadius: useTransform(
+      scrollYProgress,
+      [0.88, 1],
+      ["0px", "70px"]
+    ),
+  }}
+  className="sticky top-0 h-screen w-full overflow-hidden flex items-center justify-center"
+>
           
           {/* 스크롤에 맞춰 줌인되는 이미지 컨테이너 */}
           <motion.div
@@ -55,10 +65,10 @@ export default function MainPage() {
             </div>
           </motion.div>
 
-        </div>
+        </motion.div>
       </div>
 
-            <section className="relative z-20 w-full h-screen overflow-hidden">
+            <section className="relative z-20 -mt-[1px] w-full h-screen overflow-hidden">
         <img
           src={mainimg}
           alt="Feely 두 번째 소개 이미지"
