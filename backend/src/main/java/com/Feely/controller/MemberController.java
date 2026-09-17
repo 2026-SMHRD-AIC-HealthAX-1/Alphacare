@@ -5,7 +5,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -78,6 +80,13 @@ public class MemberController{
         return ResponseEntity.ok(MemberDto.loginResult(true, member.getMemberNo()));
     }
 
+    // 로그아웃
+    @PostMapping("/member/logout")
+    public ResponseEntity<MemberDto> logout(HttpSession session) {
+        session.invalidate();
+        return ResponseEntity.ok(MemberDto.logoutResult(true, "로그아웃되었습니다."));
+    }
+
     // 아이디 중복 여부 확인
     @GetMapping("/member/checkid")
     public ResponseEntity<MemberDto> memberDup(@RequestParam("id") String id) {
@@ -119,12 +128,59 @@ public class MemberController{
         return ResponseEntity.ok(MemberDto.findPasswordResult(true, temporaryPassword, "임시 비밀번호가 발급되었습니다."));
     }
 
+    // 회원정보 수정 (회원번호 기준)
+    @PutMapping("/member/{memberNo}")
+    public ResponseEntity<MemberDto> updateMember(
+            @PathVariable Long memberNo,
+            @RequestBody MemberDto request) {
+
+        if (memberNo == null) {
+            return ResponseEntity.badRequest().body(MemberDto.updateResult(false, "회원번호가 필요합니다."));
+        }
+
+        MemberEntity member = repo.findById(memberNo).orElse(null);
+        if (member == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(MemberDto.updateResult(false, "회원정보를 찾을 수 없습니다."));
+        }
+
+        if (!isBlank(request.id())) {
+            String newId = request.id().trim();
+            if (!member.getId().equals(newId) && repo.existsByMemberId(newId)) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(MemberDto.updateResult(false, "이미 사용중인 아이디입니다."));
+            }
+            member.setId(newId);
+        }
+
+        if (!isBlank(request.password())) {
+            member.setPw(PasswordUtil.sha256(request.password()));
+        }
+
+        if (!isBlank(request.name())) {
+            member.setName(request.name().trim());
+        }
+
+        if (!isBlank(request.phone())) {
+            member.setPhone(request.phone().trim());
+        }
+
+        if (request.kakaoId() != null) {
+            member.setSns(blankToNull(request.kakaoId()));
+        }
+
+        repo.save(member);
+        return ResponseEntity.ok(MemberDto.updateResult(true, "회원정보가 수정되었습니다."));
+    }
+
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
     }
     private String blankToNull(String value) {
         return isBlank(value) ? null : value.trim();
     }
+
+
 }
 
 
