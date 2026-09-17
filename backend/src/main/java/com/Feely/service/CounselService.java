@@ -37,10 +37,10 @@ public class CounselService {
         
         entity.setMember(member);
         entity.setCounselDttm(dto.getCounselDate());
-        entity.setSumPath(dto.getSummary());
+        entity.setCounselSum(dto.getSummary());
         entity.setStartImagePath("test");
         entity.setEndImagePath("test");
-        entity.setE01Rate(BigDecimal.valueOf(dto.getEmotionScore()));
+        entity.setE01Rate(BigDecimal.valueOf(dto.getEmotionScore())); // 테이블에 DECIMAL 데이터 타입으로 저장해야하므로 형변환해주기
         entity.setE02Rate(BigDecimal.valueOf(dto.getEmotionScore()));
         entity.setE03Rate(BigDecimal.valueOf(dto.getEmotionScore()));
         entity.setE04Rate(BigDecimal.valueOf(dto.getEmotionScore()));

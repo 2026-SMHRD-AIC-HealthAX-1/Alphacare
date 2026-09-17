@@ -45,11 +45,11 @@ public class CounselEntity {
 
     @NonNull
     @Column (
-        name = "SUM_PATH",
-        length = 500,
-        nullable = false
+        name = "COUNSEL_SUM",
+        nullable = false,
+        columnDefinition = "MEDIUMTEXT"
     )
-    private String sumPath;
+    private String counselSum;
 
 
     @NonNull 
@@ -74,8 +74,8 @@ public class CounselEntity {
     // e01 : 중립
     // e02 : 기쁨
     // e03 : 슬픔
-    // e04 : 화남
-    // e05 : 우울
+    // e04 : 분노
+    // e05 : 당황
     // e06 : 불안
 
     @NonNull 
