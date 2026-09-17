@@ -26,6 +26,16 @@ public record MemberDto(
         return new MemberDto(null, null, null, null, null, false, isDuplicate, false, null, null);
     }
 
+    // 아이디 찾기 응답 생성
+    public static MemberDto FindIdResult(String id, String message) {
+        return new MemberDto(id, null, null, null, null, false, false, false, null, message);
+    }
+
+    // 비밀번호 찾기 응답 생성
+    public static MemberDto findPasswordResult(boolean success, String temporaryPassword, String message) {
+        return new MemberDto(null, temporaryPassword, null, null, null, false, false, false, null, message);
+    }
+
     // 로그인 결과 응답 생성
     public static MemberDto loginResult(boolean loginFlag, Long memberNo) {
         return new MemberDto(null, null, null, null, null, false, false, loginFlag, memberNo, null);

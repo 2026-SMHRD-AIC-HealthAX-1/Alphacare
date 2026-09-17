@@ -85,6 +85,40 @@ public class MemberController{
         return ResponseEntity.ok(MemberDto.duplicateResult(repo.existsByMemberId(id)));
     }
 
+    // 아이디 찾기 (이름, 전화번호)
+    @GetMapping("/member/findId")
+    public ResponseEntity<MemberDto> findId(@RequestParam("name") String name, @RequestParam("phone") String phone) {
+        if (isBlank(name) || isBlank(phone)) {
+            return ResponseEntity.badRequest().body(MemberDto.FindIdResult(null, "이름과 휴대폰번호를 입력해주세요."));
+        }
+
+        String memberId = repo.findMemberByNameAndPhone(name.trim(), phone.trim())
+                .map(MemberEntity::getId)
+                .orElse(null);
+
+        return ResponseEntity.ok(MemberDto.FindIdResult(memberId, "아이디를 찾았습니다."));
+    }
+
+    // 비밀번호 찾기 (아이디, 전화번호)
+    @PostMapping("/member/findPw")
+    public ResponseEntity<MemberDto> findPassword(@RequestBody MemberDto request) {
+        if (isBlank(request.id()) || isBlank(request.phone())) {
+            return ResponseEntity.badRequest().body(MemberDto.findPasswordResult(false, null, "아이디와 휴대폰번호를 입력해주세요."));
+        }
+
+        MemberEntity member = repo.findMemberByIdAndPhone(request.id().trim(), request.phone().trim()).orElse(null);
+        if (member == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(MemberDto.findPasswordResult(false, null, "일치하는 회원정보가 없습니다."));
+        }
+
+        String temporaryPassword = PasswordUtil.generateRandomPassword();
+        member.setPw(PasswordUtil.sha256(temporaryPassword));
+        repo.save(member);
+
+        return ResponseEntity.ok(MemberDto.findPasswordResult(true, temporaryPassword, "임시 비밀번호가 발급되었습니다."));
+    }
+
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
     }
