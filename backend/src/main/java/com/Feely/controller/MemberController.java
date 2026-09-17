@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.Feely.dto.MemberDto;
 import com.Feely.entity.MemberEntity;
 import com.Feely.repository.MemberRepository;
+import com.Feely.util.PasswordUtil;
 
 
 @RestController 
@@ -27,20 +28,21 @@ public class MemberController{
     }
 
     // 회원가입
-    @PostMapping("/signUp")
-    public ResponseEntity<String> memberJoin(@RequestBody MemberDto request) {
+    @PostMapping("/member/signup")
+    public ResponseEntity<MemberDto> memberJoin(@RequestBody MemberDto request) {
+        
         if (isBlank(request.id()) || isBlank(request.password())
                 || isBlank(request.name()) || isBlank(request.phone())) {
-            return ResponseEntity.badRequest().body("필수 회원정보가 누락되었습니다.");
+            return ResponseEntity.badRequest().body(MemberDto.signupResult(false, "필수 회원정보가 누락되었습니다."));
         }
 
         if (repo.existsByMemberId(request.id())) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body("이미 사용중인 아이디입니다.");
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(MemberDto.signupResult(false, "이미 사용중인 아이디입니다."));
         }
 
         MemberEntity member = new MemberEntity();
         member.setId(request.id().trim());
-        member.setPw(request.password());
+        member.setPw(PasswordUtil.sha256(request.password()));
         member.setName(request.name().trim());
         member.setPhone(request.phone().trim());
         member.setSns(blankToNull(request.kakaoId()));
@@ -49,9 +51,9 @@ public class MemberController{
 
         try {
             repo.save(member);
-            return ResponseEntity.status(HttpStatus.CREATED).body("회원가입이 완료되었습니다.");
+            return ResponseEntity.status(HttpStatus.CREATED).body(MemberDto.signupResult(true, "회원가입이 완료되었습니다."));
         } catch (DataIntegrityViolationException exception) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body("이미 등록된 회원정보가 있습니다.");
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(MemberDto.signupResult(false, "이미 등록된 회원정보가 있습니다."));
         }
     }
 
@@ -64,7 +66,9 @@ public class MemberController{
         }
 
         MemberEntity member = repo.findMemberById(request.id().trim()).orElse(null);
-        if (member == null || !member.getPw().equals(request.password())) {
+        String hashedPassword = PasswordUtil.sha256(request.password());
+        boolean passwordMatches = member != null && (member.getPw().equals(hashedPassword) || member.getPw().equals(request.password()));
+        if (member == null || !passwordMatches) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(MemberDto.loginResult(false, null));
         }
