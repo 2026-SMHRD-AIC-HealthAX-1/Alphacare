@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
@@ -76,10 +77,18 @@ public class MemberEntity {
     @Column (
         name = "ROLE",
         length = 10,
-        nullable = false
+        nullable = false,
+        columnDefinition = "VARCHAR(10) DEFAULT 'USER'"
     )
-    private String role;
+    private String role = "USER";
     
+    @PrePersist
+    public void prePersist() {
+        if (this.role == null || this.role.isBlank()) {
+            this.role = "USER";
+        }
+    }
+
     @Column (
         name = "MILEAGE"
     )
