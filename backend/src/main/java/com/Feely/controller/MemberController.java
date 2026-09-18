@@ -96,6 +96,10 @@ public class MemberController{
                 .map(MemberEntity::getId)
                 .orElse(null);
 
+        if (memberId == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(MemberDto.FindIdResult(null, "일치하는 회원이 없습니다."));
+        }
+
         return ResponseEntity.ok(MemberDto.FindIdResult(memberId, "아이디를 찾았습니다."));
     }
 
@@ -126,7 +130,3 @@ public class MemberController{
         return isBlank(value) ? null : value.trim();
     }
 }
-
-
-
-

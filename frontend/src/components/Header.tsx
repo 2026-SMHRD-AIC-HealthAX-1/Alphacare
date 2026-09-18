@@ -1,6 +1,7 @@
 ﻿import { Link } from "react-router-dom";
 import logo from "../assets/Feely_Logo.png";
 import { useState, useEffect } from "react";
+import { logout } from "../API/auth";
 import Cookies from "js-cookie";
 
 export default function Header() {
@@ -18,18 +19,22 @@ export default function Header() {
   }, []);
 
   // 로그아웃 처리 함수
-  const handleLogout = () => {
-    // 저장된 경로와 동일하게 path: "/" 옵션을 부여하여 삭제
-    Cookies.remove("isLoggedIn", { path: "/" });
-    Cookies.remove("userId", { path: "/" });
-    Cookies.remove("memberNo", { path: "/" });
+  const handleLogout = async () => {
+    try {
+      await logout();
 
-    setIsLoggedIn(false);
-    setUserId("");
-    alert("로그아웃 되었습니다.");
+      } catch (error) {
+        console.error("로그아웃 오류 발생")
+    } finally {
+      Cookies.remove("isLoggedIn", { path : "/"});
+      Cookies.remove("userId", { path : "/"});
+      Cookies.remove("memberNo", { path : "/"});
 
-    // 페이지 리로드를 통해 상단 바 상태 완벽 초기화 및 메인 이동
-    window.location.href = "/";
+      setIsLoggedIn(false);
+      setUserId("");
+      alert("로그아웃 되었습니다.")
+      window.location.href = "/";
+    }
   };
 
   return (
@@ -79,7 +84,7 @@ export default function Header() {
 
               {/* 회원 정보 문구 */}
               <span className="text-[#1F6170] dark:text-teal-400 font-semibold">
-                {userId}님 반갑습니다.
+                {userId}님
               </span>
             </>
           ) : (
