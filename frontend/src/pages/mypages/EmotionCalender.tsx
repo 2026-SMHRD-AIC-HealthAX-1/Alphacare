@@ -66,7 +66,7 @@ export default function MyPageCalendarContent() {
       <main className="flex-1 grid grid-cols-12 gap-8">
         {/* 좌측: 캘린더 영역 */}
 
-        <section className="col-span-4 rounded-xl p-6 sticky top-8 h-fit">
+        <section className="col-span-4 p-6 sticky top-8 h-fit">
 
           <div className="relative w-fit mx-auto">
 
@@ -78,7 +78,7 @@ export default function MyPageCalendarContent() {
             {/* 캘린더 */}
             <calendar-date
               ref={calendarRef}
-              class="cally bg-base-100 border border-base-300 shadow-lg rounded-box"
+              class="cally bg-base-100 border border-base-300 shadow-lg"
             >
               <svg
                 aria-label="Previous"
@@ -113,13 +113,13 @@ export default function MyPageCalendarContent() {
 
         </section>
         {/* 우측: 상담 기록 이미지 규격 비교 (100px ~ 500px) */}
-        <section className="col-span-8 rounded-xl p-6">
+        <section className="col-span-8 p-6">
 
           <div className="space-y-6 max-h-[800px] overflow-y-auto pr-2">
             {logs.map((log) => (
               <div
                 key={log.id}
-                className="border rounded-lg p-5 space-y-4"
+                className="border p-5 space-y-4"
               >
                 {/* 회차 및 시간/감정 헤더 */}
                 <div className="flex justify-between items-center border-b pb-3">
