@@ -20,7 +20,8 @@ import lombok.NonNull;
 @Table(
     name = "MEMBER",
     uniqueConstraints = {
-        @UniqueConstraint(columnNames = "ID")
+        @UniqueConstraint(columnNames = "ID"),
+        @UniqueConstraint(columnNames = "PHONE")
         }
 ) // Unique Key 정의
 public class MemberEntity {

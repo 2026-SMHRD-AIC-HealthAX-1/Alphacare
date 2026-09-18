@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.Feely.dto.MemberDto;
 import com.Feely.entity.MemberEntity;
 import com.Feely.repository.MemberRepository;
+import com.Feely.util.PasswordUtil;
 
 
 @RestController 
@@ -27,20 +28,21 @@ public class MemberController{
     }
 
     // 회원가입
-    @PostMapping("/signUp")
-    public ResponseEntity<String> memberJoin(@RequestBody MemberDto request) {
+    @PostMapping("/member/signup")
+    public ResponseEntity<MemberDto> memberJoin(@RequestBody MemberDto request) {
+        
         if (isBlank(request.id()) || isBlank(request.password())
                 || isBlank(request.name()) || isBlank(request.phone())) {
-            return ResponseEntity.badRequest().body("필수 회원정보가 누락되었습니다.");
+            return ResponseEntity.badRequest().body(MemberDto.signupResult(false, "필수 회원정보가 누락되었습니다."));
         }
 
         if (repo.existsByMemberId(request.id())) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body("이미 사용중인 아이디입니다.");
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(MemberDto.signupResult(false, "이미 사용중인 아이디입니다."));
         }
 
         MemberEntity member = new MemberEntity();
         member.setId(request.id().trim());
-        member.setPw(request.password());
+        member.setPw(PasswordUtil.sha256(request.password()));
         member.setName(request.name().trim());
         member.setPhone(request.phone().trim());
         member.setSns(blankToNull(request.kakaoId()));
@@ -49,9 +51,9 @@ public class MemberController{
 
         try {
             repo.save(member);
-            return ResponseEntity.status(HttpStatus.CREATED).body("회원가입이 완료되었습니다.");
+            return ResponseEntity.status(HttpStatus.CREATED).body(MemberDto.signupResult(true, "회원가입이 완료되었습니다."));
         } catch (DataIntegrityViolationException exception) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body("이미 등록된 회원정보가 있습니다.");
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(MemberDto.signupResult(false, "이미 등록된 회원정보가 있습니다."));
         }
     }
 
@@ -64,7 +66,9 @@ public class MemberController{
         }
 
         MemberEntity member = repo.findMemberById(request.id().trim()).orElse(null);
-        if (member == null || !member.getPw().equals(request.password())) {
+        String hashedPassword = PasswordUtil.sha256(request.password());
+        boolean passwordMatches = member != null && (member.getPw().equals(hashedPassword) || member.getPw().equals(request.password()));
+        if (member == null || !passwordMatches) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(MemberDto.loginResult(false, null));
         }
@@ -79,6 +83,40 @@ public class MemberController{
     public ResponseEntity<MemberDto> memberDup(@RequestParam("id") String id) {
         System.out.println(" memberDup in~~");
         return ResponseEntity.ok(MemberDto.duplicateResult(repo.existsByMemberId(id)));
+    }
+
+    // 아이디 찾기 (이름, 전화번호)
+    @GetMapping("/member/findId")
+    public ResponseEntity<MemberDto> findId(@RequestParam("name") String name, @RequestParam("phone") String phone) {
+        if (isBlank(name) || isBlank(phone)) {
+            return ResponseEntity.badRequest().body(MemberDto.FindIdResult(null, "이름과 휴대폰번호를 입력해주세요."));
+        }
+
+        String memberId = repo.findMemberByNameAndPhone(name.trim(), phone.trim())
+                .map(MemberEntity::getId)
+                .orElse(null);
+
+        return ResponseEntity.ok(MemberDto.FindIdResult(memberId, "아이디를 찾았습니다."));
+    }
+
+    // 비밀번호 찾기 (아이디, 전화번호)
+    @PostMapping("/member/findPw")
+    public ResponseEntity<MemberDto> findPassword(@RequestBody MemberDto request) {
+        if (isBlank(request.id()) || isBlank(request.phone())) {
+            return ResponseEntity.badRequest().body(MemberDto.findPasswordResult(false, null, "아이디와 휴대폰번호를 입력해주세요."));
+        }
+
+        MemberEntity member = repo.findMemberByIdAndPhone(request.id().trim(), request.phone().trim()).orElse(null);
+        if (member == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(MemberDto.findPasswordResult(false, null, "일치하는 회원정보가 없습니다."));
+        }
+
+        String temporaryPassword = PasswordUtil.generateRandomPassword();
+        member.setPw(PasswordUtil.sha256(temporaryPassword));
+        repo.save(member);
+
+        return ResponseEntity.ok(MemberDto.findPasswordResult(true, temporaryPassword, "임시 비밀번호가 발급되었습니다."));
     }
 
     private boolean isBlank(String value) {
