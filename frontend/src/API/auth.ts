@@ -1,5 +1,3 @@
-// 회원가입, 로그인, 아이디/비밀번호 찾기
-//중요한 데이터 or 보안이 중요한 데이터는 Post방식
 import { api } from "./axios";
 import {
   SignupRequest,
@@ -7,28 +5,46 @@ import {
   CheckDupResponse,
   LoginRequest,
   LoginResponse,
-  MemberInfo,
+  FindIdRequest,
+  FindPwRequest,
+  FindIdResponse,
+  FindPwResponse
 } from "./user";
 
-// 1. 아이디 중복 확인 (memberDup)
-export const checkDuplicateId = async (userId: string): Promise<boolean> => {
-  const response = await api.get<CheckDupResponse>("/api/member/checkid", {
-    params: { id: userId },
+// 아이디 중복확인 API (GET /api/member/checkid?id=xxx)
+export const checkDuplicateId = async (id: string): Promise<boolean> => {
+  const response = await api.get<CheckDupResponse>(`/api/member/checkid`, {
+    params: { id }
   });
-  return response.data.isDuplicate; // true: 중복, false: 사용가능
+  return response.data.isDuplicate; 
 };
-// 2. 회원가입 (setMember)
+
+// 회원가입
 export const signupUser = async (newUser: SignupRequest): Promise<SignupResponse> => {
   const response = await api.post<SignupResponse>("/api/member/signup", newUser);
   return response.data;
 };
-// 3. 로그인 (memberLogin)
+
+// 로그인
 export const loginUser = async (loginData: LoginRequest): Promise<LoginResponse> => {
   const response = await api.post<LoginResponse>("/api/member/login", loginData);
   return response.data;
 };
-// 4. 회원 정보 조회 (getMember)
-export const getMemberInfo = async (memberNo: number): Promise<MemberInfo> => {
-  const response = await api.get<MemberInfo>(`/api/member/${memberNo}`);
+
+// 아이디 찾기
+export const findID = async (findIdData : FindIdRequest) : Promise<FindIdResponse> =>{
+  const response = await api.get<FindIdResponse>("/api/member/findId", {
+    params : {name : findIdData.name, phone : findIdData.tel}
+  });
   return response.data;
+};
+
+// 비밀번호 찾기
+export const findPW = async (findPwData: FindPwRequest): Promise<FindPwResponse> => {
+  const response = await api.post<FindPwResponse>("/api/member/findPw", findPwData);
+  return response.data;
+};
+
+export const logout = async () : Promise<void> => {
+  await api.post("/api/member/logout");
 };

@@ -139,9 +139,13 @@ export default function CounselPage() {
     };
 
     try {
-      await sendCounselData(payload);
-      alert("상담이 정상적으로 종료되었습니다.");
-      navigate("/mypage");
+      const result = 
+        await sendCounselData(payload);
+
+      if (result.counselFlag) { 
+        alert("상담이 정상적으로 종료되었습니다.");
+        navigate("/mypage");
+      }
     } catch (error) {
       console.error("상담 데이터 전송 실패:", error);
       alert("데이터 전송 중 오류가 발생했습니다.");

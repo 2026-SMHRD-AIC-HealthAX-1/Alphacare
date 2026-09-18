@@ -35,7 +35,6 @@ export default function SignupPage() {
     try {
       //아이디 중복시 true, 미중복시 false
       const isDuplicate = await checkDuplicateId(userId);
-      console.log(isDuplicate);
 
       if (isDuplicate) {
         alert("이미 사용중인 아이디 입니다.")
@@ -53,74 +52,74 @@ export default function SignupPage() {
     }
   }
 
-  //휴대폰 번호 숫자가 아닌 문자 제거
+  //휴대폰 번호 숫자가 아닌 문자 제거, 11자리까지만 허용
   const checkphone = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const onlyNum = e.target.value.replace(/[^0-9]/g, "");
+    const onlyNum = e.target.value.replace(/[^0-9]/g, "").slice(0, 11);
     setphone(onlyNum);
   }
 
   //회원가입
   const postSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    //아이디 규칙, 영어, 숫자, 특수문자로만 구성된 8자리
+
     const pwRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])[A-Za-z\d!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]{8,}$/;
     const phoneRegex = /^010\d{8}$/;
 
-    //빈칸 확인
     if (!userId || !userPw || !pwConfirm || !name || !phone) {
-      alert("모든 입력칸을 채워주세요")
+      alert("모든 입력칸을 채워주세요");
       return;
     }
 
-    //아이디 중복확인 여부 검사
     if (!checkId) {
-      alert("아이디 중복확인을 해주세요")
+      alert("아이디 중복확인을 해주세요");
       return;
     }
 
-    //비밀번호 규칙 확인
     if (!pwRegex.test(userPw)) {
-      alert("비밀번호는 영문, 숫자 특수문자로 구성된 8자리 이상이여야 합니다.")
-      return
-    }
-
-    //비밀번호 일치 확인
-    if (userPw !== pwConfirm) {
-      alert("비밀번호가 일치하지 않습니다.")
+      alert("비밀번호는 영문, 숫자, 특수문자로 구성된 8자리 이상이어야 합니다.");
       return;
     }
 
-    //휴대폰 번호 11자리 확인
+    if (userPw !== pwConfirm) {
+      alert("비밀번호가 일치하지 않습니다.");
+      return;
+    }
+
     if (!phoneRegex.test(phone)) {
-      alert("휴대폰 번호 11자리를 정확히 입력해주세요")
+      alert("휴대폰 번호 11자리를 정확히 입력해주세요");
       return;
     }
 
     try {
-      // shryu 명세서 규격(id, pw, name, phone)으로 전송
+      // 백엔드 MemberDto 필드명에 정확히 일치시킴
       const result = await signupUser({
         id: userId,
         pw: userPw,
-        kakaoID: "",
         name: name,
-        phone: phone,
+        tel: phone,
+        kakaoID: "",
+        isDuplicate : false,
+        loginFlag : false
       });
-      if (result.joinFlag) {
-        alert("회원가입이 완료되었습니다!");
-        navigate("/Login"); // 로그인 페이지로 이동
-      } else {
-        alert("회원가입에 실패했습니다.");
-      }
+
+      // 201 Created 성공 처리
+      alert(result.message || "회원가입이 완료되었습니다.");
+      navigate("/Login");
     } catch (error: any) {
       console.error("회원가입 오류 : ", error);
-      alert("회원가입 처리 중 서버 오류가 발생했습니다.");
+      // 400(필수값 누락), 409(아이디 중복) 등 백엔드가 보낸 message 필드 출력
+      if (error.response?.data?.message) {
+        alert(error.response.data.message);
+      } else {
+        alert("회원가입 처리 중 서버 오류가 발생했습니다.");
+      }
     }
   };
 
   //디자인 구현부분
   return (
     <div className="min-h-[calc(100vh-80px)] flex flex-col items-center justify-center px-4 py-8 sm:py-12">
-      <div className="w-full max-w-xl ax -auto space-y-4 sm:space-y-6">
+      <div className="w-full max-w-xl mx-auto space-y-4 sm:space-y-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-center text-[#1F6170]">
           회원가입
         </h1>
@@ -206,7 +205,9 @@ export default function SignupPage() {
             </label>
             <div className="flex-1 w-full">
               <input
-                type="phone"
+                type="tel"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={phone}
                 onChange={checkphone}
                 maxLength={11}
