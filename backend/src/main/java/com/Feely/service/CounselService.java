@@ -28,11 +28,11 @@ public class CounselService {
     }
 
     // 프론트에서 넘어온 값 Counsel DB에 저장하는 메소드
-    public void saveCounsel(CounselRequestDTO dto) {
+    public void saveCounsel(CounselRequestDTO dto, Long memberNo){ 
 
         // userId로 회원 Entity 조회
         MemberEntity member = memberRepository
-                .findById(dto.getUserId())
+                .findById(memberNo)
                 .orElseThrow(() ->
                         new IllegalArgumentException("회원을 찾을 수 없습니다.")
                 );
@@ -40,6 +40,7 @@ public class CounselService {
         CounselEntity entity = new CounselEntity();
         
         entity.setMember(member);
+        
         entity.setCounselDttm(dto.getCounselDate());
         entity.setCounselSum(dto.getSummary());
         entity.setStartImagePath("test");
@@ -89,5 +90,7 @@ public class CounselService {
 
         return responseList;
     }
+
+    
 
 }
