@@ -36,18 +36,8 @@ public record MemberDto(
         return new MemberDto(null, temporaryPassword, null, null, null, false, false, false, null, message);
     }
 
-    // 회원정보 수정 결과 응답 생성
-    public static MemberDto updateResult(boolean success, String message) {
-        return new MemberDto(null, null, null, null, null, false, false, false, null, message);
-    }
-
     // 로그인 결과 응답 생성
     public static MemberDto loginResult(boolean loginFlag, Long memberNo) {
         return new MemberDto(null, null, null, null, null, false, false, loginFlag, memberNo, null);
-    }
-
-    // 로그아웃 결과 응답 생성
-    public static MemberDto logoutResult(boolean success, String message) {
-        return new MemberDto(null, null, null, null, null, false, false, false, null, message);
     }
 }

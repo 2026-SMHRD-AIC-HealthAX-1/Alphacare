@@ -32,9 +32,3 @@ export const getMemberInfo = async (memberNo: number): Promise<MemberInfo> => {
   const response = await api.get<MemberInfo>(`/api/member/${memberNo}`);
   return response.data;
 };
-
-// 5. 로그아웃
-export const logoutUser = async (): Promise<{ message: string }> => {
-  const response = await api.post<{ message: string }>('/api/member/logout');
-  return response.data;
-};

@@ -1,30 +1,13 @@
-﻿import { Link, useNavigate } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 import logo from "../assets/Feely_Logo.png"
-import { useEffect, useState } from "react";
-import { logoutUser } from "../API/auth";
+import { useState } from "react";
 
 export default function Navbar() {
-  const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
-    return Boolean(localStorage.getItem("member_no") || localStorage.getItem("user"));
-  });
-
   // 다크모드 기능
   const [isDark, setIsDark] = useState(() => {
     return document.documentElement.classList.contains("dark") ||
       document.documentElement.getAttribute("data-theme") === "dark";
   });
-
-  useEffect(() => {
-    const syncLoginState = () => {
-      setIsLoggedIn(Boolean(localStorage.getItem("member_no") || localStorage.getItem("user")));
-    };
-
-    window.addEventListener("storage", syncLoginState);
-    syncLoginState();
-
-    return () => window.removeEventListener("storage", syncLoginState);
-  }, []);
 
   const toggleDarkMode = () => {
     const nextDark = !isDark;
@@ -36,20 +19,6 @@ export default function Navbar() {
     } else {
       document.documentElement.classList.remove("dark");
       document.documentElement.setAttribute("data-theme", "light");
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await logoutUser();
-    } catch (error) {
-      console.warn("서버 로그아웃 실패, 클라이언트 세션만 정리합니다.", error);
-    } finally {
-      localStorage.removeItem("user");
-      localStorage.removeItem("member_no");
-      setIsLoggedIn(false);
-      alert("로그아웃되었습니다.");
-      navigate("/Login");
     }
   };
 
@@ -90,28 +59,18 @@ export default function Navbar() {
           {/* 세로 구분선 */}
           <span className="text-gray-300 font-light select-none">|</span>
 
-          {!isLoggedIn ? (
-            <>
-              {/* 회원가입 */}
-              <Link to="/SignUp" className="hover:underline">
-                Sing up
-              </Link>
+          {/* 회원가입 */}
+          <Link to="/SignUp" className="hover:underline">
+            Sing up
+          </Link>
 
-              <span className="text-gray-300 font-light select-none">|</span>
-              {/* 로그인 */}
-              <Link to="/Login" className="hover:underline">
-                Login
-              </Link>
-            </>
-          ) : (
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="hover:underline text-left"
-            >
-              Logout
-            </button>
-          )}
+          {/* 세로 구분선 */}
+
+          <span className="text-gray-300 font-light select-none">|</span>
+          {/* 로그인 */}
+          <Link to="/Login" className="hover:underline">
+            Login
+          </Link>
         </nav>
       </div>
     </header>
