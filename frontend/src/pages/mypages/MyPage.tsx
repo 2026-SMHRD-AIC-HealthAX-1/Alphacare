@@ -60,7 +60,7 @@ export default function MyPage() {
       <main className="flex-1">
         {activeMenu === "profile" && (
   <div className="w-full flex justify-center">
-    <div className="w-full max-w-[800px] border rounded-xl p-6 sm:p-8 dark:border-gray-700">
+    <div className="w-full max-w-[800px] p-6 sm:p-8 dark:border-gray-700">
 
       {/* 제목 */}
       <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-[80px] text-center">

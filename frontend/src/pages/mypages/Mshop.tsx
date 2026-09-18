@@ -145,7 +145,7 @@ export default function Mshop() {
                 <main className="w-full min-w-0">
 
                     {/* 상단 마일리지 영역 */}
-                    <div className="border rounded-xl p-4 sm:p-6 mb-6 sm:mb-8">
+                    <div className=" p-4 sm:p-6 mb-3 sm:mb-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x">
 
                             {/* 보유 마일리지 */}
@@ -162,7 +162,7 @@ export default function Mshop() {
 
                                 <button
                                     onClick={() => setShowHistory(true)}
-                                    className="w-24 h-9 bg-[#1F6170] text-white px-3 py-1 rounded-lg flex items-center justify-center mx-auto"
+                                    className="w-24 h-9 bg-[#1F6170] rounded-lg text-white px-3 py-1 flex items-center justify-center mx-auto"
                                 >
                                     내역 보기
                                 </button>
@@ -172,7 +172,7 @@ export default function Mshop() {
                     </div>
 
                     {/* 마일리지 안내 */}
-                    <div className="mb-6 sm:mb-8 p-3 sm:p-4 bg-gray-50 border rounded-lg text-xs sm:text-sm text-gray-600 leading-6 sm:leading-7">
+                    <div className="mb-3 sm:mb-4 p-3 sm:p-4 bg-gray-50 border text-xs sm:text-sm text-gray-600 leading-6 sm:leading-7">
                         <p>• 마일리지는 하루에 한 번, 상담 종료 후 자동 적립됩니다.</p>
                         <p>• 적립 내역은 마일리지 내역을 통해 확인 가능합니다.</p>
                         <p>• 교환요청 하신 금액상품권은 등록된 핸드폰번호로 발송됩니다.</p>
@@ -182,7 +182,7 @@ export default function Mshop() {
                     </div>
 
                     {/* 상품권 목록 */}
-                    <div className="border rounded-xl overflow-hidden">
+                    <div className="border overflow-hidden">
                         <div className="grid grid-cols-2 sm:grid-cols-4 items-stretch min-w-0">
                             {products.map((item, idx) => {
 
@@ -264,14 +264,14 @@ export default function Mshop() {
                                                         setIsSliding(true);
                                                     }}
                                                     className="absolute left-3 top-1/2 -translate-y-1/2
-                                   w-7 h-7 rounded-full
-                                   bg-white/70 hover:bg-white
-                                   transition
-                                   flex items-center justify-center z-10"
+                                                    w-7 h-7 rounded-full
+                                                    bg-white/70 hover:bg-white
+                                                    transition
+                                                    flex items-center justify-center z-10"
                                                 >
                                                     <span className="relative -left-[1px] -top-[2px]
-                                         text-xl font-light text-gray-500
-                                         leading-none">
+                                                    text-xl font-light text-gray-500
+                                                    leading-none">
                                                         ‹
                                                     </span>
                                                 </button>
@@ -284,14 +284,14 @@ export default function Mshop() {
                                                         setIsSliding(true);
                                                     }}
                                                     className="absolute right-3 top-1/2 -translate-y-1/2
-                                   w-7 h-7 rounded-full
-                                   bg-white/70 hover:bg-white
-                                   transition
-                                   flex items-center justify-center z-10"
+                                                    w-7 h-7 rounded-full
+                                                    bg-white/70 hover:bg-white
+                                                    transition
+                                                    flex items-center justify-center z-10"
                                                 >
                                                     <span className="relative left-[1px] -top-[2px]
-                                         text-xl font-light text-gray-500
-                                         leading-none">
+                                                    text-xl font-light text-gray-500
+                                                    leading-none">
                                                         ›
                                                     </span>
                                                 </button>
@@ -299,49 +299,49 @@ export default function Mshop() {
                                             </div>
 
                                             {/* 다이어리 선택 버튼 */}
-<div className="col-span-2 sm:col-span-1 h-[260px] sm:h-[300px] lg:h-[350px] min-w-0 border-l-0 sm:border-l border-b border-gray-200 relative overflow-hidden">
+                                            <div className="col-span-2 sm:col-span-1 h-[260px] sm:h-[300px] lg:h-[350px] min-w-0 border-l-0 sm:border-l border-b border-gray-200 relative overflow-hidden">
 
-    <div className="absolute inset-0 flex flex-col items-center justify-center translate-y-0 sm:translate-y-[-10px] px-2">
+                                                <div className="absolute inset-0 flex flex-col items-center justify-center translate-y-0 sm:translate-y-[-10px] px-2">
 
-        {/* 다이어리 이름 */}
-        <p className="relative top-0 sm:top-[-20px] text-[18px] sm:text-[20px] leading-5 font-semibold text-center">
-            Feely Diary
-        </p>
+                                                    {/* 다이어리 이름 */}
+                                                    <p className="relative top-0 sm:top-[-20px] text-[18px] sm:text-[20px] leading-5 font-semibold text-center">
+                                                        Feely Diary
+                                                    </p>
 
-        {/* 가격 */}
-        <p className="relative top-0 sm:top-[-15px] mt-1 text-[16px] sm:text-[18px] text-[#1F6170] leading-5 font-semibold text-center">
-            20,000p 
-        </p>
+                                                    {/* 가격 */}
+                                                    <p className="relative top-0 sm:top-[-15px] mt-1 text-[16px] sm:text-[18px] text-[#1F6170] leading-5 font-semibold text-center">
+                                                        20,000p
+                                                    </p>
 
-        {/* 하루의 끝 */}
-        <p className="relative top-0 sm:top-[25px] mt-1 text-[14px] text-gray-500 text-center mb-2 sm:mb-3">
-            하루의 끝
-        </p>
+                                                    {/* 하루의 끝 */}
+                                                    <p className="relative top-0 sm:top-[25px] mt-1 text-[14px] text-gray-500 text-center mb-2 sm:mb-3">
+                                                        하루의 끝
+                                                    </p>
 
-        {/* 일기형 */}
-        <button
-            onClick={() => setSelectedDiaryType("일기형")}
-            className="relative top-0 sm:top-[30px] w-[120px] h-[30px] bg-[#1F6170] text-sm sm:text-[15px] text-white rounded-lg flex items-center justify-center text-center mb-3 sm:mb-5"
-        >
-            일기형
-        </button>
+                                                    {/* 일기형 */}
+                                                    <button
+                                                        onClick={() => setSelectedDiaryType("일기형")}
+                                                        className="relative top-0 sm:top-[30px] w-[120px] h-[30px] bg-[#1F6170] text-sm sm:text-[15px] text-white rounded-lg flex items-center justify-center text-center mb-3 sm:mb-5"
+                                                    >
+                                                        일기형
+                                                    </button>
 
-        {/* 상담기록 */}
-        <p className="relative top-0 sm:top-[25px] text-[14px] text-gray-500 text-center mb-2 sm:mb-3">
-            상담기록
-        </p>
+                                                    {/* 상담기록 */}
+                                                    <p className="relative top-0 sm:top-[25px] text-[14px] text-gray-500 text-center mb-2 sm:mb-3">
+                                                        상담기록
+                                                    </p>
 
-        {/* 추억형 */}
-        <button
-            onClick={() => setSelectedDiaryType("추억형")}
-            className="relative top-0 sm:top-[30px] w-[120px] h-[30px] bg-[#1F6170] text-sm sm:text-[15px] text-white rounded-lg flex items-center justify-center text-center"
-        >
-            추억형
-        </button>
+                                                    {/* 추억형 */}
+                                                    <button
+                                                        onClick={() => setSelectedDiaryType("추억형")}
+                                                        className="relative top-0 sm:top-[30px] w-[120px] h-[30px] bg-[#1F6170] text-sm sm:text-[15px] text-white rounded-lg flex items-center justify-center text-center"
+                                                    >
+                                                        추억형
+                                                    </button>
 
-    </div>
+                                                </div>
 
-</div>
+                                            </div>
 
                                         </React.Fragment>
                                     );
@@ -357,7 +357,8 @@ export default function Mshop() {
             flex flex-col items-center
             min-h-[245px] sm:min-h-[300px]
             border-b border-gray-200
-            ${idx % 2 === 0 ? "border-r border-gray-200 sm:border-r" : ""}
+            ${idx % 2 === 0 ? "border-r border-gray-200" : ""}
+            ${idx % 4 !== 3 ? "sm:border-r sm:border-gray-200" : "sm:border-r-0"}   
             sm:[&:nth-child(4n)]:border-r-0
         `}
                                     >
