@@ -40,8 +40,18 @@ export interface FindIdRequest {
   tel : string;
 }
 
+export interface FindIdResponse {
+  id : string | null;
+  message? : string;
+}
+
 //비밀번호 찾기
 export interface FindPwRequest {
   id : string;
   tel : string;
+}
+
+export interface FindPwResponse {
+  pw : string | null;
+  message? : string;
 }

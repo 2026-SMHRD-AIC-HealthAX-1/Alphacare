@@ -1,11 +1,14 @@
 import { api } from "./axios";
 import {
   SignupRequest,
+  SignupResponse,
   CheckDupResponse,
   LoginRequest,
   LoginResponse,
   FindIdRequest,
-  FindPwRequest
+  FindPwRequest,
+  FindIdResponse,
+  FindPwResponse
 } from "./user";
 
 // 아이디 중복확인 API (GET /api/member/checkid?id=xxx)
@@ -17,8 +20,8 @@ export const checkDuplicateId = async (id: string): Promise<boolean> => {
 };
 
 // 회원가입
-export const signupUser = async (newUser: SignupRequest): Promise<string> => {
-  const response = await api.post<string>("/api/signUp", newUser);
+export const signupUser = async (newUser: SignupRequest): Promise<SignupResponse> => {
+  const response = await api.post<SignupResponse>("/api/member/signup", newUser);
   return response.data;
 };
 
@@ -29,13 +32,19 @@ export const loginUser = async (loginData: LoginRequest): Promise<LoginResponse>
 };
 
 // 아이디 찾기
-export const findID = async (findIdData : FindIdRequest) : Promise<string> =>{
-  const response = await api.post<string>("/api/member/findId", findIdData);
+export const findID = async (findIdData : FindIdRequest) : Promise<FindIdResponse> =>{
+  const response = await api.get<FindIdResponse>("/api/member/findId", {
+    params : {name : findIdData.name, phone : findIdData.tel}
+  });
   return response.data;
 };
 
 // 비밀번호 찾기
-export const findPW = async (findPwData : FindPwRequest) : Promise<string> => {
-  const response = await api.post<string>("/api/member/findPw", findPwData);
+export const findPW = async (findPwData: FindPwRequest): Promise<FindPwResponse> => {
+  const response = await api.post<FindPwResponse>("/api/member/findPw", findPwData);
   return response.data;
+};
+
+export const logout = async () : Promise<void> => {
+  await api.post("/api/member/logout");
 };

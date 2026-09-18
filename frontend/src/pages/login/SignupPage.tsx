@@ -52,9 +52,9 @@ export default function SignupPage() {
     }
   }
 
-  //휴대폰 번호 숫자가 아닌 문자 제거
+  //휴대폰 번호 숫자가 아닌 문자 제거, 11자리까지만 허용
   const checkphone = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const onlyNum = e.target.value.replace(/[^0-9]/g, "");
+    const onlyNum = e.target.value.replace(/[^0-9]/g, "").slice(0, 11);
     setphone(onlyNum);
   }
 
@@ -92,7 +92,7 @@ export default function SignupPage() {
 
     try {
       // 백엔드 MemberDto 필드명에 정확히 일치시킴
-      const message = await signupUser({
+      const result = await signupUser({
         id: userId,
         pw: userPw,
         name: name,
@@ -103,13 +103,13 @@ export default function SignupPage() {
       });
 
       // 201 Created 성공 처리
-      alert(message); // "회원가입이 완료되었습니다."
+      alert(result.message || "회원가입이 완료되었습니다.");
       navigate("/Login");
     } catch (error: any) {
       console.error("회원가입 오류 : ", error);
-      // 400, 409 등 백엔드에서 보낸 에러 문자열 메세지 출력
-      if (error.response && error.response.data) {
-        alert(error.response.data);
+      // 400(필수값 누락), 409(아이디 중복) 등 백엔드가 보낸 message 필드 출력
+      if (error.response?.data?.message) {
+        alert(error.response.data.message);
       } else {
         alert("회원가입 처리 중 서버 오류가 발생했습니다.");
       }
@@ -119,7 +119,7 @@ export default function SignupPage() {
   //디자인 구현부분
   return (
     <div className="min-h-[calc(100vh-80px)] flex flex-col items-center justify-center px-4 py-8 sm:py-12">
-      <div className="w-full max-w-xl ax -auto space-y-4 sm:space-y-6">
+      <div className="w-full max-w-xl mx-auto space-y-4 sm:space-y-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-center text-[#1F6170]">
           회원가입
         </h1>
@@ -205,7 +205,9 @@ export default function SignupPage() {
             </label>
             <div className="flex-1 w-full">
               <input
-                type="phone"
+                type="tel"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={phone}
                 onChange={checkphone}
                 maxLength={11}
