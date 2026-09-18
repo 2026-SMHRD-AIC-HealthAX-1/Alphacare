@@ -1,5 +1,7 @@
 package com.Feely.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -24,6 +26,7 @@ public class MusicEntity {
     @Id 
     @GeneratedValue ( strategy = GenerationType.IDENTITY )
     @Column ( name="MUSIC_NO" )
+    @JsonProperty("music_no")
     // DB에서 직접 1000번부터 생성되게 바꿔주기
     private Long musicNo;
 
