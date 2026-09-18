@@ -24,7 +24,6 @@ export default function LoginPage() {
       if (res.loginFlag) {
         Cookies.set("isLoggedIn", "true", { expires: 1, path: "/" });
         Cookies.set("userId", userId, { expires: 1, path: "/" });
-        Cookies.set("memberNo", String(res.member_no), { expires: 1, path: "/" });
 
         alert(`${userId}님, 환영합니다!`);
         window.location.href = "/";

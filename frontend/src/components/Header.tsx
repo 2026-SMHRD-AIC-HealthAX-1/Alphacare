@@ -28,7 +28,6 @@ export default function Header() {
     } finally {
       Cookies.remove("isLoggedIn", { path : "/"});
       Cookies.remove("userId", { path : "/"});
-      Cookies.remove("memberNo", { path : "/"});
 
       setIsLoggedIn(false);
       setUserId("");

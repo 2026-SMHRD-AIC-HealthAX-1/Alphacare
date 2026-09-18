@@ -14,7 +14,6 @@ interface CounselingLog {
 }
 
 export default function MyPageCalendarContent() {
-  const [selectedDate] = useState("2026.06.15");
   const [date, setDate] = useState<Date>(new Date());
   const calendarRef = useRef<any>(null);
 
@@ -60,25 +59,23 @@ export default function MyPageCalendarContent() {
   }, []);
 
   return (
-    <div className="flex max-w-7xl mx-auto mt-8 px-6 gap-10">
+    <div className="max-w-7xl mx-auto mt-4 sm:mt-8 px-3 sm:px-6">
 
-      {/* 2. 메인 콘텐츠 영역 (좌: 캘린더 / 우: 상담 기록) */}
-      <main className="flex-1 grid grid-cols-12 gap-8">
+      {/* 2. 메인 콘텐츠 영역 (모바일: 위아래 / md 이상: 좌 캘린더-우 상담기록) */}
+      <main className="grid grid-cols-1 md:grid-cols-12 gap-6 sm:gap-8 md:gap-10">
         {/* 좌측: 캘린더 영역 */}
-
-        <section className="col-span-4 p-6 sticky top-8 h-fit">
-
-          <div className="relative w-fit mx-auto">
+        <section className="md:col-span-4 md:sticky md:top-8 md:h-fit">
+          <div className="w-full max-w-xs mx-auto">
 
             {/* 안내 문구 */}
-            <p className="absolute left-0 bottom-[calc(100%+10px)] text-[13px] text-black font-normal whitespace-nowrap">
+            <p className="text-[13px] text-black font-normal text-center md:text-left mb-2">
               상담내역을 확인할 날짜를 선택해주세요.
             </p>
 
             {/* 캘린더 */}
             <calendar-date
               ref={calendarRef}
-              class="cally bg-base-100 border border-base-300 shadow-lg"
+              class="cally bg-base-100 border border-base-300 shadow-lg w-full"
             >
               <svg
                 aria-label="Previous"
@@ -113,17 +110,17 @@ export default function MyPageCalendarContent() {
 
         </section>
         {/* 우측: 상담 기록 이미지 규격 비교 (100px ~ 500px) */}
-        <section className="col-span-8 p-6">
+        <section className="md:col-span-8">
 
-          <div className="space-y-6 max-h-[800px] overflow-y-auto pr-2">
+          <div className="space-y-4 sm:space-y-6 max-h-[70vh] md:max-h-[800px] overflow-y-auto pr-1 sm:pr-2">
             {logs.map((log) => (
               <div
                 key={log.id}
-                className="border p-5 space-y-4"
+                className="border rounded-lg p-4 sm:p-5 space-y-3 sm:space-y-4"
               >
                 {/* 회차 및 시간/감정 헤더 */}
-                <div className="flex justify-between items-center border-b pb-3">
-                  <span className="font-bold text-[#1F6170] text-base">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
+                  <span className="font-bold text-[#1F6170] text-sm sm:text-base">
                     {formattedDate}
                   </span>
                   <span className="text-[#1F6170] text-xs font-bold px-3 py-1.5 rounded-full border border-[#1F6170]">
@@ -132,14 +129,15 @@ export default function MyPageCalendarContent() {
                 </div>
 
                 {/* 크기별 이미지 및 설명 */}
-                <div className="flex flex-col md:flex-row gap-5 items-start">
-                  <div className="flex-shrink-0">
+                <div className="flex flex-col md:flex-row gap-4 sm:gap-5 items-center md:items-start">
+                  <div className="flex-shrink-0 flex flex-col items-center">
                     <img
                       src={log.imageUrl}
                       alt={`표정 스냅샷 ${log.imageSize}px`}
                       style={{
                         width: `${log.imageSize}px`,
                         height: `${log.imageSize}px`,
+                        maxWidth: "100%",
                       }}
                       className="object-cover rounded-lg border border-gray-200"
                     />
@@ -148,7 +146,7 @@ export default function MyPageCalendarContent() {
                     </span>
                   </div>
 
-                  <div className="flex-1 space-y-2 text-sm text-gray-700 pt-2">
+                  <div className="flex-1 w-full space-y-2 text-sm text-gray-700 pt-1 md:pt-2">
                     <p className="font-semibold text-gray-900 text-base mb-2">
                       상담 요약 및 규격 특징
                     </p>
