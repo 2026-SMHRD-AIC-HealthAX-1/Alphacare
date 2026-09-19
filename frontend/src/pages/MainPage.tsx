@@ -1,14 +1,21 @@
-﻿import { useRef } from "react";
-import Cam from "../assets/Cam.png";
+﻿import { useRef, useEffect } from "react";
 import face_1 from "../assets/face_1.png";
 import CounselImg_2 from "../assets/CounselImg_2.png"; 
 import EmotionCalender from "../assets/EmotionCalender.png" 
 import Report from "../assets/Report.png"
+import cam300 from "../assets/cam300.webm"
 
 import { motion, useScroll, useTransform } from "framer-motion";
 
 export default function MainPage() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.playbackRate = 0.5;
+    }
+  }, []);
 
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -80,7 +87,7 @@ export default function MainPage() {
 
 
           {/* ==================================================
-              1번 이미지
+              1번 영상
               ================================================== */}
           <div
             className="
@@ -94,9 +101,13 @@ export default function MainPage() {
               overflow-hidden
             "
           >
-            <img
-              src={Cam}
-              alt="Feely 카메라"
+            <video
+              ref={videoRef}
+              src={cam300}
+              autoPlay
+              muted
+              loop
+              playsInline
               className="
                 block
                 w-screen
