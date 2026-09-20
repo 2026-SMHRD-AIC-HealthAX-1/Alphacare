@@ -23,11 +23,11 @@ const diaryImages = [
 
 export default function Mshop() {
     const [showHistory, setShowHistory] = useState(false);
-    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [selectedProduct, setSelectedProduct] = useState<{ name: string; image: string; point: string } | null>(null);
     const [diaryIndex, setDiaryIndex] = useState(0);
     const [diaryDirection, setDiaryDirection] = useState("right");
     const [isSliding, setIsSliding] = useState(false);
-    const [selectedDiaryType, setSelectedDiaryType] = useState(null);
+    const [selectedDiaryType, setSelectedDiaryType] = useState<string | null>(null);
     const [diaryStartDate, setDiaryStartDate] = useState("");
     const [diaryEndDate, setDiaryEndDate] = useState("");
 
@@ -666,11 +666,6 @@ export default function Mshop() {
                                                                     diaryStartDate &&
                                                                     selectedEndDate
                                                                 ) {
-
-                                                                    const startDate =
-                                                                        new Date(
-                                                                            diaryStartDate
-                                                                        );
 
                                                                     const endDate =
                                                                         new Date(
