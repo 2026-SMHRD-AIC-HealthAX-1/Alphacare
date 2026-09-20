@@ -47,7 +47,7 @@ export const AdminPage: React.FC = () => {
     { userSeq: 3, userId: 'user03', userName: '박민수', userTel: '010-5555-6666', attendanceCount: 3, totalCounselCount: 1, isHighRisk: false, status: 'BLOCKED' },
   ]);
 
-  const [musicList, setMusicList] = useState<Music[]>([
+  const [musicList] = useState<Music[]>([
     { musicId: 1, title: 'Weightless', artist: 'Marconi Union', genre: 'Ambient', emotionTag: '불안', registeredAt: '2026-09-01' },
     { musicId: 2, title: 'River Flows in You', artist: '이루마', genre: 'New Age', emotionTag: '슬픔', registeredAt: '2026-09-05' },
   ]);

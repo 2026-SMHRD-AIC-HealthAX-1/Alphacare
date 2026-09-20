@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 export default function EmotionGraph() {
-  const [currentWeek, setCurrentWeek] = useState("5월 19일 - 5월 25일");
+  const [currentWeek] = useState("5월 19일 - 5월 25일");
 
   return (
     <div className="space-y-6">

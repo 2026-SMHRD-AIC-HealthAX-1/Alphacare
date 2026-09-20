@@ -164,7 +164,7 @@ export default function MyPageCalendarContent() {
             >
               <svg
                 aria-label="Previous"
-                class="fill-current size-4"
+                className="fill-current size-4"
                 slot="previous"
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
@@ -177,7 +177,7 @@ export default function MyPageCalendarContent() {
 
               <svg
                 aria-label="Next"
-                class="fill-current size-4"
+                className="fill-current size-4"
                 slot="next"
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"

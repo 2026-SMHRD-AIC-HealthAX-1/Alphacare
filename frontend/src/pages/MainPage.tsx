@@ -1,6 +1,4 @@
 ﻿import { useRef, useEffect } from "react";
-import EmotionCalender from "../assets/EmotionCalender.png";
-import Report from "../assets/Report.png";
 import cam from "../assets/cam.webm";
 import face from "../assets/face.webm";
 import chat from "../assets/chat.webm";
