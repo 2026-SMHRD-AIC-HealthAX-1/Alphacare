@@ -24,7 +24,6 @@ export default function LoginPage() {
       if (res.loginFlag) {
         Cookies.set("isLoggedIn", "true", { expires: 1, path: "/" });
         Cookies.set("userId", userId, { expires: 1, path: "/" });
-        Cookies.set("memberNo", String(res.member_no), { expires: 1, path: "/" });
 
         alert(`${userId}님, 환영합니다!`);
         window.location.href = "/";
@@ -45,7 +44,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-[calc(100vh-80px)] flex flex-col items-center justify-center px-4 py-8 sm:py-12">
       <div className="w-full max-w-md mx-auto space-y-4 sm:space-y-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-center text-[#1F6170]">
+        <h1 className="text-2xl sm:text-3xl font-bold text-center text-[#1F6170] dark:text-teal-400">
           로그인
         </h1>
         <form onSubmit={handleLogin} className="space-y-4">
@@ -84,13 +83,13 @@ export default function LoginPage() {
             <div className="w-64 flex flex-col gap-3 mx-auto">
               <div className="flex items-center justify-center text-xs">
                 <Link to="/FindId" className="hover:underline">아이디 찾기</Link>
-                <span className="mx-4 text-gray-300 font-light select-none">|</span>
+                <span className="mx-4 text-gray-300 dark:text-gray-600 font-light select-none">|</span>
                 <Link to="/FindPw" className="hover:underline">비밀번호 찾기</Link>
               </div>
               <div className="flex items-center gap-2 w-full">
                 <Link
                   to="/SignUp"
-                  className="flex-1 h-11 flex items-center justify-center bg-gray-100 text-gray-700 font-bold text-base sm:text-lg rounded-lg shadow-sm hover:bg-gray-200 transition-colors"
+                  className="flex-1 h-11 flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-base sm:text-lg rounded-lg shadow-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                 >
                   회원가입
                 </Link>

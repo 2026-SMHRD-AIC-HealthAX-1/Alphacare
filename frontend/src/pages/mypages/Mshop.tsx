@@ -150,15 +150,15 @@ export default function Mshop() {
 
                             {/* 보유 마일리지 */}
                             <div className="text-center py-2 sm:py-0">
-                                <p className="text-gray-500 mb-2">보유 마일리지</p>
-                                <p className="text-2xl sm:text-3xl font-bold text-[#1F6170]">
+                                <p className="text-gray-500 dark:text-gray-400 mb-2">보유 마일리지</p>
+                                <p className="text-2xl sm:text-3xl font-bold text-[#1F6170] dark:text-teal-400">
                                     12,500 P
                                 </p>
                             </div>
 
                             {/* 마일리지 내역 */}
                             <div className="text-center py-2 sm:py-0">
-                                <p className="text-gray-500 mb-4">마일리지 내역</p>
+                                <p className="text-gray-500 dark:text-gray-400 mb-4">마일리지 내역</p>
 
                                 <button
                                     onClick={() => setShowHistory(true)}
@@ -172,7 +172,7 @@ export default function Mshop() {
                     </div>
 
                     {/* 마일리지 안내 */}
-                    <div className="mb-3 sm:mb-4 p-3 sm:p-4 bg-gray-50 border text-xs sm:text-sm text-gray-600 leading-6 sm:leading-7">
+                    <div className="mb-3 sm:mb-4 p-3 sm:p-4 bg-gray-50 dark:bg-gray-900 border text-xs sm:text-sm text-gray-600 dark:text-gray-400 leading-6 sm:leading-7">
                         <p>• 마일리지는 하루에 한 번, 상담 종료 후 자동 적립됩니다.</p>
                         <p>• 적립 내역은 마일리지 내역을 통해 확인 가능합니다.</p>
                         <p>• 교환요청 하신 금액상품권은 등록된 핸드폰번호로 발송됩니다.</p>
@@ -202,7 +202,7 @@ export default function Mshop() {
                                         <React.Fragment key={idx}>
 
                                             {/* 다이어리 이미지 */}
-                                            <div className="col-span-2 sm:col-span-3 min-w-0 h-[260px] sm:h-[300px] lg:h-[350px] p-0 m-0 border-b border-gray-200 overflow-hidden relative">
+                                            <div className="col-span-2 sm:col-span-3 min-w-0 h-[260px] sm:h-[300px] lg:h-[350px] p-0 m-0 border-b border-gray-200 dark:border-gray-700 overflow-hidden relative">
                                                 <div className="w-full h-full overflow-hidden relative">
 
                                                     {/* 현재 이미지 */}
@@ -265,12 +265,12 @@ export default function Mshop() {
                                                     }}
                                                     className="absolute left-3 top-1/2 -translate-y-1/2
                                                     w-7 h-7 rounded-full
-                                                    bg-white/70 hover:bg-white
+                                                    bg-white/70 dark:bg-gray-800/70 hover:bg-white dark:hover:bg-gray-800
                                                     transition
                                                     flex items-center justify-center z-10"
                                                 >
                                                     <span className="relative -left-[1px] -top-[2px]
-                                                    text-xl font-light text-gray-500
+                                                    text-xl font-light text-gray-500 dark:text-gray-400
                                                     leading-none">
                                                         ‹
                                                     </span>
@@ -285,12 +285,12 @@ export default function Mshop() {
                                                     }}
                                                     className="absolute right-3 top-1/2 -translate-y-1/2
                                                     w-7 h-7 rounded-full
-                                                    bg-white/70 hover:bg-white
+                                                    bg-white/70 dark:bg-gray-800/70 hover:bg-white dark:hover:bg-gray-800
                                                     transition
                                                     flex items-center justify-center z-10"
                                                 >
                                                     <span className="relative left-[1px] -top-[2px]
-                                                    text-xl font-light text-gray-500
+                                                    text-xl font-light text-gray-500 dark:text-gray-400
                                                     leading-none">
                                                         ›
                                                     </span>
@@ -299,7 +299,7 @@ export default function Mshop() {
                                             </div>
 
                                             {/* 다이어리 선택 버튼 */}
-                                            <div className="col-span-2 sm:col-span-1 h-[260px] sm:h-[300px] lg:h-[350px] min-w-0 border-l-0 sm:border-l border-b border-gray-200 relative overflow-hidden">
+                                            <div className="col-span-2 sm:col-span-1 h-[260px] sm:h-[300px] lg:h-[350px] min-w-0 border-l-0 sm:border-l border-b border-gray-200 dark:border-gray-700 relative overflow-hidden">
 
                                                 <div className="absolute inset-0 flex flex-col items-center justify-center translate-y-0 sm:translate-y-[-10px] px-2">
 
@@ -309,12 +309,12 @@ export default function Mshop() {
                                                     </p>
 
                                                     {/* 가격 */}
-                                                    <p className="relative top-0 sm:top-[-15px] mt-1 text-[16px] sm:text-[18px] text-[#1F6170] leading-5 font-semibold text-center">
+                                                    <p className="relative top-0 sm:top-[-15px] mt-1 text-[16px] sm:text-[18px] text-[#1F6170] dark:text-teal-400 leading-5 font-semibold text-center">
                                                         20,000p
                                                     </p>
 
                                                     {/* 하루의 끝 */}
-                                                    <p className="relative top-0 sm:top-[25px] mt-1 text-[14px] text-gray-500 text-center mb-2 sm:mb-3">
+                                                    <p className="relative top-0 sm:top-[25px] mt-1 text-[14px] text-gray-500 dark:text-gray-400 text-center mb-2 sm:mb-3">
                                                         하루의 끝
                                                     </p>
 
@@ -327,7 +327,7 @@ export default function Mshop() {
                                                     </button>
 
                                                     {/* 상담기록 */}
-                                                    <p className="relative top-0 sm:top-[25px] text-[14px] text-gray-500 text-center mb-2 sm:mb-3">
+                                                    <p className="relative top-0 sm:top-[25px] text-[14px] text-gray-500 dark:text-gray-400 text-center mb-2 sm:mb-3">
                                                         상담기록
                                                     </p>
 
@@ -356,9 +356,9 @@ export default function Mshop() {
             p-3 sm:p-4
             flex flex-col items-center
             min-h-[245px] sm:min-h-[300px]
-            border-b border-gray-200
-            ${idx % 2 === 0 ? "border-r border-gray-200" : ""}
-            ${idx % 4 !== 3 ? "sm:border-r sm:border-gray-200" : "sm:border-r-0"}   
+            border-b border-gray-200 dark:border-gray-700
+            ${idx % 2 === 0 ? "border-r border-gray-200 dark:border-gray-700" : ""}
+            ${idx % 4 !== 3 ? "sm:border-r sm:border-gray-200 dark:border-gray-700" : "sm:border-r-0"}   
             sm:[&:nth-child(4n)]:border-r-0
         `}
                                     >
@@ -378,7 +378,7 @@ export default function Mshop() {
                                         </p>
 
                                         {/* 가격 */}
-                                        <p className="w-full min-w-0 mt-2 text-xs sm:text-[14px] leading-5 text-[#1F6170] font-bold text-center">
+                                        <p className="w-full min-w-0 mt-2 text-xs sm:text-[14px] leading-5 text-[#1F6170] dark:text-teal-400 font-bold text-center">
                                             {item.point}
                                         </p>
 
@@ -402,7 +402,7 @@ export default function Mshop() {
                         showHistory && (
                             <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
 
-                                <div className="bg-white rounded-xl p-4 sm:p-6 w-[calc(100%-2rem)] max-w-[500px]">
+                                <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 w-[calc(100%-2rem)] max-w-[500px]">
 
                                     <div className="flex justify-between items-center mb-5">
                                         <h2 className="text-xl font-bold">
@@ -419,7 +419,7 @@ export default function Mshop() {
 
                                     <table className="w-full text-center border">
                                         <thead>
-                                            <tr className="border-b bg-gray-100">
+                                            <tr className="border-b bg-gray-100 dark:bg-gray-700">
                                                 <th className="py-2">날짜</th>
                                                 <th>구분</th>
                                                 <th>포인트</th>
@@ -447,7 +447,7 @@ export default function Mshop() {
                         selectedProduct && (
                             <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
 
-                                <div className="bg-white rounded-xl p-4 sm:p-6 w-[calc(100%-2rem)] max-w-[450px] shadow-lg">
+                                <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 w-[calc(100%-2rem)] max-w-[450px] shadow-lg">
 
                                     {/* 제목 */}
                                     <div className="flex justify-between items-center mb-6">
@@ -457,7 +457,7 @@ export default function Mshop() {
 
                                         <button
                                             onClick={() => setSelectedProduct(null)}
-                                            className="text-xl text-gray-500"
+                                            className="text-xl text-gray-500 dark:text-gray-400"
                                         >
                                             ✕
                                         </button>
@@ -469,11 +469,11 @@ export default function Mshop() {
                                             해당 상품으로 교환하시겠습니까?
                                         </p>
 
-                                        <p className="text-[#1F6170] font-bold mb-3">
+                                        <p className="text-[#1F6170] dark:text-teal-400 font-bold mb-3">
                                             {selectedProduct.name}
                                         </p>
 
-                                        <p className="text-sm text-gray-500">
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">
                                             교환한 마일리지는 환불되지않습니다.<br />
                                             교환한 상품은 등록하신 핸드폰번호로 발송됩니다.
                                         </p>
@@ -482,7 +482,7 @@ export default function Mshop() {
                                     {/* 마일리지 정보 */}
                                     <div className="border rounded-lg p-4 mb-6">
                                         <div className="flex justify-between mb-3">
-                                            <span className="text-gray-500">
+                                            <span className="text-gray-500 dark:text-gray-400">
                                                 보유마일리지
                                             </span>
 
@@ -492,11 +492,11 @@ export default function Mshop() {
                                         </div>
 
                                         <div className="flex justify-between">
-                                            <span className="text-gray-500">
+                                            <span className="text-gray-500 dark:text-gray-400">
                                                 상품가격
                                             </span>
 
-                                            <span className="font-bold text-[#1F6170]">
+                                            <span className="font-bold text-[#1F6170] dark:text-teal-400">
                                                 {selectedProduct.point}
                                             </span>
                                         </div>
@@ -525,7 +525,7 @@ export default function Mshop() {
                         selectedDiaryType && (
                             <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
 
-                                <div className="bg-white rounded-xl p-4 sm:p-6 w-[calc(100%-2rem)] max-w-[450px] shadow-lg text-[13px]">
+                                <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 w-[calc(100%-2rem)] max-w-[450px] shadow-lg text-[13px]">
 
                                     {/* 제목 */}
                                     <div className="flex justify-between items-center mb-6">
@@ -540,7 +540,7 @@ export default function Mshop() {
                                                 setDiaryStartDate("");
                                                 setDiaryEndDate("");
                                             }}
-                                            className="text-[18px] text-gray-500"
+                                            className="text-[18px] text-gray-500 dark:text-gray-400"
                                         >
                                             ✕
                                         </button>
@@ -555,7 +555,7 @@ export default function Mshop() {
                                             해당 상품으로 교환하시겠습니까?
                                         </p>
 
-                                        <p className="text-[17px] text-[#1F6170] font-bold mb-4">
+                                        <p className="text-[17px] text-[#1F6170] dark:text-teal-400 font-bold mb-4">
                                             Feely Diary - {selectedDiaryType}
                                         </p>
 
@@ -566,12 +566,12 @@ export default function Mshop() {
                                             <div className="border rounded-lg p-4 mb-5 text-left">
 
                                                 {/* 기간 제목 */}
-                                                <p className="text-[13px] font-semibold text-gray-700 mb-1 text-center">
+                                                <p className="text-[13px] font-semibold text-gray-700 dark:text-gray-300 mb-1 text-center">
                                                     상담 기간을 선택해주세요
                                                 </p>
 
                                                 {/* 최대 기간 안내 */}
-                                                <p className="text-[11px] text-gray-400 mb-3 text-center">
+                                                <p className="text-[11px] text-gray-400 dark:text-gray-500 mb-3 text-center">
                                                     최대 3개월까지 선택할 수 있습니다.
                                                 </p>
 
@@ -582,7 +582,7 @@ export default function Mshop() {
                                                     {/* 시작일 */}
                                                     <div className="w-full sm:flex-1">
 
-                                                        <p className="text-[11px] text-gray-500 mb-1">
+                                                        <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">
                                                             시작일
                                                         </p>
 
@@ -600,14 +600,14 @@ export default function Mshop() {
                                                                 // 기존 종료일 초기화
                                                                 setDiaryEndDate("");
                                                             }}
-                                                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-[12px] outline-none focus:border-[#1F6170]"
+                                                            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-[12px] outline-none focus:border-[#1F6170]"
                                                         />
 
                                                     </div>
 
 
                                                     {/* 물결 표시 */}
-                                                    <div className="hidden sm:block pb-2 text-gray-400 text-[12px] font-medium">
+                                                    <div className="hidden sm:block pb-2 text-gray-400 dark:text-gray-500 text-[12px] font-medium">
                                                         ~
                                                     </div>
 
@@ -615,7 +615,7 @@ export default function Mshop() {
                                                     {/* 종료일 */}
                                                     <div className="w-full sm:flex-1">
 
-                                                        <p className="text-[11px] text-gray-500 mb-1">
+                                                        <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">
                                                             종료일
                                                         </p>
 
@@ -709,7 +709,7 @@ export default function Mshop() {
                                                                 );
 
                                                             }}
-                                                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-[12px] outline-none focus:border-[#1F6170]"
+                                                            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-[12px] outline-none focus:border-[#1F6170]"
                                                         />
 
                                                     </div>
@@ -722,7 +722,7 @@ export default function Mshop() {
 
 
                                         {/* 안내 문구 */}
-                                        <div className="text-[12px] text-gray-500 leading-5">
+                                        <div className="text-[12px] text-gray-500 dark:text-gray-400 leading-5">
 
                                             {/* 추억형 전용 안내 */}
                                             {selectedDiaryType === "추억형" && (
@@ -762,7 +762,7 @@ export default function Mshop() {
                                         {/* 보유 마일리지 */}
                                         <div className="flex justify-between mb-3">
 
-                                            <span className="text-gray-500 text-[15px]">
+                                            <span className="text-gray-500 dark:text-gray-400 text-[15px]">
                                                 보유 마일리지
                                             </span>
 
@@ -776,11 +776,11 @@ export default function Mshop() {
                                         {/* 상품 가격 */}
                                         <div className="flex justify-between">
 
-                                            <span className="text-gray-500 text-[15px]">
+                                            <span className="text-gray-500 dark:text-gray-400 text-[15px]">
                                                 상품 가격
                                             </span>
 
-                                            <span className="font-bold text-[#1F6170] text-[15px]">
+                                            <span className="font-bold text-[#1F6170] dark:text-teal-400 text-[15px]">
                                                 20,000 P
                                             </span>
 
@@ -830,7 +830,7 @@ export default function Mshop() {
                                         }
                                         className={`w-full py-3 rounded-lg font-semibold text-[16px] text-white ${selectedDiaryType === "추억형" &&
                                             (!diaryStartDate || !diaryEndDate)
-                                            ? "bg-gray-300 cursor-not-allowed"
+                                            ? "bg-gray-300 dark:bg-gray-600 cursor-not-allowed"
                                             : "bg-[#1F6170] hover:bg-[#174d59]"
                                             }`}
                                     >

@@ -59,7 +59,7 @@ export default function FindPw() {
   return (
     <div className="min-h-[calc(100vh-80px)] flex flex-col items-center justify-center px-4 py-8 sm:py-12">
       <div className="w-full max-w-md mx-auto space-y-4 sm:space-y-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-center text-[#1F6170]">
+        <h1 className="text-2xl sm:text-3xl font-bold text-center text-[#1F6170] dark:text-teal-400">
           비밀번호 찾기
         </h1>
 
@@ -117,9 +117,9 @@ export default function FindPw() {
       {/* 임시 비밀번호 발급 결과 모달 */}
       {tempPw && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
-          <div className="bg-white rounded-xl shadow-lg w-full max-w-sm p-6 space-y-4">
-            <h2 className="text-lg font-bold text-[#1F6170]">임시 비밀번호 발급</h2>
-            <p className="text-sm text-gray-600">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg w-full max-w-sm p-6 space-y-4">
+            <h2 className="text-lg font-bold text-[#1F6170] dark:text-teal-400">임시 비밀번호 발급</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               로그인 후 꼭 비밀번호를 변경해주세요.
             </p>
             <div className="flex items-center gap-2">
@@ -128,7 +128,7 @@ export default function FindPw() {
                 readOnly
                 value={tempPw}
                 onFocus={(e) => e.target.select()}
-                className="flex-1 border rounded-md px-3 py-2 text-sm bg-gray-50"
+                className="flex-1 border rounded-md px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900"
               />
               <button
                 type="button"
@@ -141,7 +141,7 @@ export default function FindPw() {
             <button
               type="button"
               onClick={() => setTempPw(null)}
-              className="w-full h-10 flex items-center justify-center bg-gray-100 text-gray-700 font-bold rounded-lg hover:bg-gray-200 transition-colors"
+              className="w-full h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
             >
               닫기
             </button>

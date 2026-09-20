@@ -31,7 +31,6 @@ export interface LoginRequest {
 //로그인 응답
 export interface LoginResponse {
   loginFlag : boolean;
-  member_no : number;
 }
 
 //아이디 찾기

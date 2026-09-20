@@ -53,7 +53,7 @@ export default function FindId() {
   return (
     <div className="min-h-[calc(100vh-80px)] flex flex-col items-center justify-center px-4 py-8 sm:py-12">
       <div className="w-full max-w-md mx-auto space-y-4 sm:space-y-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-center text-[#1F6170]">
+        <h1 className="text-2xl sm:text-3xl font-bold text-center text-[#1F6170] dark:text-teal-400">
           아이디 찾기
         </h1>
 

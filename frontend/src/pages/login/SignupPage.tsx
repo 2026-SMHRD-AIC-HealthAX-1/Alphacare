@@ -120,7 +120,7 @@ export default function SignupPage() {
   return (
     <div className="min-h-[calc(100vh-80px)] flex flex-col items-center justify-center px-4 py-8 sm:py-12">
       <div className="w-full max-w-xl mx-auto space-y-4 sm:space-y-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-center text-[#1F6170]">
+        <h1 className="text-2xl sm:text-3xl font-bold text-center text-[#1F6170] dark:text-teal-400">
           회원가입
         </h1>
 
@@ -160,7 +160,7 @@ export default function SignupPage() {
                 placeholder="비밀번호를 입력해주세요"
                 className="w-64 border rounded-md px-3 py-2 text-sm focus:outline-none"
               />
-              <span className="text-xs text-gray-500 pl-1">
+              <span className="text-xs text-gray-500 dark:text-gray-400 pl-1">
                 영어, 숫자, 특수문자로 구성된 8자리 이상
               </span>
             </div>
