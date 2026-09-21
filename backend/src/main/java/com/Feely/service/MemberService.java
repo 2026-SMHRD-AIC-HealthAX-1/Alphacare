@@ -20,6 +20,7 @@ public class MemberService {
         this.memberRepository = memberRepository;
     }
 
+    // 회원가입
     public MemberDto signup(MemberDto request) {
         if (isBlank(request.id()) || isBlank(request.password())
                 || isBlank(request.name()) || isBlank(request.phone())) {
@@ -47,6 +48,7 @@ public class MemberService {
         }
     }
 
+    // 로그인
     public MemberDto login(MemberDto request, HttpSession session) {
         if (isBlank(request.id()) || isBlank(request.password())) {
             return MemberDto.loginResult(false, MemberResponse.Message.LOGIN_REQUIRED_INPUT);
@@ -54,7 +56,7 @@ public class MemberService {
 
         MemberEntity member = memberRepository.findMemberById(request.id().trim()).orElse(null);
         String hashedPassword = PasswordUtil.sha256(request.password());
-        boolean passwordMatches = member != null && (member.getPw().equals(hashedPassword) || member.getPw().equals(request.password()));
+        boolean passwordMatches = member != null && (member.getPw().equals(hashedPassword) );
 
         if (member == null || !passwordMatches) {
             return MemberDto.loginResult(false, MemberResponse.Message.LOGIN_FAIL);
@@ -64,10 +66,12 @@ public class MemberService {
         return MemberDto.loginResult(true, MemberResponse.Message.LOGIN_SUCCESS);
     }
 
+    // 중복 확인
     public MemberDto duplicateCheck(String id) {
         return MemberDto.duplicateResult(memberRepository.existsByMemberId(id));
     }
 
+    // 아이디 찾기
     public MemberDto findId(String name, String phone) {
         if (isBlank(name) || isBlank(phone)) {
             return MemberDto.FindIdResult(null, MemberResponse.Message.FIND_ID_REQUIRED_INPUT);
@@ -80,6 +84,7 @@ public class MemberService {
         return MemberDto.FindIdResult(memberId, MemberResponse.Message.FIND_ID_SUCCESS);
     }
 
+    // 비밀번호 찾기
     public MemberDto findPassword(MemberDto request) {
         if (isBlank(request.id()) || isBlank(request.phone())) {
             return MemberDto.findPasswordResult(false, null, MemberResponse.Message.FIND_PASSWORD_REQUIRED_INPUT);
@@ -97,6 +102,7 @@ public class MemberService {
         return MemberDto.findPasswordResult(true, temporaryPassword, MemberResponse.Message.TEMP_PASSWORD_SENT);
     }
 
+    // 회원 정보 수정
     public MemberDto updateMember(HttpSession session, MemberDto request) {
         MemberEntity member = (MemberEntity) session.getAttribute("member");
         if (member == null) {
