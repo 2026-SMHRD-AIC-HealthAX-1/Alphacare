@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Cookies from "js-cookie";
 import CounselCalendar from "./EmotionCalender";
 import EmotionGraph from "./WeeklyReport";
 import Mshop from "./Mshop";
 import { updateMember, logout } from "../../API/auth";
+import { clearAuthCookies } from "../../API/axios";
 import { isValidPassword, isValidPhone, sanitizePhoneInput } from "../../utils/validation";
 
 export default function MyPage() {
@@ -55,8 +55,7 @@ export default function MyPage() {
       } catch (logoutError) {
         console.error("로그아웃 오류:", logoutError);
       } finally {
-        Cookies.remove("isLoggedIn", { path: "/" });
-        Cookies.remove("userId", { path: "/" });
+        clearAuthCookies();
         navigate("/Login");
       }
     } catch (error: any) {

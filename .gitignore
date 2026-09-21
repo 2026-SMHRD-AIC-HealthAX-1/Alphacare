@@ -43,3 +43,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 /.metadata/
+
+#Claude API 키
+.APIenv
+APIenv

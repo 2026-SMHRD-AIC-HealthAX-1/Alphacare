@@ -2,6 +2,7 @@
 import logo from "../assets/Feely_Logo.png";
 import { useState, useEffect } from "react";
 import { logout } from "../API/auth";
+import { clearAuthCookies } from "../API/axios";
 import Cookies from "js-cookie";
 
 export default function Header() {
@@ -26,8 +27,7 @@ export default function Header() {
       } catch (error) {
         console.error("로그아웃 오류 발생")
     } finally {
-      Cookies.remove("isLoggedIn", { path : "/"});
-      Cookies.remove("userId", { path : "/"});
+      clearAuthCookies();
 
       setIsLoggedIn(false);
       setUserId("");
