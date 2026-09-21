@@ -22,7 +22,6 @@ const diaryImages = [
 ];
 
 export default function Mshop() {
-    const [showHistory, setShowHistory] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<{ name: string; image: string; point: string } | null>(null);
     const [diaryIndex, setDiaryIndex] = useState(0);
     const [diaryDirection, setDiaryDirection] = useState("right");
@@ -30,12 +29,6 @@ export default function Mshop() {
     const [selectedDiaryType, setSelectedDiaryType] = useState<string | null>(null);
     const [diaryStartDate, setDiaryStartDate] = useState("");
     const [diaryEndDate, setDiaryEndDate] = useState("");
-
-    const mileageHistory = [
-        { date: "2026-09-01", type: "적립", point: "+500" },
-        { date: "2026-09-05", type: "사용", point: "-1000" },
-        { date: "2026-09-10", type: "적립", point: "+300" },
-    ];
 
     const products = [
         {
@@ -145,44 +138,27 @@ export default function Mshop() {
                 <main className="w-full min-w-0">
 
                     {/* 상단 마일리지 영역 */}
-                    <div className=" p-4 sm:p-6 mb-3 sm:mb-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x">
+                    <div className="p-4 sm:p-6 mb-0">
+                        <div className="grid grid-cols-1 sm:grid-cols-2">
 
                             {/* 보유 마일리지 */}
-                            <div className="text-center py-2 sm:py-0">
-                                <p className="text-gray-500 dark:text-gray-400 mb-2">보유 마일리지</p>
-                                <p className="text-2xl sm:text-3xl font-bold text-[#1F6170] dark:text-teal-400">
+                            <div className="flex items-center justify-center gap-3 py-2 sm:py-0 relative left-[-100px]">
+                                <p className="text-gray-500 dark:text-gray-400">보유 마일리지</p>
+                                <p className="text-2xl sm:text-3xl font-bold text-gray-600 dark:text-teal-400">
                                     12,500 P
                                 </p>
-                            </div>
-
-                            {/* 마일리지 내역 */}
-                            <div className="text-center py-2 sm:py-0">
-                                <p className="text-gray-500 dark:text-gray-400 mb-4">마일리지 내역</p>
-
-                                <button
-                                    onClick={() => setShowHistory(true)}
-                                    className="w-24 h-9 bg-[#1F6170] rounded-lg text-white px-3 py-1 flex items-center justify-center mx-auto"
-                                >
-                                    내역 보기
-                                </button>
                             </div>
 
                         </div>
                     </div>
 
-                    {/* 마일리지 안내 */}
-                    <div className="mb-3 sm:mb-4 p-3 sm:p-4 bg-gray-50 dark:bg-gray-900 border text-xs sm:text-sm text-gray-600 dark:text-gray-400 leading-6 sm:leading-7">
-                        <p>• 마일리지는 하루에 한 번, 상담 종료 후 자동 적립됩니다.</p>
-                        <p>• 적립 내역은 마일리지 내역을 통해 확인 가능합니다.</p>
-                        <p>• 교환요청 하신 금액상품권은 등록된 핸드폰번호로 발송됩니다.</p>
-                        <p>• 교환한 마일리지는 환불되지 않습니다.</p>
-                        <p>• 유효기간 연장은 불가능합니다.</p>
-                        <p>• 마일리지를 현금으로 교환할 수 없습니다.</p>
-                    </div>
+                    {/* 마일리지와 상품권 영역 구분선 */}
+                    <div className="border-t border-gray-200 dark:border-gray-700 mt-[0px] mb-[20px]"></div>
+
+                    
 
                     {/* 상품권 목록 */}
-                    <div className="border overflow-hidden">
+                    <div className="overflow-hidden">
                         <div className="grid grid-cols-2 sm:grid-cols-4 items-stretch min-w-0">
                             {products.map((item, idx) => {
 
@@ -202,7 +178,7 @@ export default function Mshop() {
                                         <React.Fragment key={idx}>
 
                                             {/* 다이어리 이미지 */}
-                                            <div className="col-span-2 sm:col-span-3 min-w-0 h-[260px] sm:h-[300px] lg:h-[350px] p-0 m-0 border-b border-gray-200 dark:border-gray-700 overflow-hidden relative">
+                                            <div className="col-span-2 sm:col-span-3 min-w-0 h-[260px] sm:h-[300px] lg:h-[350px] p-0 m-0 overflow-hidden relative">
                                                 <div className="w-full h-full overflow-hidden relative">
 
                                                     {/* 현재 이미지 */}
@@ -299,7 +275,7 @@ export default function Mshop() {
                                             </div>
 
                                             {/* 다이어리 선택 버튼 */}
-                                            <div className="col-span-2 sm:col-span-1 h-[260px] sm:h-[300px] lg:h-[350px] min-w-0 border-l-0 sm:border-l border-b border-gray-200 dark:border-gray-700 relative overflow-hidden">
+                                            <div className="col-span-2 sm:col-span-1 h-[260px] sm:h-[300px] lg:h-[350px] min-w-0 relative overflow-hidden">
 
                                                 <div className="absolute inset-0 flex flex-col items-center justify-center translate-y-0 sm:translate-y-[-10px] px-2">
 
@@ -321,7 +297,7 @@ export default function Mshop() {
                                                     {/* 일기형 */}
                                                     <button
                                                         onClick={() => setSelectedDiaryType("일기형")}
-                                                        className="relative top-0 sm:top-[30px] w-[120px] h-[30px] bg-[#1F6170] text-sm sm:text-[15px] text-white rounded-lg flex items-center justify-center text-center mb-3 sm:mb-5"
+                                                        className="relative top-0 sm:top-[30px] w-[120px] h-[30px] bg-[#0D9488] text-sm sm:text-[15px] text-white rounded-lg flex items-center justify-center text-center mb-3 sm:mb-5"
                                                     >
                                                         일기형
                                                     </button>
@@ -334,7 +310,7 @@ export default function Mshop() {
                                                     {/* 추억형 */}
                                                     <button
                                                         onClick={() => setSelectedDiaryType("추억형")}
-                                                        className="relative top-0 sm:top-[30px] w-[120px] h-[30px] bg-[#1F6170] text-sm sm:text-[15px] text-white rounded-lg flex items-center justify-center text-center"
+                                                        className="relative top-0 sm:top-[30px] w-[120px] h-[30px] bg-[#0D9488] text-sm sm:text-[15px] text-white rounded-lg flex items-center justify-center text-center"
                                                     >
                                                         추억형
                                                     </button>
@@ -356,10 +332,6 @@ export default function Mshop() {
             p-3 sm:p-4
             flex flex-col items-center
             min-h-[245px] sm:min-h-[300px]
-            border-b border-gray-200 dark:border-gray-700
-            ${idx % 2 === 0 ? "border-r border-gray-200 dark:border-gray-700" : ""}
-            ${idx % 4 !== 3 ? "sm:border-r sm:border-gray-200 dark:border-gray-700" : "sm:border-r-0"}   
-            sm:[&:nth-child(4n)]:border-r-0
         `}
                                     >
 
@@ -385,7 +357,7 @@ export default function Mshop() {
                                         {/* 교환 버튼 */}
                                         <button
                                             onClick={() => setSelectedProduct(item)}
-                                            className="w-[120px] h-[30px] mt-3 bg-[#1F6170] text-white rounded-lg text-[14px] text-center flex items-center justify-center whitespace-nowrap"
+                                            className="w-[120px] h-[30px] mt-3 bg-[#0D9488] text-white rounded-lg text-[14px] text-center flex items-center justify-center whitespace-nowrap"
                                         >
                                             교환하기
                                         </button>
@@ -396,52 +368,22 @@ export default function Mshop() {
                         </div>
                     </div >
 
+                    {/* 마일리지 안내 */}
+                    <div className="w-full border-t border-gray-300 dark:border-gray-700 mt-[60px] p-4 sm:p-5 text-gray-600 dark:text-gray-400">
+                        <p className="text-[14px] sm:text-[16px] font-semibold text-gray-800 dark:text-gray-200 mb-2">
+                            주의 사항
+                        </p>
+                        <div className="text-[10px] sm:text-xs leading-6 sm:leading-7">
+                            <p>• 마일리지는 하루에 한 번, 상담 종료 후 자동 적립됩니다.</p>
+                            <p>• 적립 내역은 마일리지 내역을 통해 확인 가능합니다.</p>
+                            <p>• 교환요청 하신 금액상품권은 등록된 핸드폰번호로 발송됩니다.</p>
+                            <p>• 교환한 마일리지는 환불되지 않습니다.</p>
+                            <p>• 유효기간 연장은 불가능합니다.</p>
+                            <p>• 마일리지를 현금으로 교환할 수 없습니다.</p>
+                        </div>
+                    </div>
 
-                    {/* 마일리지 내역 모달 */}
-                    {
-                        showHistory && (
-                            <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
 
-                                <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 w-[calc(100%-2rem)] max-w-[500px]">
-
-                                    <div className="flex justify-between items-center mb-5">
-                                        <h2 className="text-xl font-bold">
-                                            마일리지 내역
-                                        </h2>
-
-                                        <button
-                                            onClick={() => setShowHistory(false)}
-                                            className="text-xl"
-                                        >
-                                            ✕
-                                        </button>
-                                    </div>
-
-                                    <table className="w-full text-center border">
-                                        <thead>
-                                            <tr className="border-b bg-gray-100 dark:bg-gray-700">
-                                                <th className="py-2">날짜</th>
-                                                <th>구분</th>
-                                                <th>포인트</th>
-                                            </tr>
-                                        </thead>
-
-                                        <tbody>
-                                            {mileageHistory.map((item, idx) => (
-                                                <tr key={idx} className="border-b">
-                                                    <td className="py-2">{item.date}</td>
-                                                    <td>{item.type}</td>
-                                                    <td>{item.point}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-
-                                </div>
-
-                            </div>
-                        )
-                    }
                     {/* 상품 교환 확인 모달 */}
                     {
                         selectedProduct && (
@@ -510,7 +452,7 @@ export default function Mshop() {
                                             // 실제 교환 API 연결 부분
                                             setSelectedProduct(null);
                                         }}
-                                        className="w-full bg-[#1F6170] text-white py-3 rounded-lg font-semibold"
+                                        className="w-full bg-[#0D9488] text-white py-3 rounded-lg font-semibold"
                                     >
                                         교환하기
                                     </button>
@@ -826,7 +768,7 @@ export default function Mshop() {
                                         className={`w-full py-3 rounded-lg font-semibold text-[16px] text-white ${selectedDiaryType === "추억형" &&
                                             (!diaryStartDate || !diaryEndDate)
                                             ? "bg-gray-300 dark:bg-gray-600 cursor-not-allowed"
-                                            : "bg-[#1F6170] hover:bg-[#174d59]"
+                                            : "bg-[#0D9488] hover:bg-[#0D9488]"
                                             }`}
                                     >
                                         교환하기

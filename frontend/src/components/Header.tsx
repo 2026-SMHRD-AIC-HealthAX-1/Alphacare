@@ -1,5 +1,5 @@
 ﻿import { Link } from "react-router-dom";
-import logo from "../assets/Feely_Logo.png";
+import logo from "../assets/Feely_Logo_2.png";
 import { useState, useEffect } from "react";
 import { logout } from "../API/auth";
 import Cookies from "js-cookie";
