@@ -45,13 +45,13 @@ export default function Header() {
             <img
               src={logo}
               alt="Feely Logo"
-              className="h-16 w-auto object-contain -translate-y-2"
+              className="h-12 w-auto object-contain -translate-y--2"
             />
           </Link>
         </div>
 
         {/* 네비게이션 메뉴 */}
-        <nav className="flex items-center gap-1 sm:gap-3 text-xs sm:text-base font-medium whitespace-nowrap ml-auto -translate-y-3">
+        <nav className="flex items-center gap-1 sm:gap-3 text-xs sm:text-base font-medium whitespace-nowrap ml-auto -translate-y-1">
           {/* 상담 페이지 */}
           <Link to="/Counsel" className="hover:underline">
             상담하기
