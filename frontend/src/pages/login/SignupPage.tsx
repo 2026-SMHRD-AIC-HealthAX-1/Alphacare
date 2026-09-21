@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { checkDuplicateId, signupUser } from "../../API/auth";
+import { isValidPassword, isValidPhone, sanitizePhoneInput } from "../../utils/validation";
 
 export default function SignupPage() {
   //기능 구현 부분
@@ -54,16 +55,12 @@ export default function SignupPage() {
 
   //휴대폰 번호 숫자가 아닌 문자 제거, 11자리까지만 허용
   const checkphone = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const onlyNum = e.target.value.replace(/[^0-9]/g, "").slice(0, 11);
-    setphone(onlyNum);
+    setphone(sanitizePhoneInput(e.target.value));
   }
 
   //회원가입
   const postSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    const pwRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])[A-Za-z\d!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]{8,}$/;
-    const phoneRegex = /^010\d{8}$/;
 
     if (!userId || !userPw || !pwConfirm || !name || !phone) {
       alert("모든 입력칸을 채워주세요");
@@ -75,7 +72,7 @@ export default function SignupPage() {
       return;
     }
 
-    if (!pwRegex.test(userPw)) {
+    if (!isValidPassword(userPw)) {
       alert("비밀번호는 영문, 숫자, 특수문자로 구성된 8자리 이상이어야 합니다.");
       return;
     }
@@ -85,7 +82,7 @@ export default function SignupPage() {
       return;
     }
 
-    if (!phoneRegex.test(phone)) {
+    if (!isValidPhone(phone)) {
       alert("휴대폰 번호 11자리를 정확히 입력해주세요");
       return;
     }
