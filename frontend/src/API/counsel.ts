@@ -1,6 +1,6 @@
 //상담 페이지
 
-import {api} from "./axios"; // 기존 axios 인스턴스 경로에 맞게 지정
+import {api, handleSessionExpired} from "./axios"; // 기존 axios 인스턴스 경로에 맞게 지정
 
 // 백엔드 DB 전송용 인터페이스
 export interface CounselDataPayload {
@@ -39,6 +39,16 @@ export interface CounselRecord {
 
 // 로그인한 회원의 상담 기록 전체 조회 함수 (세션 기준으로 백엔드가 회원을 판별함)
 export const getCounselData = async (): Promise<CounselRecord[]> => {
-  const response = await api.get("/api/counsel");
-  return response.data;
+  try {
+    const response = await api.get("/api/counsel");
+    return response.data;
+  } catch (err: any) {
+    // GET /api/counsel은 세션이 없을 때 백엔드가 401 대신 500을 내려주는 알려진 버그가 있어
+    // (CounselController.sendCounsel의 member null 체크 누락), 이 경우도 세션 만료로 간주해 처리함
+    // 백엔드가 수정되면 이 분기는 제거해도 됨
+    if (err?.response?.status === 500) {
+      handleSessionExpired();
+    }
+    throw err;
+  }
 };

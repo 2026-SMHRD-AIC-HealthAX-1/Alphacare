@@ -179,52 +179,60 @@ export default function EmotionGraph() {
     .filter((p): p is { x: number; y: number; tooltip: string } => p !== null)
     .sort((a, b) => a.x - b.x);
 
-  return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 pb-2 border-b border-gray-200 dark:border-gray-700">
-        감정 그래프
-      </h1>
+  // 그래프 위에서 마우스를 올리고 있는 데이터 포인트 (호버 툴팁 표시용)
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const hoveredPoint = hoveredIndex !== null ? timePoints[hoveredIndex] : null;
 
+  return (
+    <div className="space-y-6 mt-8 sm:mt-14">
       {/* 주간 감정 리포트 메인 카드 */}
-      <div className="border border-gray-300 dark:border-gray-700 rounded-2xl p-6 shadow-sm space-y-6">
+      <div className="border border-gray-200 dark:border-gray-700 rounded-2xl p-6 sm:p-8 shadow-sm space-y-8">
         {/* 날짜 이동 헤더: 클릭 시 해당 주(월~일)만 표시되도록 이동 */}
-        <div className="flex items-center justify-center gap-4">
+        <div className="flex items-center justify-center gap-3">
           <button
+            type="button"
             onClick={goToPrevWeek}
-            className="text-gray-800 hover:text-black dark:text-gray-300 dark:hover:text-white font-bold text-lg"
+            aria-label="이전 주"
+            className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
-            &lt;
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M15.75 19.5 8.25 12l7.5-7.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </button>
-          <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+          <span className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 px-1">
             {formatWeekRange(weekStart)}
           </span>
           <button
+            type="button"
             onClick={goToNextWeek}
-            className="text-gray-800 hover:text-black dark:text-gray-300 dark:hover:text-white font-bold text-lg"
+            aria-label="다음 주"
+            className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
-            &gt;
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="m8.25 4.5 7.5 7.5-7.5 7.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </button>
         </div>
 
         {/* 그래프 영역 */}
-        <div className="border border-gray-300 dark:border-gray-800 rounded-xl p-5">
-          <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-4">일주일 동안의 감정 변화</h3>
+        <div className="bg-gray-50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 rounded-xl p-5 sm:p-6">
+          <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-6">일주일 동안의 감정 변화</h3>
 
           {loading ? (
-            <div className="flex items-center justify-center h-40 text-sm text-gray-400 dark:text-gray-500">
+            <div className="flex items-center justify-center h-56 text-sm text-gray-400 dark:text-gray-500">
               상담 기록을 불러오는 중입니다...
             </div>
           ) : error ? (
-            <div className="flex items-center justify-center h-40 text-sm text-gray-400 dark:text-gray-500">
+            <div className="flex items-center justify-center h-56 text-sm text-gray-400 dark:text-gray-500">
               상담 기록을 불러오지 못했습니다. 로그인 상태를 확인해주세요.
             </div>
           ) : (
-            <div className="flex h-56 items-stretch">
+            <div className="flex h-64 items-stretch">
               {/* Y축 범주: 실제 감정분류(중립/기쁨/슬픔/분노/당황/불안) */}
-              <div className="flex flex-col justify-between text-xs text-gray-900 dark:text-gray-100 pr-4 border-r border-gray-300 dark:border-gray-700 font-bold">
+              <div className="flex flex-col justify-between text-xs text-gray-500 dark:text-gray-400 pr-4 border-r border-gray-200 dark:border-gray-700 font-semibold">
                 {EMOTION_LABELS.map((e) => (
-                  <span key={e.label} className="flex items-center gap-1">
-                    {e.emoji} {e.label}
+                  <span key={e.label} className="flex items-center gap-1.5">
+                    <span className="text-sm">{e.emoji}</span> {e.label}
                   </span>
                 ))}
               </div>
@@ -234,7 +242,7 @@ export default function EmotionGraph() {
                 {EMOTION_LABELS.map((_, i) => (
                   <div
                     key={i}
-                    className="w-full border-b border-dashed border-gray-300 dark:border-gray-700 h-0"
+                    className="w-full border-b border-dashed border-gray-200 dark:border-gray-700 h-0"
                   ></div>
                 ))}
 
@@ -242,42 +250,72 @@ export default function EmotionGraph() {
                 {weekDates.slice(1).map((_, i) => (
                   <div
                     key={`divider-${i}`}
-                    className="absolute top-0 bottom-0 w-px bg-gray-200 dark:bg-gray-800"
+                    className="absolute top-0 bottom-0 w-px bg-gray-100 dark:bg-gray-800"
                     style={{ left: `${((i + 1) / 7) * 100}%` }}
                   ></div>
                 ))}
 
-                {/* 상담 시각 간 연결선 + 데이터 포인트 */}
+                {/* 상담 시각 간 연결선 + 아래쪽 그라데이션 채움 */}
                 <svg
                   className="absolute inset-0 w-full h-full overflow-visible"
                   preserveAspectRatio="none"
                   viewBox="0 0 100 100"
                 >
+                  <defs>
+                    <linearGradient id="weeklyEmotionAreaGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#ff0000" stopOpacity="0.25" />
+                      <stop offset="100%" stopColor="#ff0000" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
                   {timePoints.length > 1 && (
-                    <polyline
-                      points={timePoints.map((p) => `${p.x},${p.y}`).join(" ")}
-                      fill="none"
-                      stroke="var(--color-primary, #1F6170)"
-                      strokeWidth="1.5"
-                      vectorEffect="non-scaling-stroke"
-                    />
+                    <>
+                      <polygon
+                        // 왼쪽/오른쪽 끝을 0/100이 아니라 첫 상담·마지막 상담 시각(x좌표)에 맞춰서
+                        // 실제 기록이 없는 구간까지 채워지지 않도록 함
+                        points={`${timePoints[0].x},100 ${timePoints.map((p) => `${p.x},${p.y}`).join(" ")} ${timePoints[timePoints.length - 1].x},100`}
+                        fill="url(#weeklyEmotionAreaGradient)"
+                        stroke="none"
+                      />
+                      <polyline
+                        points={timePoints.map((p) => `${p.x},${p.y}`).join(" ")}
+                        fill="none"
+                        stroke="#FF0000"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        vectorEffect="non-scaling-stroke"
+                      />
+                    </>
                   )}
-                  {timePoints.map((p, i) => (
-                    <circle
-                      key={i}
-                      cx={p.x}
-                      cy={p.y}
-                      r="2.2"
-                      vectorEffect="non-scaling-stroke"
-                      fill="var(--color-primary, #1F6170)"
-                    >
-                      <title>{p.tooltip}</title>
-                    </circle>
-                  ))}
                 </svg>
 
+                {/* 데이터 포인트: viewBox 왜곡으로 타원이 되지 않도록 SVG 대신 절대위치 HTML 마커로 표시 */}
+                {timePoints.map((p, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onMouseEnter={() => setHoveredIndex(i)}
+                    onMouseLeave={() => setHoveredIndex(null)}
+                    onFocus={() => setHoveredIndex(i)}
+                    onBlur={() => setHoveredIndex(null)}
+                    aria-label={p.tooltip}
+                    className="absolute w-2.5 h-2.5 rounded-full bg-[#FF0000] border-2 border-white dark:border-gray-900 shadow-sm -translate-x-1/2 -translate-y-1/2 transition-transform hover:scale-150 focus:scale-150 outline-none"
+                    style={{ left: `${p.x}%`, top: `${p.y}%` }}
+                  />
+                ))}
+
+                {/* 호버한 지점의 요일/시간/감정 툴팁 */}
+                {hoveredPoint && (
+                  <div
+                    className="absolute -translate-x-1/2 -translate-y-[calc(100%+10px)] pointer-events-none bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900 text-[11px] font-semibold px-2.5 py-1.5 rounded-md shadow-lg whitespace-nowrap z-10"
+                    style={{ left: `${hoveredPoint.x}%`, top: `${hoveredPoint.y}%` }}
+                  >
+                    {hoveredPoint.tooltip}
+                  </div>
+                )}
+
                 {/* X축 일자: 선택된 주의 월~일 날짜를 각 날짜 구간 중앙에 표시 */}
-                <div className="absolute bottom-[-24px] left-4 right-0 text-xs text-gray-900 dark:text-gray-100 font-bold">
+                <div className="absolute bottom-[-26px] left-4 right-0 text-xs text-gray-500 dark:text-gray-400 font-semibold">
                   {weekDates.map((d, i) => (
                     <span
                       key={d.toISOString()}
@@ -294,11 +332,16 @@ export default function EmotionGraph() {
         </div>
 
         {/* 하단 요약 및 추천 음악 2열 카드 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* 이번 주 감정 요약 */}
-          <div className="border border-gray-300 dark:border-gray-800 rounded-xl p-5 space-y-2">
-            <h4 className="font-bold text-gray-900 dark:text-gray-100 text-sm">이번 주 감정 요약</h4>
-            <p className="text-xs text-gray-800 dark:text-gray-200 leading-relaxed pt-1 font-medium">
+          <div className="bg-gray-50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 rounded-xl p-5 space-y-2">
+            <h4 className="flex items-center gap-2 font-bold text-gray-900 dark:text-gray-100 text-sm">
+              <span className="text-base">
+                {weekDominantIndex !== null ? EMOTION_LABELS[weekDominantIndex].emoji : "🗓️"}
+              </span>
+              이번 주 감정 요약
+            </h4>
+            <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed pt-1">
               {weekDominantLabel
                 ? `이번 주는 '${weekDominantLabel}' 감정이 가장 많이 나타났어요.`
                 : "이번 주에는 아직 상담 기록이 없어요."}
@@ -306,8 +349,11 @@ export default function EmotionGraph() {
           </div>
 
           {/* 맞춤 음악 추천 */}
-          <div className="border border-gray-300 dark:border-gray-800 rounded-xl p-5 space-y-3">
-            <h4 className="font-bold text-gray-900 dark:text-gray-100 text-sm">맞춤 음악 추천</h4>
+          <div className="bg-gray-50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 rounded-xl p-5 space-y-3">
+            <h4 className="flex items-center gap-2 font-bold text-gray-900 dark:text-gray-100 text-sm">
+              <span className="text-base">🎵</span>
+              맞춤 음악 추천
+            </h4>
 
             {!weekDominantLabel ? (
               <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -322,13 +368,19 @@ export default function EmotionGraph() {
                 '{weekDominantLabel}' 감정에 등록된 추천 음악이 아직 없어요.
               </p>
             ) : (
-              <div className="space-y-2 text-xs">
+              <div className="space-y-3 text-xs">
                 {music.map((m) => (
                   <div key={m.music_no} className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-md border border-gray-300 dark:border-gray-600 flex-shrink-0"></div>
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#1F6170] to-[#2d8a9e] flex items-center justify-center flex-shrink-0 text-white shadow-sm">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9 18V5l12-2v13" />
+                        <circle cx="6" cy="18" r="3" />
+                        <circle cx="18" cy="16" r="3" />
+                      </svg>
+                    </div>
                     <div>
                       <p className="font-bold text-gray-900 dark:text-gray-100">{m.title}</p>
-                      <p className="text-gray-700 dark:text-gray-300">{m.singer}</p>
+                      <p className="text-gray-500 dark:text-gray-400">{m.singer}</p>
                     </div>
                   </div>
                 ))}
