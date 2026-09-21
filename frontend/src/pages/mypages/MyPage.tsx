@@ -1,7 +1,9 @@
 import { useState } from "react";
+import Cookies from "js-cookie";
 import EmotionGraph from "./EmotionCalender";
 import CounselCalendar from "./WeeklyReport";
 import Mshop from "./Mshop";
+import { updateMember } from "../../API/auth";
 
 export default function MyPage() {
   const [activeMenu, setActiveMenu] = useState<"profile" | "graph" | "calendar" | "Mshop">("graph");
@@ -9,6 +11,49 @@ export default function MyPage() {
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [phone, setPhone] = useState("");
+  const [updating, setUpdating] = useState(false);
+
+  // 로그인 시 저장된 아이디 쿠키 (Header.tsx와 동일한 방식)
+  const loginId = Cookies.get("userId") || "";
+
+  // 회원정보 수정 제출: 비밀번호/전화번호 중 입력된 값만 서버로 전송
+  const handleUpdateMember = async () => {
+    if (!password && !phone) {
+      alert("수정할 내용을 입력해주세요.");
+      return;
+    }
+
+    if (password && password !== passwordConfirm) {
+      alert("비밀번호와 비밀번호 확인이 일치하지 않습니다.");
+      return;
+    }
+
+    if (phone && !/^[0-9]+$/.test(phone)) {
+      alert("핸드폰번호는 '-' 없이 숫자만 입력해주세요.");
+      return;
+    }
+
+    try {
+      setUpdating(true);
+      const result = await updateMember({
+        pw: password || undefined,
+        tel: phone || undefined,
+      });
+      alert(result.message ?? "회원정보가 수정되었습니다.");
+      setPassword("");
+      setPasswordConfirm("");
+      setPhone("");
+    } catch (error: any) {
+      if (error?.response?.status === 401) {
+        alert("로그인이 필요합니다.");
+      } else {
+        alert(error?.response?.data?.message ?? "회원정보 수정 중 오류가 발생했습니다.");
+      }
+      console.error("회원정보 수정 오류:", error);
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   return (
     <div className="flex items-start max-w-7xl mx-auto py-4 px-2 sm:px-6 gap-8 min-h-[750px]">
@@ -77,7 +122,7 @@ export default function MyPage() {
 
           <input
             type="text"
-            value="사용자아이디"
+            value={loginId || "로그인 정보 없음"}
             readOnly
             className="w-50 h-11 px-4 border border-gray-200 rounded-lg bg-gray-100 text-gray-500 text-[13px] cursor-not-allowed outline-none"
           />
@@ -161,16 +206,11 @@ export default function MyPage() {
         <div className="flex justify-center pt-6">
           <button
             type="button"
-            onClick={() => {
-              console.log("회원정보 수정:", {
-                password,
-                passwordConfirm,
-                phone,
-              });
-            }}
-            className="w-[170px] h-[40px] bg-[#1F6170] text-white rounded-lg font-semibold text-sm flex items-center justify-center hover:bg-[#174d59] transition-colors"
+            onClick={handleUpdateMember}
+            disabled={updating}
+            className="w-[170px] h-[40px] bg-[#1F6170] text-white rounded-lg font-semibold text-sm flex items-center justify-center hover:bg-[#174d59] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            정보수정완료
+            {updating ? "수정 중..." : "정보수정완료"}
           </button>
         </div>
 

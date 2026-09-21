@@ -54,3 +54,13 @@ export interface FindPwResponse {
   pw : string | null;
   message? : string;
 }
+
+//회원정보 수정
+export interface UpdateMemberRequest {
+  pw? : string;
+  tel? : string;
+}
+
+export interface UpdateMemberResponse {
+  message? : string;
+}
