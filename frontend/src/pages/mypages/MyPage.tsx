@@ -201,7 +201,7 @@ export default function MyPage() {
           <button
             type="submit"
             disabled={updating}
-            className="w-[170px] h-[40px] bg-[#1F6170] text-white rounded-lg font-semibold text-sm flex items-center justify-center hover:bg-[#174d59] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-[170px] h-[40px] bg-[#0D9488] text-white rounded-lg font-semibold text-sm flex items-center justify-center hover:bg-[#174d59] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {updating ? "수정 중..." : "정보수정완료"}
           </button>
