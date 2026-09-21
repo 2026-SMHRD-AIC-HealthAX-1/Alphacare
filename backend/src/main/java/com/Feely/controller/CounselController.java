@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -66,12 +68,14 @@ public class CounselController {
     }
 
     @GetMapping("/counsel")
-    public List<CounselResponseDTO> sendCounsel(
-            HttpSession session) {
+    public ResponseEntity<List<CounselResponseDTO>> sendCounsel(HttpSession session) {
+    MemberEntity member = (MemberEntity) session.getAttribute("member");
 
-        MemberEntity member = (MemberEntity) session.getAttribute("member");
-
-        return counselService.sendCounsel(member.getMemberNo());
+    if (member == null) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
+
+    return ResponseEntity.ok(counselService.sendCounsel(member.getMemberNo()));
+}
 
 }
