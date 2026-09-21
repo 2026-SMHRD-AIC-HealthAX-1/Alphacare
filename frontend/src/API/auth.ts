@@ -8,7 +8,9 @@ import {
   FindIdRequest,
   FindPwRequest,
   FindIdResponse,
-  FindPwResponse
+  FindPwResponse,
+  UpdateMemberRequest,
+  UpdateMemberResponse
 } from "./user";
 
 // 아이디 중복확인 API (GET /api/member/checkid?id=xxx)
@@ -47,4 +49,12 @@ export const findPW = async (findPwData: FindPwRequest): Promise<FindPwResponse>
 
 export const logout = async () : Promise<void> => {
   await api.post("/api/member/logout");
+};
+
+// 회원정보 수정 (비밀번호, 전화번호 - 값이 있는 필드만 서버에서 반영)
+export const updateMember = async (
+  updateData: UpdateMemberRequest
+): Promise<UpdateMemberResponse> => {
+  const response = await api.put<UpdateMemberResponse>("/api/member/", updateData);
+  return response.data;
 };
