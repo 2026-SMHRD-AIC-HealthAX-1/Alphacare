@@ -4,6 +4,8 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import com.Feely.common.MusicResponse;
+import com.Feely.dto.MusicDto;
 import com.Feely.entity.MusicEntity;
 import com.Feely.repository.MusicRepository;
 
@@ -16,18 +18,27 @@ public class MusicService {
         this.musicRepository = musicRepository;
     }
 
-    public List<MusicEntity> getMusic(String genre) {
+    public MusicDto getMusic(String genre) {
         if (isBlank(genre)) {
-            return List.of();
+            return MusicDto.musicResult(List.of(), MusicResponse.Message.GENRE_REQUIRED);
         }
 
-        return musicRepository.findByGenre(genre.trim());
+        try {
+            return MusicDto.musicResult(
+                    musicRepository.findByGenre(genre.trim()),
+                    null);
+        } catch (RuntimeException e) {
+            return MusicDto.musicResult(List.of(), MusicResponse.Message.MUSIC_PROCESS_ERROR);
+        }
     }
 
-    public boolean setRecommend(String title, String singer, String genre) {
-        if (isBlank(title) || isBlank(singer) || isBlank(genre)
-                || musicRepository.findByTitleAndSinger(title.trim(), singer.trim()).isPresent()) {
-            return false;
+    public MusicDto setRecommend(String title, String singer, String genre) {
+        if (isBlank(title) || isBlank(singer) || isBlank(genre)) {
+            return MusicDto.flagResult(false, MusicResponse.Message.REQUIRED_MUSIC_INFO);
+        }
+
+        if (musicRepository.findByTitleAndSinger(title.trim(), singer.trim()).isPresent()) {
+            return MusicDto.flagResult(false, MusicResponse.Message.DUPLICATE_MUSIC);
         }
 
         try {
@@ -36,15 +47,15 @@ public class MusicService {
             music.setSinger(singer.trim());
             music.setGenre(genre.trim());
             musicRepository.save(music);
-            return true;
+            return MusicDto.flagResult(true, MusicResponse.Message.SET_SUCCESS);
         } catch (RuntimeException e) {
-            return false;
+            return MusicDto.flagResult(false, MusicResponse.Message.MUSIC_PROCESS_ERROR);
         }
     }
 
-    public boolean updateRecommend(Long musicNo, String title, String singer, String genre) {
+    public MusicDto updateRecommend(Long musicNo, String title, String singer, String genre) {
         if (isBlank(title) || isBlank(singer) || isBlank(genre)) {
-            return false;
+            return MusicDto.flagResult(false, MusicResponse.Message.REQUIRED_MUSIC_INFO);
         }
 
         try {
@@ -53,14 +64,14 @@ public class MusicService {
                     .orElse(null);
 
             if (music == null) {
-                return false;
+                return MusicDto.flagResult(false, MusicResponse.Message.MUSIC_NOT_FOUND);
             }
 
             music.setGenre(genre.trim());
             musicRepository.save(music);
-            return true;
+            return MusicDto.flagResult(true, MusicResponse.Message.UPDATE_SUCCESS);
         } catch (RuntimeException e) {
-            return false;
+            return MusicDto.flagResult(false, MusicResponse.Message.MUSIC_PROCESS_ERROR);
         }
     }
 
