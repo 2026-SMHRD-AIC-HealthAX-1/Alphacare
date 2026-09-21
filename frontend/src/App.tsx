@@ -8,6 +8,7 @@ import CounselPage from './pages/CounselPage';
 import LoginPage from './pages/login/LoginPage';
 import SignupPage from './pages/login/SignupPage';
 import MyPage from './pages/mypages/MyPage';
+import RequireAuth from './components/RequireAuth';
 import FindId from './pages/login/FindId';
 import FindPw from './pages/login/FindPw';
 import Admin from "./pages/Manager";
@@ -22,7 +23,7 @@ export default function App() {
         <Route path="/Counsel" element={<CounselPage />} />
         <Route path="/Login" element={<LoginPage />} />
         <Route path="/SignUp" element={<SignupPage />} />
-        <Route path="/MyPage" element={<MyPage />} />
+        <Route path="/MyPage" element={<RequireAuth><MyPage /></RequireAuth>} />
         <Route path="/FindId" element={<FindId />} />
         <Route path="/FindPw" element={<FindPw />} />
         <Route path="/Admin" element={<Admin />} />

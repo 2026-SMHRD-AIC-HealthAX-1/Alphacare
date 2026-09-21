@@ -1,0 +1,19 @@
+package com.Feely.repository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+
+import com.Feely.entity.MusicEntity;
+
+// 사용시, @Autowired 로 연결
+@Repository 
+public interface MusicRepository extends JpaRepository<MusicEntity, Long>{
+
+	List<MusicEntity> findByGenre(String genre);
+
+	Optional<MusicEntity> findByTitleAndSinger(String title, String singer);
+
+}

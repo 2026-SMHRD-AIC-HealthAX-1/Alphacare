@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { checkDuplicateId, signupUser } from "../../API/auth";
+import { isValidPassword, isValidPhone, sanitizePhoneInput } from "../../utils/validation";
 
 export default function SignupPage() {
   //기능 구현 부분
@@ -16,7 +17,7 @@ export default function SignupPage() {
   const [userPw, setuserPw] = useState("");
   const [pwConfirm, setPwConfirm] = useState("");
   const [name, setName] = useState("");
-  const [tel, setTel] = useState("");
+  const [phone, setphone] = useState("");
 
   //아이디 입력칸 수정 시 중복확인 상태 초기화
   const renameCheckId = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -35,7 +36,6 @@ export default function SignupPage() {
     try {
       //아이디 중복시 true, 미중복시 false
       const isDuplicate = await checkDuplicateId(userId);
-      console.log(isDuplicate);
 
       if (isDuplicate) {
         alert("이미 사용중인 아이디 입니다.")
@@ -53,75 +53,71 @@ export default function SignupPage() {
     }
   }
 
-  //휴대폰 번호 숫자가 아닌 문자 제거
-  const checkTel = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const onlyNum = e.target.value.replace(/[^0-9]/g, "");
-    setTel(onlyNum);
+  //휴대폰 번호 숫자가 아닌 문자 제거, 11자리까지만 허용
+  const checkphone = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setphone(sanitizePhoneInput(e.target.value));
   }
 
   //회원가입
   const postSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    //아이디 규칙, 영어, 숫자, 특수문자로만 구성된 8자리
-    const pwRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])[A-Za-z\d!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]{8,}$/;
-    const telRegex = /^010\d{8}$/;
-    
-    //빈칸 확인
-    if (!userId || !userPw || !pwConfirm || !name || !tel) {
-      alert("모든 입력칸을 채워주세요")
+
+    if (!userId || !userPw || !pwConfirm || !name || !phone) {
+      alert("모든 입력칸을 채워주세요");
       return;
     }
-    
-    //아이디 중복확인 여부 검사
+
     if (!checkId) {
-      alert("아이디 중복확인을 해주세요")
+      alert("아이디 중복확인을 해주세요");
       return;
     }
 
-    //비밀번호 규칙 확인
-    if (!pwRegex.test(userPw)) {
-      alert("비밀번호는 영문, 숫자 특수문자로 구성된 8자리 이상이여야 합니다.")
-      return
+    if (!isValidPassword(userPw)) {
+      alert("비밀번호는 영문, 숫자, 특수문자로 구성된 8자리 이상이어야 합니다.");
+      return;
     }
 
-    //비밀번호 일치 확인
     if (userPw !== pwConfirm) {
-      alert("비밀번호가 일치하지 않습니다.")
+      alert("비밀번호가 일치하지 않습니다.");
       return;
     }
 
-    //휴대폰 번호 11자리 확인
-    if (!telRegex.test(tel)) {
-      alert("휴대폰 번호 11자리를 정확히 입력해주세요")
+    if (!isValidPhone(phone)) {
+      alert("휴대폰 번호 11자리를 정확히 입력해주세요");
       return;
     }
 
     try {
-      const today = new Date().toISOString().split("T")[0];
-
-      await signupUser({
-        ID: userId,
-        kakaoID: "",
-        PW: userPw,
+      // 백엔드 MemberDto 필드명에 정확히 일치시킴
+      const result = await signupUser({
+        id: userId,
+        pw: userPw,
         name: name,
-        tel: tel,
-        signDate: today,
+        tel: phone,
+        kakaoID: "",
+        isDuplicate : false,
+        loginFlag : false
       });
 
-      alert("회원가입이 완료되었습니다.")
-      navigate("/");
-
-    } catch (error) {
-      console.error("회원가입 오류 : ", error)
-      alert("회원가입 도중 오류가 발생했습니다.")
+      // 201 Created 성공 처리
+      alert(result.message || "회원가입이 완료되었습니다.");
+      navigate("/Login");
+    } catch (error: any) {
+      console.error("회원가입 오류 : ", error);
+      // 400(필수값 누락), 409(아이디 중복) 등 백엔드가 보낸 message 필드 출력
+      if (error.response?.data?.message) {
+        alert(error.response.data.message);
+      } else {
+        alert("회원가입 처리 중 서버 오류가 발생했습니다.");
+      }
     }
-  }
+  };
 
   //디자인 구현부분
   return (
     <div className="min-h-[calc(100vh-80px)] flex flex-col items-center justify-center px-4 py-8 sm:py-12">
-      <div className="w-full max-w-2xl space-y-4 sm:space-y-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-center text-[#1F6170]">
+      <div className="w-full max-w-xl mx-auto space-y-4 sm:space-y-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-center text-[#1F6170] dark:text-teal-400">
           회원가입
         </h1>
 
@@ -137,11 +133,11 @@ export default function SignupPage() {
                 value={userId}
                 onChange={renameCheckId}
                 placeholder="아이디를 입력해주세요"
-                className="flex-1 min-w-0 border rounded-md px-3 py-2 text-sm focus:outline-none"
+                className="w-64  border rounded-md px-3 py-2 text-sm focus:outline-none"
               />
               <button
                 type="button" onClick={clickCheckDuplicate}
-                className="whitespace-nowrap shrink-0 px-3 sm:px-4 py-2 bg-[#1F6170] text-white text-xs sm:text-sm font-medium rounded-md hover:opacity-90 transition-opacity"
+                className="whitespace-nowrap shrink-0 px-3 sm:px-4 py-2 bg-[#0D9488] text-white text-xs sm:text-sm font-medium rounded-md hover:opacity-90 transition-opacity"
               >
                 중복확인
               </button>
@@ -159,9 +155,9 @@ export default function SignupPage() {
                 value={userPw}
                 onChange={(e) => setuserPw(e.target.value)}
                 placeholder="비밀번호를 입력해주세요"
-                className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none"
+                className="w-64 border rounded-md px-3 py-2 text-sm focus:outline-none"
               />
-              <span className="text-xs text-gray-500 pl-1">
+              <span className="text-xs text-gray-500 dark:text-gray-400 pl-1">
                 영어, 숫자, 특수문자로 구성된 8자리 이상
               </span>
             </div>
@@ -177,8 +173,8 @@ export default function SignupPage() {
                 type="password"
                 value={pwConfirm}
                 onChange={(e) => setPwConfirm(e.target.value)}
-                placeholder="비밀번호를 다시한번 입력해주세요."
-                className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none"
+                placeholder="비밀번호를 다시 입력해주세요."
+                className="w-64 border rounded-md px-3 py-2 text-sm focus:outline-none"
               />
             </div>
           </div>
@@ -194,7 +190,7 @@ export default function SignupPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="이름을 입력해주세요."
-                className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none"
+                className="w-64 border rounded-md px-3 py-2 text-sm focus:outline-none"
               />
             </div>
           </div>
@@ -207,27 +203,29 @@ export default function SignupPage() {
             <div className="flex-1 w-full">
               <input
                 type="tel"
-                value={tel}
-                onChange={checkTel}
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={phone}
+                onChange={checkphone}
                 maxLength={11}
                 placeholder="`-`을 제외한 전화번호를 입력해주세요"
-                className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none"
+                className="w-64 border rounded-md px-3 py-2 text-sm focus:outline-none"
               />
             </div>
           </div>
 
           {/* 하단 버튼 */}
           <div className="flex flex-col items-center gap-3 pt-6 w-full">
-            <div className="w-full max-w-[520px] flex flex-col gap-3">
+            <div className="w-64 flex flex-col gap-3 mx-auto">
               <button
                 type="submit"
-                className="w-full py-3 bg-[#1F6170] text-white font-bold text-base sm:text-lg rounded-lg shadow-sm hover:opacity-90 transition-opacity"
+                className="w-64 py-3 bg-[#0D9488] text-white font-bold text-base sm:text-lg rounded-lg shadow-sm hover:opacity-90 transition-opacity"
               >
                 회원가입
               </button>
               <button
                 type="button"
-                className="w-full py-3 bg-[#F7E600] text-black font-bold text-base sm:text-lg rounded-lg shadow-sm hover:brightness-90 transition-all"
+                className="w-64 py-3 bg-[#F7E600] text-black font-bold text-base sm:text-lg rounded-lg shadow-sm hover:brightness-90 transition-all"
               >
                 카카오톡 회원가입
               </button>
