@@ -1,4 +1,3 @@
-@ -1,46 +0,0 @@
 # FastAPI라는 서버 제작 도구를 가져오기
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -45,3 +44,36 @@ def emotion_api(data: EmotionRequest):
         "emotion": result["emotion"],
         "confidence": result["confidence"]
     }
+
+# 백엔드 통신 테스트용 가짜 감정 데이터
+# 실제 AI 모델이 완성되면 실제 분석 결과로 교체할 예정
+# ============================================================
+
+@app.get("/emotion-test")
+def emotion_test():
+
+    # 6가지 감정의 테스트용 비율
+    # 전체 합계는 100%
+    return {
+        "e01_rate": 20.0,
+        "e02_rate": 45.0,
+        "e03_rate": 10.0,
+        "e04_rate": 5.0,
+        "e05_rate": 12.0,
+        "e06_rate": 8.0
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
