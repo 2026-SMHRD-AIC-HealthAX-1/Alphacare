@@ -137,7 +137,7 @@ export default function SignupPage() {
               />
               <button
                 type="button" onClick={clickCheckDuplicate}
-                className="whitespace-nowrap shrink-0 px-3 sm:px-4 py-2 bg-[#1F6170] text-white text-xs sm:text-sm font-medium rounded-md hover:opacity-90 transition-opacity"
+                className="whitespace-nowrap shrink-0 px-3 sm:px-4 py-2 bg-[#0D9488] text-white text-xs sm:text-sm font-medium rounded-md hover:opacity-90 transition-opacity"
               >
                 중복확인
               </button>
@@ -219,7 +219,7 @@ export default function SignupPage() {
             <div className="w-64 flex flex-col gap-3 mx-auto">
               <button
                 type="submit"
-                className="w-64 py-3 bg-[#1F6170] text-white font-bold text-base sm:text-lg rounded-lg shadow-sm hover:opacity-90 transition-opacity"
+                className="w-64 py-3 bg-[#0D9488] text-white font-bold text-base sm:text-lg rounded-lg shadow-sm hover:opacity-90 transition-opacity"
               >
                 회원가입
               </button>

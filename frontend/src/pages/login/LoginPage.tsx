@@ -95,7 +95,7 @@ export default function LoginPage() {
                 </Link>
                 <button
                   type="submit"
-                  className="flex-1 h-11 flex items-center justify-center bg-[#1F6170] text-white font-bold text-base sm:text-lg rounded-lg shadow-sm hover:opacity-90 transition-opacity"
+                  className="flex-1 h-11 flex items-center justify-center bg-[#0D9488] text-white font-bold text-base sm:text-lg rounded-lg shadow-sm hover:opacity-90 transition-opacity"
                 >
                   로그인
                 </button>
