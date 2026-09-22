@@ -19,6 +19,22 @@ export const startCounselSession = async (sessionId: string): Promise<void> => {
   await axios.post(`${FASTAPI_BASE_URL}/counsel/start`, { sessionId });
 };
 
+// 상담 시작 시점의 "오늘의 기분" 텍스트(+ 있으면 표정 점수)를 넘겨서
+// 첫 감정 점수(6개 카테고리, 합 1)를 계산해옴. 텍스트 0.6 : 표정 0.4 가중합이며,
+// faceScores를 안 넘기면(카메라 미사용) 텍스트 100%로 처리됨.
+// 반환값은 그대로 sendEmotionSample로 넘겨서 상담 중 감정 평균의 첫 샘플로 사용함
+export const getInitialEmotion = async (
+  sessionId: string,
+  moodText: string,
+  faceScores?: Record<string, number>
+): Promise<Record<string, number>> => {
+  const response = await axios.post<{ emotionScores: Record<string, number> }>(
+    `${FASTAPI_BASE_URL}/counsel/initial-emotion`,
+    { sessionId, moodText, faceScores: faceScores ?? null }
+  );
+  return response.data.emotionScores;
+};
+
 // 상담 중 주기적으로 감정분석 점수(scores)를 FastAPI 세션 데이터에 누적 전달함
 // (평균 계산 및 상담 종료 처리는 FastAPI가 상담 종료 시점에 직접 담당함)
 export const sendEmotionSample = async (

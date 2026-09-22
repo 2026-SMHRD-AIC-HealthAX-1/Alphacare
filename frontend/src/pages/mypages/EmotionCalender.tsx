@@ -234,14 +234,14 @@ export default function MyPageCalendarContent() {
                       ${isSelected
                         ? "bg-[#1F6170] text-white font-bold"
                         : isToday
-                          ? "bg-gray-900 text-white font-bold dark:bg-gray-100 dark:text-gray-900"
+                          ? "bg-[#0D9488] text-white font-bold hover:bg-[#0b7d73] dark:bg-[#0D9488] dark:text-white dark:hover:bg-[#14b8a6]"
                           : "hover:bg-gray-100 dark:hover:bg-gray-800"
                       }`}
                   >
                     <span>{cell.date.getDate()}</span>
                     {emotion && (
                       <span
-                        className={`leading-none ${showDetailsPanel ? "text-[8px]" : "text-[10px] sm:text-xs"
+                        className={`leading-none ${showDetailsPanel ? "text-[8px]" : "text-base sm:text-lg"
                           }`}
                       >
                         {emotion.emoji}
@@ -298,8 +298,25 @@ export default function MyPageCalendarContent() {
                           <span className="font-bold text-[#1F6170] dark:text-teal-400 text-sm sm:text-base">
                             {formattedDate} {timePart}
                           </span>
-                          <span className="text-[#1F6170] dark:text-teal-400 text-xs font-bold px-3 py-1.5 rounded-full border border-[#1F6170]">
+                          <span className="relative group text-[#1F6170] dark:text-teal-400 text-xs font-bold px-3 py-1.5 rounded-full border border-[#1F6170] cursor-default">
                             {dominant.emoji} {dominant.label} ({Number(log[dominant.key]).toFixed(0)}%)
+
+                            {/* 호버 시 감정 점수 6개를 높은 순으로 보여주는 툴팁 */}
+                            <div className="pointer-events-none absolute right-0 top-full mt-2 z-20 hidden group-hover:block w-40 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg p-2">
+                              <ul className="space-y-1">
+                                {[...EMOTION_LABELS]
+                                  .sort((a, b) => Number(log[b.key]) - Number(log[a.key]))
+                                  .map((item) => (
+                                    <li
+                                      key={item.key}
+                                      className="flex items-center justify-between gap-2 text-xs font-normal text-gray-700 dark:text-gray-200"
+                                    >
+                                      <span>{item.emoji} {item.label}</span>
+                                      <span className="font-semibold">{Number(log[item.key]).toFixed(0)}%</span>
+                                    </li>
+                                  ))}
+                              </ul>
+                            </div>
                           </span>
                         </div>
 
