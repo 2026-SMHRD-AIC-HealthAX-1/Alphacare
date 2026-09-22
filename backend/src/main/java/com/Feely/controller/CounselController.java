@@ -8,10 +8,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
+import com.Feely.common.CounselResponse;
 import com.Feely.dto.CounselRequestDTO;
 import com.Feely.dto.CounselResponseDTO;
 import com.Feely.entity.MemberEntity;
@@ -30,52 +32,50 @@ public class CounselController {
     }
 
     @PostMapping("/counsel")
-    public Map<String, Boolean> saveCounsel(@RequestBody CounselRequestDTO dto, HttpSession session) {
+    public Map<String, Boolean> saveCounsel(
+        @RequestPart ("data") CounselRequestDTO dto,
+        @RequestPart ("startImage") MultipartFile startImage,
+        @RequestPart ("endImage") MultipartFile endImage,
+        HttpSession session) {
 
-        Map<String, Boolean> counselFlag = new HashMap<>();
+            Map<String, Boolean> counselFlag = new HashMap<>();
 
-        // 프론트엔드에서 받아온 상담 결과를 DB에 저장하는 메소드
-        // try-catch 로 성공, 실패에 따라 counselFlag = true/false 값 반환
-        try {
-            MemberEntity member = (MemberEntity) session.getAttribute("member");
+            try {
+                MemberEntity member = (MemberEntity)session.getAttribute("member");
 
-            System.out.println("세션 member : " + member);
+                System.out.println("세션 member : " + member);
+                System.out.println("상담 세션 ID : " + session.getId());
 
-            System.out.println("상담 세션 ID : " + session.getId());
-            System.out.println("상담 세션 member : "
-                    + session.getAttribute("member"));
+                if (member == null) {
+                    System.out.println(CounselResponse.Message.COUNESL_SESSION_NOT_FOUND);
+                    counselFlag.put("counselFlag", false);
+                    return counselFlag;
+                }
 
-            if (member == null) {
-                System.out.println("세션에 회원 정보가 없습니다.");
+                Long memberNo = member.getMemberNo();
 
+                counselService.saveCounsel(dto, memberNo, startImage, endImage);
+
+                counselFlag.put("counselFlag", true);
+                
+            } catch (Exception e) {
+                e.printStackTrace();
                 counselFlag.put("counselFlag", false);
-                return counselFlag;
             }
 
-            Long memberNo = member.getMemberNo();
+            return counselFlag;
 
-            System.out.println("세션 memberNo : " + memberNo);
-
-            counselService.saveCounsel(dto, memberNo);
-
-            counselFlag.put("counselFlag", true);
-        } catch (Exception e) {
-            e.printStackTrace();
-            counselFlag.put("counselFlag", false);
         }
-
-        return counselFlag;
-    }
-
+        
     @GetMapping("/counsel")
     public ResponseEntity<List<CounselResponseDTO>> sendCounsel(HttpSession session) {
-    MemberEntity member = (MemberEntity) session.getAttribute("member");
+        MemberEntity member = (MemberEntity) session.getAttribute("member");
 
-    if (member == null) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        if (member == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        return ResponseEntity.ok(counselService.sendCounsel(member.getMemberNo()));
     }
-
-    return ResponseEntity.ok(counselService.sendCounsel(member.getMemberNo()));
-}
 
 }
