@@ -3,6 +3,7 @@ package com.Feely.service;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.stereotype.Service;
 
@@ -37,6 +38,16 @@ public class CounselService {
                         new IllegalArgumentException("회원을 찾을 수 없습니다.")
                 );
 
+        // 감정 점수 6개 들어왔는지 검증
+        Map<String, Double> emotionScore = dto.getEmotionScore();
+        
+        String[] requiredKeys = {"e01", "e02", "e03", "e04", "e05", "e06"};
+        for (String key : requiredKeys) {
+            if (emotionScore == null || emotionScore.get(key) == null) {
+                throw new IllegalArgumentException("감정 점수 (" + key + ")가 누락되었습니다.");
+            }
+        }
+
         CounselEntity entity = new CounselEntity();
         
         entity.setMember(member);
@@ -45,12 +56,12 @@ public class CounselService {
         entity.setCounselSum(dto.getSummary());
         entity.setStartImagePath("test");
         entity.setEndImagePath("test");
-        entity.setE01Rate(BigDecimal.valueOf(dto.getEmotionScore())); // 테이블에 DECIMAL 데이터 타입으로 저장해야하므로 형변환해주기
-        entity.setE02Rate(BigDecimal.valueOf(dto.getEmotionScore()));
-        entity.setE03Rate(BigDecimal.valueOf(dto.getEmotionScore()));
-        entity.setE04Rate(BigDecimal.valueOf(dto.getEmotionScore()));
-        entity.setE05Rate(BigDecimal.valueOf(dto.getEmotionScore()));
-        entity.setE06Rate(BigDecimal.valueOf(dto.getEmotionScore()));
+        entity.setE01Rate(BigDecimal.valueOf(emotionScore.get("e01")));
+        entity.setE02Rate(BigDecimal.valueOf(emotionScore.get("e02")));
+        entity.setE03Rate(BigDecimal.valueOf(emotionScore.get("e03")));
+        entity.setE04Rate(BigDecimal.valueOf(emotionScore.get("e04")));
+        entity.setE05Rate(BigDecimal.valueOf(emotionScore.get("e05")));
+        entity.setE06Rate(BigDecimal.valueOf(emotionScore.get("e06")));
 
         counselRepository.save(entity);
     }
