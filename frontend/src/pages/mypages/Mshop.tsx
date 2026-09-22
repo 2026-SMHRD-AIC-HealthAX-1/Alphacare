@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { getMileageProducts, MileageProduct } from "../../API/mileage";
+import { getMemberMileage } from "../../API/auth";
 import naverpay_5000 from "../../assets/naverpay_5000.png";
 import naverpay_10000 from "../../assets/naverpay_10000.png";
 
@@ -16,7 +17,8 @@ import Feely_Diary from "../../assets/Feely_Diary.png";
 import Feely_Diary_Detail from "../../assets/Feely_Diary_Detail.png";
 
 
-// 보유 마일리지/적립내역은 아직 회원 마일리지 조회 API가 없어서 하드코딩 상태로 남겨둠.
+// 보유 마일리지는 GET /api/member/mileage에서 받아옴 (백엔드에 아직 없으면 추가 필요 - MemberController 참고)
+// 적립내역은 별도 조회 API가 없어서 아직 미구현
 // 상품 목록/재고/가격은 DB(GET /api/products)에서 받아옴.
 // 교환 API는 아직 없어서 교환 버튼은 확인 모달까지만 동작함 (실제 차감/재고 반영은 별도 작업 필요)
 
@@ -76,10 +78,43 @@ export default function Mshop() {
         loadProducts();
     }, []);
 
-    // DB 상품을 카드에서 쓰는 형태로 변환 (이미지가 매칭 안 되면 빈 문자열 -> 카드에서 아이콘으로 대체)
+    // 보유 마일리지 (회원 데이터 기준, GET /api/member/mileage)
+    const [memberMileage, setMemberMileage] = useState<number | null>(null);
+    const [mileageLoading, setMileageLoading] = useState(true);
+
+    useEffect(() => {
+        const loadMileage = async () => {
+            try {
+                setMileageLoading(true);
+                const data = await getMemberMileage();
+                setMemberMileage(data.mileage);
+            } catch (err) {
+                console.error("보유 마일리지를 불러오지 못했습니다:", err);
+                setMemberMileage(null);
+            } finally {
+                setMileageLoading(false);
+            }
+        };
+
+        loadMileage();
+    }, []);
+
+    // 화면 3곳(상단 배지 / 상품권 교환 모달 / 다이어리 교환 모달)에서 공통으로 쓰는 표시용 문자열
+    const mileageDisplay = mileageLoading
+        ? "..."
+        : memberMileage !== null
+            ? `${memberMileage.toLocaleString()} P`
+            : "- P";
+
+    // DB 상품을 카드에서 쓰는 형태로 변환
+    // 1순위: DB에 저장된 실제 상품 이미지(prodImage, base64) - 백엔드에 등록된 상품이면 항상 있음
+    // 2순위: 상품명으로 매칭되는 로컬 이미지 (DB 이미지가 없는 예전 데이터 대비)
+    // 둘 다 없으면 빈 문자열 -> 카드에서 🎁 아이콘으로 대체
     const productItems = dbProducts.map((p) => ({
         name: p.prodName,
-        image: PRODUCT_IMAGE_MAP[p.prodName] ?? "",
+        image: p.prodImage
+            ? `data:image/jpeg;base64,${p.prodImage}`
+            : PRODUCT_IMAGE_MAP[p.prodName] ?? "",
         point: `${p.prodPrice.toLocaleString()}P`,
         inventory: p.prodInventory,
     }));
@@ -153,7 +188,7 @@ export default function Mshop() {
                             <div className="flex items-center justify-center gap-3 py-2 sm:py-0 relative left-[-100px]">
                                 <p className="text-gray-500 dark:text-gray-400">보유 마일리지</p>
                                 <p className="text-2xl sm:text-3xl font-bold text-gray-600 dark:text-teal-400">
-                                    12,500 P
+                                    {mileageDisplay}
                                 </p>
                             </div>
 
@@ -459,7 +494,7 @@ export default function Mshop() {
                                             </span>
 
                                             <span className="font-bold">
-                                                12,500 P
+                                                {mileageDisplay}
                                             </span>
                                         </div>
 
@@ -734,7 +769,7 @@ export default function Mshop() {
                                             </span>
 
                                             <span className="font-bold text-[15px]">
-                                                12,500 P
+                                                {mileageDisplay}
                                             </span>
 
                                         </div>

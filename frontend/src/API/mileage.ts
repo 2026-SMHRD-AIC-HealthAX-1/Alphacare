@@ -2,11 +2,13 @@
 import { api } from "./axios";
 
 // 백엔드 MileageProductDto와 매칭되는 타입 (목록 조회 응답에도 message/success가 같이 오지만 화면엔 안 씀)
+// prodImage는 백엔드가 byte[](mediumblob)로 내려주는데, Jackson이 자동으로 base64 문자열로 직렬화해줌
 export interface MileageProduct {
   prodNo: number;
   prodName: string;
   prodInventory: number;
   prodPrice: number;
+  prodImage: string | null;
 }
 
 // 마일리지 상품 전체 목록 조회

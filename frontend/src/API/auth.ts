@@ -10,7 +10,8 @@ import {
   FindIdResponse,
   FindPwResponse,
   UpdateMemberRequest,
-  UpdateMemberResponse
+  UpdateMemberResponse,
+  MemberMileageResponse
 } from "./user";
 
 // 아이디 중복확인 API (GET /api/member/checkid?id=xxx)
@@ -56,5 +57,11 @@ export const updateMember = async (
   updateData: UpdateMemberRequest
 ): Promise<UpdateMemberResponse> => {
   const response = await api.put<UpdateMemberResponse>("/api/member/", updateData);
+  return response.data;
+};
+
+// 보유 마일리지 조회 (세션 로그인 기준, 마일리지샵 등에서 사용)
+export const getMemberMileage = async (): Promise<MemberMileageResponse> => {
+  const response = await api.get<MemberMileageResponse>("/api/member/mileage");
   return response.data;
 };
