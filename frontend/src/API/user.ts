@@ -64,3 +64,10 @@ export interface UpdateMemberRequest {
 export interface UpdateMemberResponse {
   message? : string;
 }
+
+// 보유 마일리지 조회 응답 (mileage는 로그인 안 됐거나 조회 실패 시 null)
+export interface MemberMileageResponse {
+  mileage : number | null;
+  message? : string;
+  success? : boolean;
+}
