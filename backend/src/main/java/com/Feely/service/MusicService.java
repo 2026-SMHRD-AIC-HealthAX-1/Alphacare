@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import com.Feely.common.MusicResponse;
 import com.Feely.entity.MusicEntity;
 import com.Feely.repository.MusicRepository;
 
@@ -25,9 +26,17 @@ public class MusicService {
     }
 
     public boolean setRecommend(String title, String singer, String genre) {
-        if (isBlank(title) || isBlank(singer) || isBlank(genre)
-                || musicRepository.findByTitleAndSinger(title.trim(), singer.trim()).isPresent()) {
-            return false;
+        if (isBlank(title)) {
+            throw new IllegalArgumentException(MusicResponse.Message.MUSIC_TITLE_REQUIRED);
+        }
+        if (isBlank(singer)) {
+            throw new IllegalArgumentException(MusicResponse.Message.MUSIC_SINGER_REQUIRED);
+        }
+        if (isBlank(genre)) {
+            throw new IllegalArgumentException(MusicResponse.Message.MUSIC_GENRE_REQUIRED);
+        }
+        if (musicRepository.findByTitleAndSinger(title.trim(), singer.trim()).isPresent()) {
+            throw new IllegalArgumentException(MusicResponse.Message.MUSIC_ALREADY_EXISTS);
         }
 
         try {
@@ -38,29 +47,39 @@ public class MusicService {
             musicRepository.save(music);
             return true;
         } catch (RuntimeException e) {
-            return false;
+            throw new IllegalStateException(MusicResponse.Message.MUSIC_SAVE_FAIL, e);
         }
     }
 
     public boolean updateRecommend(Long musicNo, String title, String singer, String genre) {
-        if (isBlank(title) || isBlank(singer) || isBlank(genre)) {
-            return false;
+        if (isBlank(title)) {
+            throw new IllegalArgumentException(MusicResponse.Message.MUSIC_TITLE_REQUIRED);
+        }
+        if (isBlank(singer)) {
+            throw new IllegalArgumentException(MusicResponse.Message.MUSIC_SINGER_REQUIRED);
+        }
+        if (isBlank(genre)) {
+            throw new IllegalArgumentException(MusicResponse.Message.MUSIC_GENRE_REQUIRED);
         }
 
         try {
-            MusicEntity music = musicRepository
-                    .findByTitleAndSinger(title.trim(), singer.trim())
+            MusicEntity music = musicRepository.findById(musicNo)
                     .orElse(null);
 
             if (music == null) {
-                return false;
+                throw new IllegalArgumentException(MusicResponse.Message.MUSIC_ALREADY_EXISTS);
             }
 
+            music.setTitle(title.trim());
+            music.setSinger(singer.trim());
             music.setGenre(genre.trim());
             musicRepository.save(music);
             return true;
         } catch (RuntimeException e) {
-            return false;
+            if (e instanceof IllegalArgumentException) {
+                throw e;
+            }
+            throw new IllegalStateException(MusicResponse.Message.MUSIC_UPDATE_FAIL, e);
         }
     }
 
