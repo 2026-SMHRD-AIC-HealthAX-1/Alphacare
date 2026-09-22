@@ -1,10 +1,11 @@
 package com.Feely;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import com.Feely.entity.MemberEntity;
 import com.Feely.repository.MemberRepository;
@@ -20,8 +21,8 @@ class BackendApplicationTests {
 	}
 
 	@Test
-	void duplicatePhoneShouldBeAllowed() {
-		String phone = "01011112222";
+	void duplicatePhoneShouldBeRejected() {
+		String phone = "010" + String.format("%08d", Math.abs(System.nanoTime() % 100000000L));
 		String firstId = "phone_dup_test_1_" + System.nanoTime();
 		String secondId = "phone_dup_test_2_" + System.nanoTime();
 
@@ -32,7 +33,7 @@ class BackendApplicationTests {
 		first.setPhone(phone);
 		first.setRole("USER");
 		first.setMileage(0);
-		memberRepository.save(first);
+		memberRepository.saveAndFlush(first);
 
 		MemberEntity second = new MemberEntity();
 		second.setId(secondId);
@@ -42,9 +43,8 @@ class BackendApplicationTests {
 		second.setRole("USER");
 		second.setMileage(0);
 
-		assertDoesNotThrow(() -> memberRepository.saveAndFlush(second));
+		assertThrows(DataIntegrityViolationException.class, () -> memberRepository.saveAndFlush(second));
 		memberRepository.delete(first);
-		memberRepository.delete(second);
 	}
 
 }
