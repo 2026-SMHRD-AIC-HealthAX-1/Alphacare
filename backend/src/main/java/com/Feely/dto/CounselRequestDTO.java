@@ -1,6 +1,7 @@
 package com.Feely.dto;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 
@@ -20,7 +21,12 @@ public class CounselRequestDTO {
     private Integer sessionTurn;
     private String summary;
     private String emotionCategory;
-    private Double emotionScore;
+
+    // 감정 카테고리별 평균 점수 ( key : e01 ~ e06 , value : 0.0 ~ 100.0 )
+    // e01: 중립, e02: 기쁨, e03: 슬픔, e04: 분노, e05: 당황, e06: 불안
+    private Map<String, Double> emotionScore;
+    
+    
     private String status;
 
 }
