@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { sendCounselData, CounselDataPayload } from "../API/counsel";
 import { sendChatMessage } from "../API/ai";
+import { sendEmotionFrame } from "../API/emotion";
 import { useNavigate } from "react-router-dom";
 
 interface Message {
@@ -27,13 +28,30 @@ export default function CounselPage() {
   // 상담 시작 / 종료 시점에 웹캠에서 캡처한 이미지(base64)
   const [startImage, setStartImage] = useState<string | null>(null);
 
+  // 상담 중 실시간으로 표시할 주요 감정 (카메라 주기 분석 결과)
+  const [latestEmotion, setLatestEmotion] = useState<{ label: string; percent: number } | null>(null);
+  // 상담 종료 시 평균을 내기 위해 카메라 분석 결과를 계속 쌓아두는 배열
+  const emotionSamplesRef = useRef<Record<string, number>[]>([]);
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
+  // 마이크 음성인식(SpeechRecognition) 인스턴스 보관용
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   const isNormalExit = useRef(false);
   // 시작 이미지는 영상이 처음 준비됐을 때 한 번만 자동 캡처하기 위한 가드
   const hasCapturedStartRef = useRef(false);
   // FastAPI 챗봇 서버에 상담 1회당 하나씩 발급하는 대화 식별자 (대화 히스토리 구분용)
   const chatSessionIdRef = useRef<string>(crypto.randomUUID());
+
+  // 감정 카테고리 코드 -> 한글 라벨 (CounselEntity의 e01~e06 컬럼과 동일한 분류)
+  const EMOTION_LABELS: Record<string, string> = {
+    e01: "중립",
+    e02: "기쁨",
+    e03: "슬픔",
+    e04: "분노",
+    e05: "당황",
+    e06: "불안",
+  };
 
   // 1. 웹캠 미디어 스트림 제어
   useEffect(() => {
@@ -60,7 +78,52 @@ export default function CounselPage() {
     };
   }, [isCamOn]);
 
-  // 2. 시간 변환 / 프레임 캡처 / 전송용 데이터 조립 함수들
+  // 2. 마이크 음성인식 제어 (브라우저 자체 Web Speech API 사용, 별도 백엔드 불필요)
+  useEffect(() => {
+    if (!isMicOn) {
+      recognitionRef.current?.stop();
+      recognitionRef.current = null;
+      return;
+    }
+
+    const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognitionCtor) {
+      alert("이 브라우저는 음성 인식을 지원하지 않습니다. Chrome에서 사용해주세요.");
+      setIsMicOn(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognitionCtor();
+    recognition.lang = "ko-KR";
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    // 인식된 음성을 텍스트로 바꿔서 입력창에 실시간 반영
+    recognition.onresult = (event) => {
+      let transcript = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      setInputText(transcript);
+    };
+
+    // 침묵 등으로 브라우저가 인식을 자체 종료하는 경우 버튼 상태도 같이 꺼줌
+    recognition.onerror = () => {
+      setIsMicOn(false);
+    };
+    recognition.onend = () => {
+      setIsMicOn(false);
+    };
+
+    recognition.start();
+    recognitionRef.current = recognition;
+
+    return () => {
+      recognition.stop();
+    };
+  }, [isMicOn]);
+
+  // 3. 시간 변환 / 프레임 캡처 / 전송용 데이터 조립 함수들
   // Date.toISOString()은 항상 UTC 기준이라 그대로 쓰면 백엔드(LocalDateTime)에
   // 9시간 어긋난 시간이 저장됨 - 타임존을 Asia/Seoul로 명시해서 항상 한국시간으로 변환함
   const getKoreanDateTimeString = (date: Date): string => {
@@ -96,9 +159,28 @@ export default function CounselPage() {
     return canvas.toDataURL("image/jpeg", 0.8);
   };
 
+  // 지금까지 쌓인 카메라 분석 샘플들의 카테고리별 평균 점수 계산
+  const getAverageEmotionScores = (): Record<string, number> => {
+    const samples = emotionSamplesRef.current;
+    if (samples.length === 0) return {};
+
+    const sums: Record<string, number> = {};
+    samples.forEach((sample) => {
+      Object.entries(sample).forEach(([key, value]) => {
+        sums[key] = (sums[key] ?? 0) + value;
+      });
+    });
+
+    const averages: Record<string, number> = {};
+    Object.entries(sums).forEach(([key, total]) => {
+      averages[key] = total / samples.length;
+    });
+    return averages;
+  };
+
   // 백엔드로 보낼 상담 데이터 조립
-  // TODO: summary/emotionScores는 FastAPI 쪽 대화요약 + 감정평균 엔드포인트 연동 후 실제 값으로 채워야 함
-  // (지금은 자리만 잡아둔 상태라 비어있는 값이 그대로 전송됨)
+  // TODO: summary는 FastAPI 쪽 대화요약 엔드포인트 연동 후 실제 값으로 채워야 함
+  // emotionScores는 카메라 주기 분석 결과의 평균값 (아직 팀원 쪽 /emotion이 스텁이라 항상 비어있을 수 있음)
   const buildCounselPayload = (
     status: "COMPLETED" | "ABORTED",
     endImage: string | null
@@ -106,14 +188,47 @@ export default function CounselPage() {
     return {
       counselDate: getKoreanDateTimeString(new Date()),
       summary: "",
-      emotionScores: {},
+      emotionScores: getAverageEmotionScores(),
       startImagePath: startImage,
       endImagePath: endImage,
       status,
     };
   };
 
-  // 3. 이탈 감지 및 sendBeacon 전송
+  // 4. 카메라로 잡히는 화면을 주기적으로 감정분석(/emotion) 서버에 전송
+  // 상담 모달이 열려있는 동안(카메라 사용 여부를 아직 안 정했을 때)은 보내지 않음
+  useEffect(() => {
+    if (!isCamOn || isInitialModalOpen) return;
+
+    const intervalId = window.setInterval(() => {
+      const frame = captureFrame();
+      if (!frame) return;
+
+      sendEmotionFrame({ sessionId: chatSessionIdRef.current, image: frame })
+        .then((result) => {
+          if (!result.scores) return;
+
+          emotionSamplesRef.current.push(result.scores);
+
+          const topEntry = Object.entries(result.scores).sort((a, b) => b[1] - a[1])[0];
+          if (topEntry) {
+            const [code, value] = topEntry;
+            setLatestEmotion({
+              label: EMOTION_LABELS[code] ?? code,
+              percent: Math.round(value * 100),
+            });
+          }
+        })
+        .catch((err) => {
+          // 팀원 쪽 /emotion이 아직 스텁이거나 서버가 꺼져있으면 여기로 옴 - 상담 진행은 막지 않음
+          console.debug("감정분석 서버 응답 없음:", err);
+        });
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
+  }, [isCamOn, isInitialModalOpen]);
+
+  // 5. 이탈 감지 및 sendBeacon 전송
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (!isNormalExit.current) {
@@ -139,7 +254,7 @@ export default function CounselPage() {
     };
   }, [startImage]);
 
-  // 4. 초기 기분 제출 -> 카메라 사용 여부 확인 단계로 이동
+  // 6. 초기 기분 제출 -> 카메라 사용 여부 확인 단계로 이동
   const handleMoodSubmit = () => {
     if (!initialMoodText.trim()) {
       alert("오늘의 기분이나 일상을 간단히 입력해주세요!");
@@ -162,7 +277,7 @@ export default function CounselPage() {
     setIsInitialModalOpen(false);
   };
 
-  // 5. 상담 종료 핸들러
+  // 7. 상담 종료 핸들러
   const handleFinishCounseling = async () => {
     if (!window.confirm("상담을 종료하시겠습니까?")) return;
 
@@ -184,15 +299,9 @@ export default function CounselPage() {
     }
   };
 
-  // 6. 대화 목록 및 메시지 전송 로직
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 1,
-      sender: "ai",
-      text: "안녕하세요, 병욱님! 상담 시작 전, 오늘 하루 어떤 일이 있으셨고 기분은 어떠신가요?",
-      time: new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }),
-    },
-  ]);
+  // 8. 대화 목록 및 메시지 전송 로직
+  // 하드코딩된 AI 첫 인사말 없이 빈 배열로 시작 -> 첫 메시지는 사용자가 입력한 초기 기분(질의응답)이 됨
+  const [messages, setMessages] = useState<Message[]>([]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -382,17 +491,15 @@ export default function CounselPage() {
 
                   {!isInitialModalOpen && (
                     <>
-                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <div className="w-44 h-56 border-2 border-dashed border-[#1F6170] rounded-3xl relative flex items-center justify-center animate-pulse">
-                          <div className="absolute top-2 left-2 bg-[#1F6170]/90 text-white text-[10px] px-2 py-0.5 rounded">
-                            Face Tracked
-                          </div>
-                        </div>
-                      </div>
-
                       <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white px-2.5 py-1 rounded-lg text-xs flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                        주요 감정: <strong>편안함 (58%)</strong>
+                        {latestEmotion ? (
+                          <>
+                            주요 감정: <strong>{latestEmotion.label} ({latestEmotion.percent}%)</strong>
+                          </>
+                        ) : (
+                          "감정 분석 대기 중..."
+                        )}
                       </div>
                     </>
                   )}
@@ -415,10 +522,6 @@ export default function CounselPage() {
               >
                 {isCamOn ? "📷 비디오 ON" : "📷 비디오 OFF"}
               </button>
-
-              <span className="text-[11px] text-gray-400">
-                AI 모델: ResNet / MediaPipe
-              </span>
             </div>
           </div>
         </div>
