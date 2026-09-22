@@ -8,6 +8,7 @@ import com.Feely.common.MusicResponse;
 import com.Feely.dto.MusicDto;
 import com.Feely.entity.MusicEntity;
 import com.Feely.repository.MusicRepository;
+import java.util.stream.Collectors;
 
 @Service
 public class MusicService {
@@ -18,27 +19,28 @@ public class MusicService {
         this.musicRepository = musicRepository;
     }
 
-    public MusicDto getMusic(String genre) {
-        if (isBlank(genre)) {
-            return MusicDto.musicResult(List.of(), MusicResponse.Message.GENRE_REQUIRED);
-        }
-
-        try {
-            return MusicDto.musicResult(
-                    musicRepository.findByGenre(genre.trim()),
-                    null);
-        } catch (RuntimeException e) {
-            return MusicDto.musicResult(List.of(), MusicResponse.Message.MUSIC_PROCESS_ERROR);
-        }
+    public List<MusicDto> getMusic(String genre) {
+    if (isBlank(genre)) {
+        return List.of();
+    }
+    return musicRepository.findByGenre(genre.trim())
+            .stream()
+            .map(MusicDto::from)
+            .collect(Collectors.toList());
     }
 
-    public MusicDto setRecommend(String title, String singer, String genre) {
-        if (isBlank(title) || isBlank(singer) || isBlank(genre)) {
-            return MusicDto.flagResult(false, MusicResponse.Message.REQUIRED_MUSIC_INFO);
+    public boolean setRecommend(String title, String singer, String genre) {
+        if (isBlank(title)) {
+            throw new IllegalArgumentException(MusicResponse.Message.MUSIC_TITLE_REQUIRED);
         }
-
+        if (isBlank(singer)) {
+            throw new IllegalArgumentException(MusicResponse.Message.MUSIC_SINGER_REQUIRED);
+        }
+        if (isBlank(genre)) {
+            throw new IllegalArgumentException(MusicResponse.Message.MUSIC_GENRE_REQUIRED);
+        }
         if (musicRepository.findByTitleAndSinger(title.trim(), singer.trim()).isPresent()) {
-            return MusicDto.flagResult(false, MusicResponse.Message.DUPLICATE_MUSIC);
+            throw new IllegalArgumentException(MusicResponse.Message.MUSIC_ALREADY_EXISTS);
         }
 
         try {
@@ -47,31 +49,41 @@ public class MusicService {
             music.setSinger(singer.trim());
             music.setGenre(genre.trim());
             musicRepository.save(music);
-            return MusicDto.flagResult(true, MusicResponse.Message.SET_SUCCESS);
+            return true;
         } catch (RuntimeException e) {
-            return MusicDto.flagResult(false, MusicResponse.Message.MUSIC_PROCESS_ERROR);
+            throw new IllegalStateException(MusicResponse.Message.MUSIC_SAVE_FAIL, e);
         }
     }
 
-    public MusicDto updateRecommend(Long musicNo, String title, String singer, String genre) {
-        if (isBlank(title) || isBlank(singer) || isBlank(genre)) {
-            return MusicDto.flagResult(false, MusicResponse.Message.REQUIRED_MUSIC_INFO);
+    public boolean updateRecommend(Long musicNo, String title, String singer, String genre) {
+        if (isBlank(title)) {
+            throw new IllegalArgumentException(MusicResponse.Message.MUSIC_TITLE_REQUIRED);
+        }
+        if (isBlank(singer)) {
+            throw new IllegalArgumentException(MusicResponse.Message.MUSIC_SINGER_REQUIRED);
+        }
+        if (isBlank(genre)) {
+            throw new IllegalArgumentException(MusicResponse.Message.MUSIC_GENRE_REQUIRED);
         }
 
         try {
-            MusicEntity music = musicRepository
-                    .findByTitleAndSinger(title.trim(), singer.trim())
+            MusicEntity music = musicRepository.findById(musicNo)
                     .orElse(null);
 
             if (music == null) {
-                return MusicDto.flagResult(false, MusicResponse.Message.MUSIC_NOT_FOUND);
+                throw new IllegalArgumentException(MusicResponse.Message.MUSIC_ALREADY_EXISTS);
             }
 
+            music.setTitle(title.trim());
+            music.setSinger(singer.trim());
             music.setGenre(genre.trim());
             musicRepository.save(music);
-            return MusicDto.flagResult(true, MusicResponse.Message.UPDATE_SUCCESS);
+            return true;
         } catch (RuntimeException e) {
-            return MusicDto.flagResult(false, MusicResponse.Message.MUSIC_PROCESS_ERROR);
+            if (e instanceof IllegalArgumentException) {
+                throw e;
+            }
+            throw new IllegalStateException(MusicResponse.Message.MUSIC_UPDATE_FAIL, e);
         }
     }
 

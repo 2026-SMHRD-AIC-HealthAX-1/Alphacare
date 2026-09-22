@@ -1,12 +1,16 @@
 package com.Feely.controller;
 
+import java.util.List;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.Feely.common.MusicResponse;
 import com.Feely.dto.MusicDto;
+import com.Feely.entity.MusicEntity;
 import com.Feely.service.MusicService;
 
 @RestController
@@ -26,7 +30,7 @@ public class MusicController {
      * @return 음악 목록
      */
     @GetMapping("/recommend")
-    public ResponseEntity<MusicDto> getMusic(@RequestParam("genre") String genre) {
+    public ResponseEntity<List<MusicDto>> getMusic(@RequestParam("genre") String genre) {
         return ResponseEntity.ok(musicService.getMusic(genre));
     }
 
@@ -43,7 +47,12 @@ public class MusicController {
             @RequestParam("title") String title,
             @RequestParam("singer") String singer,
             @RequestParam("genre") String genre) {
-        return ResponseEntity.ok(musicService.setRecommend(title, singer, genre));
+        try {
+            boolean result = musicService.setRecommend(title, singer, genre);
+            return ResponseEntity.ok(MusicDto.result(result, MusicResponse.Message.MUSIC_SAVE_SUCCESS));
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(MusicDto.result(false, e.getMessage()));
+        }
     }
 
     /**
@@ -61,7 +70,11 @@ public class MusicController {
             @RequestParam("title") String title,
             @RequestParam("singer") String singer,
             @RequestParam("genre") String genre) {
-        return ResponseEntity.ok(musicService.updateRecommend(musicNo, title, singer, genre));
+        try {
+            boolean result = musicService.updateRecommend(musicNo, title, singer, genre);
+            return ResponseEntity.ok(MusicDto.result(result, MusicResponse.Message.MUSIC_UPDATE_SUCCESS));
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(MusicDto.result(false, e.getMessage()));
+        }
     }
-
 }

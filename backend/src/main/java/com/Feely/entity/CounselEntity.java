@@ -9,6 +9,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -52,22 +53,23 @@ public class CounselEntity {
     private String counselSum;
 
 
+    @Lob 
     @NonNull 
     @Column (
-        name = "START_IMAGE_PATH",
-        length = 500,
+        name = "START_IMAGE",
+        columnDefinition = "mediumblob",
         nullable = false
     )
-    private String startImagePath;
+    private byte[] startImage;
 
-
+    @Lob 
     @NonNull 
     @Column (
-        name = "END_IMAGE_PATH",
-        length = 500,
+        name = "END_IMAGE",
+        columnDefinition = "mediumblob",
         nullable = false
     )
-    private String endImagePath;
+    private byte[] endImage;
 
 
     // 각 감정분류의 점수

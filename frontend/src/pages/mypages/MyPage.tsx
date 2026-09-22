@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Cookies from "js-cookie";
 import CounselCalendar from "./EmotionCalender";
 import EmotionGraph from "./WeeklyReport";
 import Mshop from "./Mshop";
 import { updateMember, logout } from "../../API/auth";
+import { clearAuthCookies } from "../../API/axios";
 import { isValidPassword, isValidPhone, sanitizePhoneInput } from "../../utils/validation";
 
 export default function MyPage() {
@@ -55,8 +55,7 @@ export default function MyPage() {
       } catch (logoutError) {
         console.error("로그아웃 오류:", logoutError);
       } finally {
-        Cookies.remove("isLoggedIn", { path: "/" });
-        Cookies.remove("userId", { path: "/" });
+        clearAuthCookies();
         navigate("/Login");
       }
     } catch (error: any) {
@@ -201,7 +200,7 @@ export default function MyPage() {
           <button
             type="submit"
             disabled={updating}
-            className="w-[170px] h-[40px] bg-[#0D9488] text-white rounded-lg font-semibold text-sm flex items-center justify-center hover:bg-[#174d59] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="w-[170px] h-[40px] bg-[#0D9488] text-white rounded-lg font-semibold text-sm flex items-center justify-center hover:bg-[#0D9488] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {updating ? "수정 중..." : "정보수정완료"}
           </button>
