@@ -306,10 +306,10 @@ export default function MyPageCalendarContent() {
                         {/* 시작/종료 이미지 및 요약 */}
                         <div className="flex flex-col md:flex-row gap-4 sm:gap-5 items-center md:items-start">
                           <div className="flex-shrink-0 flex gap-2">
-                            {log.startImgPath && (
+                            {log.startImage && (
                               <div className="flex flex-col items-center">
                                 <img
-                                  src={log.startImgPath}
+                                  src={`data:image/jpeg;base64,${log.startImage}`}
                                   alt="상담 시작 시점 표정"
                                   onError={(e) => {
                                     (e.currentTarget as HTMLImageElement).style.display = "none";
@@ -321,10 +321,10 @@ export default function MyPageCalendarContent() {
                                 </span>
                               </div>
                             )}
-                            {log.endImgPath && (
+                            {log.endImage && (
                               <div className="flex flex-col items-center">
                                 <img
-                                  src={log.endImgPath}
+                                  src={`data:image/jpeg;base64,${log.endImage}`}
                                   alt="상담 종료 시점 표정"
                                   onError={(e) => {
                                     (e.currentTarget as HTMLImageElement).style.display = "none";
