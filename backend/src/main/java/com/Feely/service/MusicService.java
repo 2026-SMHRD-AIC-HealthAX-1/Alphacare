@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import com.Feely.common.MusicResponse;
 import com.Feely.entity.MusicEntity;
 import com.Feely.repository.MusicRepository;
+import java.util.stream.Collectors;
 
 @Service
 public class MusicService {
@@ -17,12 +18,14 @@ public class MusicService {
         this.musicRepository = musicRepository;
     }
 
-    public List<MusicEntity> getMusic(String genre) {
-        if (isBlank(genre)) {
-            return List.of();
-        }
-
-        return musicRepository.findByGenre(genre.trim());
+    public List<MusicDto> getMusic(String genre) {
+    if (isBlank(genre)) {
+        return List.of();
+    }
+    return musicRepository.findByGenre(genre.trim())
+            .stream()
+            .map(MusicDto::from)
+            .collect(Collectors.toList());
     }
 
     public boolean setRecommend(String title, String singer, String genre) {
