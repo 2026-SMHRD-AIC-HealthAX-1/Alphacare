@@ -26,6 +26,6 @@ public class CounselResponseDTO {
         pattern = "yyyy-MM-dd HH:mm:ss"
     )
     private LocalDateTime counselDttm;
-    private String startImage;
-    private String endImage;
+    private byte[] startImage;
+    private byte[] endImage;
 }

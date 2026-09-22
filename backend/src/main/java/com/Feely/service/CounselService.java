@@ -103,10 +103,8 @@ public class CounselService {
             response.setE06Rate(counsel.getE06Rate());
 
             response.setCounselDttm(counsel.getCounselDttm());
-            response.setStartImage(
-                    Base64.getEncoder().encodeToString(counsel.getStartImage()));
-            response.setEndImage(
-                    Base64.getEncoder().encodeToString(counsel.getEndImage()));
+            response.setStartImage(counsel.getStartImage());
+            response.setEndImage(counsel.getEndImage());
 
             responseList.add(response);
         }
