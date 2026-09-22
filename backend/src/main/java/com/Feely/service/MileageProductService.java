@@ -21,22 +21,34 @@ public class MileageProductService {
     }
 
     // 상품 전체 조회
-    public MileageProductDto getProducts() {
+    public List<MileageProductDto> getProducts() {
         List<MileageProductEntity> products = mileageProductRepository.findAll();
-        return MileageProductDto.listResult(true, MileageProductResponse.Message.PRODUCT_LIST_SUCCESS);
+
+        return products.stream()
+                .map(product -> MileageProductDto.detailResult(
+                    product.getProdNo(),
+                    product.getProdName(), 
+                    product.getProdInventory(), 
+                    product.getProdPrice(), 
+                    product.getProdImage(), 
+                    MileageProductResponse.Message.PRODUCT_LIST_SUCCESS,
+                    true
+                )).toList();
+                
+        // return MileageProductDto.listResult(true, MileageProductResponse.Message.PRODUCT_LIST_SUCCESS);
     }
 
     // 상품 단일 조회
     public MileageProductDto getProduct(Long id) {
         Optional<MileageProductEntity> product = mileageProductRepository.findById(id);
         if (product.isEmpty()) {
-            return MileageProductDto.detailResult(null, null, null, null,
+            return MileageProductDto.detailResult(null, null, null, null, null,
                     MileageProductResponse.Message.PRODUCT_NOT_FOUND, false);
         }
 
         MileageProductEntity entity = product.get();
         return MileageProductDto.detailResult(entity.getProdNo(), entity.getProdName(),
-                entity.getProdInventory(), entity.getProdPrice(),
+                entity.getProdInventory(), entity.getProdPrice(), entity.getProdImage(),
                 MileageProductResponse.Message.PRODUCT_LIST_SUCCESS, true);
     }
 
@@ -51,7 +63,7 @@ public class MileageProductService {
 
         MileageProductEntity saved = mileageProductRepository.save(request);
         return MileageProductDto.detailResult(saved.getProdNo(), saved.getProdName(),
-                saved.getProdInventory(), saved.getProdPrice(),
+                saved.getProdInventory(), saved.getProdPrice(), saved.getProdImage(),
                 MileageProductResponse.Message.PRODUCT_REGISTRATION_SUCCESS, true);
     }
 
@@ -76,7 +88,7 @@ public class MileageProductService {
 
         MileageProductEntity updated = mileageProductRepository.save(product);
         return MileageProductDto.detailResult(updated.getProdNo(), updated.getProdName(),
-                updated.getProdInventory(), updated.getProdPrice(),
+                updated.getProdInventory(), updated.getProdPrice(), updated.getProdImage(),
                 MileageProductResponse.Message.PRODUCT_UPDATE_SUCCESS, true);
     }
 

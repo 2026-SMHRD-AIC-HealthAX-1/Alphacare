@@ -1,5 +1,7 @@
 package com.Feely.entity;
 
+import java.time.LocalDate;
+
 import jakarta.annotation.Nonnull;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -50,5 +52,13 @@ public class MileageProductEntity {
         nullable = false
     )
     private int prodPrice;
+
+    @Nonnull 
+    @Column (
+        name="PRODUCT_IMAGE",
+        columnDefinition = "mediumblob",
+        nullable=false
+    )
+    private byte[] prodImage;
 
 }
