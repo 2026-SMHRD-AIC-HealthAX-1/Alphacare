@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getCounselData, CounselRecord } from "../../API/counsel";
 import { getRecommendedMusic, MusicRecommendation } from "../../API/music";
+import { getWeeklyAiSummary } from "../../API/counselSession";
 
 const DAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -88,6 +89,10 @@ export default function EmotionGraph() {
   const [musicLoading, setMusicLoading] = useState(false);
   const [musicError, setMusicError] = useState(false);
 
+  // 이번 주 상담 기록을 종합한 AI 요약 (FastAPI가 회원번호+주 기준으로 캐시해둠)
+  const [aiWeeklySummary, setAiWeeklySummary] = useState("");
+  const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
+
   useEffect(() => {
     const loadCounselData = async () => {
       try {
@@ -152,6 +157,37 @@ export default function EmotionGraph() {
     };
 
     loadMusic();
+    // weekStart가 바뀌거나 상담 기록이 새로 로드될 때만 다시 조회
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekStart, logs]);
+
+  // 이번 주 상담 기록이 있으면 AI 종합 요약을 조회함.
+  // FastAPI가 (회원번호, 주 시작일) 기준으로 캐시해둠으로 상담 개수가 안 늘어난 주를 다시 보면
+  // 별도 호출 없이 캐시된 값을 바로 받음
+  useEffect(() => {
+    if (weekLogs.length === 0) {
+      setAiWeeklySummary("");
+      return;
+    }
+
+    const memberNo = weekLogs[0].memberNo;
+    const weekStartKey = toDateKey(weekStart);
+    const summaries = weekLogs.map((log) => log.counselSum);
+
+    const loadAiSummary = async () => {
+      try {
+        setAiSummaryLoading(true);
+        const result = await getWeeklyAiSummary(memberNo, weekStartKey, summaries);
+        setAiWeeklySummary(result);
+      } catch (err) {
+        console.error("이번 주 AI 요약을 불러오지 못했습니다:", err);
+        setAiWeeklySummary("");
+      } finally {
+        setAiSummaryLoading(false);
+      }
+    };
+
+    loadAiSummary();
     // weekStart가 바뀌거나 상담 기록이 새로 로드될 때만 다시 조회
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekStart, logs]);
@@ -342,9 +378,13 @@ export default function EmotionGraph() {
               이번 주 감정 요약
             </h4>
             <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed pt-1">
-              {weekDominantLabel
-                ? `이번 주는 '${weekDominantLabel}' 감정이 가장 많이 나타났어요.`
-                : "이번 주에는 아직 상담 기록이 없어요."}
+              {!weekDominantLabel
+                ? "이번 주에는 아직 상담 기록이 없어요."
+                : aiSummaryLoading
+                ? "이번 주 요약을 불러오는 중입니다..."
+                : aiWeeklySummary
+                ? aiWeeklySummary
+                : `이번 주는 '${weekDominantLabel}' 감정이 가장 많이 나타났어요.`}
             </p>
           </div>
 

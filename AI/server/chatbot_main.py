@@ -53,10 +53,25 @@ chat_sessions: dict[str, FeelySession] = {}
 # 이것도 chat_sessions와 마찬가지로 메모리 저장이라 서버 재시작하면 초기화됨
 counsel_sessions: dict[str, dict] = {}
 
+# 주간 AI 요약 캐시 - 감주 가망은 (회원번호, 주 시작일) 이고, 값은 {count, summary} 임.
+# "주가 끝나는 시점"이라는 건 없어서(상담이 언제 끝날지 모름), 캐시를 만들 때 반영했던
+# 상담 개수(count)와 지금 요청의 상담 개수가 같으면 캐시를 그대로 쓰고, 다르면(=새 상담이 느어난) 다시 생성함
+weekly_summary_cache: dict[tuple[int, str], dict] = {}
+
 # 한국 표준시(KST, UTC+9) - DST가 없는 나라라 고정 오프셋으로 충분함 (zoneinfo/tzdata 의존성 불필요)
 KST = timezone(timedelta(hours=9))
 
 EMOTION_KEYS = ["e01", "e02", "e03", "e04", "e05", "e06"]
+
+
+class WeeklySummaryRequest(BaseModel):
+    memberNo: int
+    weekStart: str  # 이번 주 월요일 (YYYY-MM-DD) - 캐시 키의 일부로만 쓰임
+    summaries: list[str]  # 이번 주 상담 기록들의 개별 요약(counselSum) 목록
+
+
+class WeeklySummaryResponse(BaseModel):
+    summary: str
 
 
 class ChatRequest(BaseModel):
@@ -87,7 +102,8 @@ class CounselAbortRequest(BaseModel):
 
 
 class CounselSummaryResponse(BaseModel):
-    # 프론트가 이 값을 받아서 백엔드(/api/counsel)에 맞는 모양으로 다시 가공해서 직접 전송함
+    # 프론트가 이 값을 받아서 백엔드(/api/counsel)에 맞는 모양(multipart + 이미지)으로
+    # 다시 가공해서 직접 전송함 (counsel.ts의 saveCounselRecord 참고)
     counselDate: str
     summary: str
     emotionScores: dict[str, float]
@@ -210,6 +226,44 @@ def counsel_abort(data: CounselAbortRequest):
     counsel_sessions.pop(data.sessionId, None)
     chat_sessions.pop(data.sessionId, None)
     return {"ok": True}
+
+
+WEEKLY_SUMMARY_SYSTEM_PROMPT = (
+    "너는 여러 번의 심리상담 세션 요약을 모아서 한 주간의 상담 경향을 정리하는 도우미야. "
+    "아래는 이번 주에 진행된 상담들의 개별 요약이야. 이 내용을 종합해서 "
+    "이번 주 전체적으로 어떤 이야기와 감정 흐름이 있었는지 2~3문장의 한국어 존대말로 담백하게 요약해. "
+    "진단하거나 평가하는 표현은 쓰지 말고, 실제 내용에 근거해서만 작성해."
+)
+
+
+@app.post("/counsel/weekly-summary", response_model=WeeklySummaryResponse)
+def counsel_weekly_summary(data: WeeklySummaryRequest):
+    # 빈 문자열 요약은 제외함 (서버 재시작 등으로 개별 상담 요약이 비어있을 수 있음)
+    valid_summaries = [s for s in data.summaries if s and s.strip()]
+
+    if not valid_summaries:
+        return WeeklySummaryResponse(summary="")
+
+    cache_key = (data.memberNo, data.weekStart)
+    cached = weekly_summary_cache.get(cache_key)
+
+    # 캐시가 있고 그 이후로 이번 주 상담 개수가 안 늘었으면(=유효 요약 개수 동일) 그대로 재사용
+    if cached is not None and cached["count"] == len(valid_summaries):
+        return WeeklySummaryResponse(summary=cached["summary"])
+
+    try:
+        summary_text = call_feely(
+            WEEKLY_SUMMARY_SYSTEM_PROMPT,
+            [{"role": "user", "content": "\n\n".join(f"- {s}" for s in valid_summaries)}],
+            max_tokens=400,
+        )
+    except Exception as err:
+        # 생성 실패 시 캐시는 건드리지 않고 빈 문자열만 반환함 (다음 조회 때 다시 시도됨)
+        print(f"주간 상담 요약 생성 실패: {err}")
+        return WeeklySummaryResponse(summary="")
+
+    weekly_summary_cache[cache_key] = {"count": len(valid_summaries), "summary": summary_text}
+    return WeeklySummaryResponse(summary=summary_text)
 
 
 # ------------------------------------------------------------------

@@ -3,7 +3,7 @@
 import { api } from "./axios"; // 기존 axios 인스턴스 경로에 맞게 지정
 
 // FastAPI(/counsel/finish)가 계산해서 돌려준 상담 요약 데이터 (counselSession.ts의
-// CounselSummaryResult와 동일한 모양) - 이걸 그대로 백엔드가 원하는 형태로 다시 가공해서 보냄
+// CounselSummaryResult와 동일한 모양)
 export interface CounselSummaryPayload {
   counselDate: string;                   // 상담 시작 시각 (YYYY-MM-DD HH:mm:ss, 한국시간)
   summary: string;                       // 상담 전체 요약
@@ -11,30 +11,57 @@ export interface CounselSummaryPayload {
   status: "COMPLETED" | "ABORTED";       // 정상종료 / 이탈 상태 구분
 }
 
-// 상담 종료 시 백엔드(/api/counsel)로 직접 전송하는 함수
-// 지금 백엔드 컨트롤러가 @RequestBody(JSON)로 받고, DTO도 emotionScore 단일 값(Double) 하나만
-// 받으므로(6개 카테고리 Map 아님) 일반 JSON POST로 보냄.
-// 이미지 저장 로직도 지금은 "test" 고정 문자열이라 실제로 안 쓰이므로 이미지는 아예 안 보냄
-// (백엔드가 카테고리별 컬럼/이미지 저장을 다시 지원하면 이 함수도 다시 바꿔야 함)
-export const saveCounselRecord = async (
-  summary: CounselSummaryPayload
-): Promise<{ counselFlag: boolean }> => {
-  // 지금 백엔드는 감정점수를 6개 카테고리가 아니라 emotionScore 하나로만 받으므로,
-  // 6개 평균을 다시 한 번 평균 낸 값 하나를 임시로 보냄 (카테고리별 구분은 유실됨)
-  const scores = Object.values(summary.emotionScores);
-  const overallScore =
-    scores.length > 0 ? scores.reduce((sum, value) => sum + value, 0) / scores.length : 0;
+// base64 데이터 URL(카메라 캡처 이미지)을 실제 파일로 보낼 수 있게 Blob으로 변환함
+const dataUrlToBlob = (dataUrl: string): Blob => {
+  const [header, base64] = dataUrl.split(",");
+  const mimeMatch = header.match(/:(.*?);/);
+  const mime = mimeMatch ? mimeMatch[1] : "image/jpeg";
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new Blob([bytes], { type: mime });
+};
 
-  const response = await api.post("/api/counsel", {
-    counselDate: summary.counselDate,
-    summary: summary.summary,
-    emotionScore: overallScore,
-    status: summary.status,
+// 상담 종료 시 백엔드(/api/counsel)로 직접 전송하는 함수
+// 백엔드가 @RequestPart("data")/@RequestPart("startImage")/@RequestPart("endImage")로
+// multipart/form-data를 받으므로 FormData로 조립해서 보냄.
+// axios 대신 fetch를 쓰는 이유: api 인스턴스의 기본 Content-Type(application/json) 때문에
+// FormData를 보내도 boundary가 안 붙어서 415가 나는 문제가 실제로 있었어서 fetch를 씀
+export const saveCounselRecord = async (
+  summary: CounselSummaryPayload,
+  startImageDataUrl: string | null,
+  endImageDataUrl: string | null
+): Promise<{ counselFlag: boolean }> => {
+  const formData = new FormData();
+  formData.append("data", new Blob([JSON.stringify(summary)], { type: "application/json" }));
+
+  // 카메라를 사용하지 않은 상담은 이미지가 없어 이 파트가 비는데,
+  // 백엔드 startImage/endImage가 필수 파트라 이 경우 저장이 실패함 (백엔드 팀 확인 필요)
+  if (startImageDataUrl) {
+    formData.append("startImage", dataUrlToBlob(startImageDataUrl), "start.jpg");
+  }
+  if (endImageDataUrl) {
+    formData.append("endImage", dataUrlToBlob(endImageDataUrl), "end.jpg");
+  }
+
+  // 백엔드가 로그인 세션 쿠키로 회원을 조회하므로 credentials: "include" 필수
+  const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/counsel`, {
+    method: "POST",
+    body: formData,
+    credentials: "include",
   });
-  return response.data;
+
+  if (!response.ok) {
+    throw new Error(`상담 데이터 저장 요청 실패: ${response.status}`);
+  }
+
+  return response.json();
 };
 
 // 상담 기록 조회 응답 타입 (백엔드 CounselResponseDTO와 매칭)
+// startImage/endImage는 백엔드가 byte[]로 내려주는데, Jackson이 자동으로 base64 문자열로 직렬화해줌
 export interface CounselRecord {
   counselNo: number;
   memberNo: number;
@@ -46,8 +73,8 @@ export interface CounselRecord {
   e05Rate: number;          // 당황
   e06Rate: number;          // 불안
   counselDttm: string;      // 상담 일시 (YYYY-MM-DD HH:mm:ss)
-  startImgPath: string;     // 상담 시작 시점 이미지 경로
-  endImgPath: string;       // 상담 종료 시점 이미지 경로
+  startImage: string;       // 상담 시작 시점 이미지 (base64)
+  endImage: string;         // 상담 종료 시점 이미지 (base64)
 }
 
 // 로그인한 회원의 상담 기록 전체 조회 함수 (세션 기준으로 백엔드가 회원을 판별함)

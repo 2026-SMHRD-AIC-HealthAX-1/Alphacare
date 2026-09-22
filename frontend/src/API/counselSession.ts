@@ -41,6 +41,21 @@ export const finishCounselSession = async (
   return response.data;
 };
 
+// 이번 주 AI 종합 요약 조회 (WeeklyReport.tsx에서 사용)
+// FastAPI가 (회원번호, 주 시작일) 기준으로 캐시해둠 - 이번 주 상담 개수가 안 바뀌었으면
+// 캐시된 값을 그대로 돌려주고, 기록이 늘어난 경우에만 Claude를 다시 호출함
+export const getWeeklyAiSummary = async (
+  memberNo: number,
+  weekStart: string,
+  summaries: string[]
+): Promise<string> => {
+  const response = await axios.post<{ summary: string }>(
+    `${FASTAPI_BASE_URL}/counsel/weekly-summary`,
+    { memberNo, weekStart, summaries }
+  );
+  return response.data.summary;
+};
+
 // 상담 종료 버튼을 누르지 않고 페이지를 이탈했을 때(sendBeacon) 호출 -
 // 백엔드 저장은 하지 않고, FastAPI 메모리에 쌓인 세션 데이터만 정리함
 export const COUNSEL_ABORT_BEACON_URL = `${FASTAPI_BASE_URL}/counsel/abort`;
