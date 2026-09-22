@@ -9,16 +9,14 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.Feely.common.CounselResponse;
+import com.Feely.common.MemberResponse;
 import com.Feely.dto.CounselRequestDTO;
 import com.Feely.dto.CounselResponseDTO;
 import com.Feely.entity.CounselEntity;
 import com.Feely.entity.MemberEntity;
 import com.Feely.repository.CounselRepository;
 import com.Feely.repository.MemberRepository;
-import com.Feely.common.CounselResponse;
-import com.Feely.common.MemberResponse;
-
-import java.util.Base64;
 
 @Service
 public class CounselService {

@@ -1,5 +1,7 @@
 package com.Feely.controller;
 
+import java.util.List;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,10 +28,10 @@ public class MileageProductController {
 
     // 상품 전체 목록 조회
     @GetMapping("/products")
-    public ResponseEntity<MileageProductDto> getProducts() {
+    public ResponseEntity<List<MileageProductDto>> getProducts() {
 
         // 상품 전체 조회
-        MileageProductDto result = mileageProductService.getProducts();
+        List<MileageProductDto> result = mileageProductService.getProducts();
         return ResponseEntity.ok(result);
     }
 
