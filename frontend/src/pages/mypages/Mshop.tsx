@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
+import { decryptMileage, formatMileage } from "../../utils/mileageCrypto";
 import naverpay_5000 from "../../assets/naverpay_5000.png";
 import naverpay_10000 from "../../assets/naverpay_10000.png";
 
@@ -29,6 +30,12 @@ export default function Mshop() {
     const [selectedDiaryType, setSelectedDiaryType] = useState<string | null>(null);
     const [diaryStartDate, setDiaryStartDate] = useState("");
     const [diaryEndDate, setDiaryEndDate] = useState("");
+    const [mileage, setMileage] = useState(0);
+
+    useEffect(() => {
+        const encrypted = localStorage.getItem("memberMileage") ?? "";
+        setMileage(decryptMileage(encrypted));
+    }, []);
 
     const products = [
         {
@@ -145,7 +152,7 @@ export default function Mshop() {
                             <div className="flex items-center justify-center gap-3 py-2 sm:py-0 relative left-[-100px]">
                                 <p className="text-gray-500 dark:text-gray-400">보유 마일리지</p>
                                 <p className="text-2xl sm:text-3xl font-bold text-gray-600 dark:text-teal-400">
-                                    12,500 P
+                                    {formatMileage(mileage)}
                                 </p>
                             </div>
 

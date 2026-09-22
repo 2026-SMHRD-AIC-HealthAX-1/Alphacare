@@ -16,7 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.Feely.common.CounselResponse;
 import com.Feely.dto.CounselRequestDTO;
 import com.Feely.dto.CounselResponseDTO;
-import com.Feely.entity.MemberEntity;
+import com.Feely.dto.MemberSessionDto;
 import com.Feely.service.CounselService;
 
 import jakarta.servlet.http.HttpSession;
@@ -41,7 +41,7 @@ public class CounselController {
             Map<String, Boolean> counselFlag = new HashMap<>();
 
             try {
-                MemberEntity member = (MemberEntity)session.getAttribute("member");
+                MemberSessionDto member = (MemberSessionDto) session.getAttribute("member");
 
                 System.out.println("세션 member : " + member);
                 System.out.println("상담 세션 ID : " + session.getId());
@@ -69,7 +69,7 @@ public class CounselController {
         
     @GetMapping("/counsel")
     public ResponseEntity<List<CounselResponseDTO>> sendCounsel(HttpSession session) {
-        MemberEntity member = (MemberEntity) session.getAttribute("member");
+        MemberSessionDto member = (MemberSessionDto) session.getAttribute("member");
 
         if (member == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();

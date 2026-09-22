@@ -5,8 +5,10 @@ import org.springframework.stereotype.Service;
 
 import com.Feely.common.MemberResponse;
 import com.Feely.dto.MemberDto;
+import com.Feely.dto.MemberSessionDto;
 import com.Feely.entity.MemberEntity;
 import com.Feely.repository.MemberRepository;
+import com.Feely.util.MileageCryptoUtil;
 import com.Feely.util.PasswordUtil;
 
 import jakarta.servlet.http.HttpSession;
@@ -66,7 +68,19 @@ public class MemberService {
             return MemberDto.loginResult(false, MemberResponse.Message.LOGIN_FAIL);
         }
 
-        session.setAttribute("member", member);
+        MemberSessionDto sessionMember = new MemberSessionDto(
+                member.getMemberNo(),
+                member.getId(),
+                member.getName(),
+                member.getPhone(),
+                member.getSns(),
+                member.getRole(),
+                member.getMileage()
+        );
+
+        String encryptedMileage = MileageCryptoUtil.encrypt(member.getMileage());
+        session.setAttribute("member", sessionMember);
+        session.setAttribute("memberMileage", encryptedMileage);
         return MemberDto.loginResult(true, MemberResponse.Message.LOGIN_SUCCESS);
     }
 
@@ -108,18 +122,18 @@ public class MemberService {
 
     // 회원 정보 수정
     public MemberDto updateMember(HttpSession session, MemberDto request) {
-        MemberEntity member = (MemberEntity) session.getAttribute("member");
-        if (member == null) {
+        MemberSessionDto sessionMember = (MemberSessionDto) session.getAttribute("member");
+        if (sessionMember == null) {
             return MemberDto.updateResult(false, MemberResponse.Message.NEED_LOGIN);
         }
 
-        Long memberNo = member.getMemberNo();
+        Long memberNo = sessionMember.getMemberNo();
         if (memberNo == null) {
             return MemberDto.updateResult(false, MemberResponse.Message.NEED_MEMBER_NO);
         }
 
-        MemberEntity findResult = memberRepository.findById(memberNo).orElse(null);
-        if (findResult == null) {
+        MemberEntity member = memberRepository.findById(memberNo).orElse(null);
+        if (member == null) {
             return MemberDto.updateResult(false, MemberResponse.Message.MEMBER_INFO_NOT_FOUND);
         }
 
@@ -152,7 +166,20 @@ public class MemberService {
         }
 
         memberRepository.save(member);
-        session.setAttribute("member", member);
+
+        MemberSessionDto updatedSessionMember = new MemberSessionDto(
+                member.getMemberNo(),
+                member.getId(),
+                member.getName(),
+                member.getPhone(),
+                member.getSns(),
+                member.getRole(),
+                member.getMileage()
+        );
+
+        String encryptedMileage = MileageCryptoUtil.encrypt(member.getMileage());
+        session.setAttribute("member", updatedSessionMember);
+        session.setAttribute("memberMileage", encryptedMileage);
 
         return MemberDto.updateResult(true, MemberResponse.Message.UPDATE_SUCCESS);
     }
