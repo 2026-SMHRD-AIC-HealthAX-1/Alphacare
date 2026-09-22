@@ -2,16 +2,36 @@
 """
 chatbot_main.py
 
-Feely 챗봇 전용 FastAPI 서버 (임시 작업용 파일).
+Feely 챗봇/상담 전용 FastAPI 서버 (임시 작업용 파일).
 팀원이 server/main.py에서 감정분석(/emotion) 쪽을 작업 중이라 그 파일은 건드리지 않고,
-챗봇 기능만 여기서 따로 완성해둠. 팀원 작업 끝나면 아래 내용을
-main.py에 그대로 옮겨 붙이면 됨 (import, CORS 설정, /chat 엔드포인트).
-단, 맨 아래 /emotion 스텁은 테스트용이라 절대 같이 옮기면 안 됨 (main.py에 진짜 버전이 따로 있음).
+챗봇/상담 관련 기능은 전부 여기서 따로 완성해둠.
+
+[병합 방법] 팀원 작업(진짜 얼굴표정 분석 모델) 끝나면 아래 내용을 main.py로 옮기면 됨:
+  1. import 구문 전체 (main.py에 이미 있는 것과 중복되는 건 합칠 것)
+  2. app = FastAPI() / CORSMiddleware 설정
+     - main.py에도 이미 app = FastAPI()와 동일한 CORS 설정이 있으므로,
+       이 파일에서 app 인스턴스를 새로 만들지 말고 main.py의 app 하나만 남길 것
+  3. 아래 엔드포인트 전부:
+     - GET  /test                    (헬스체크)
+     - POST /chat                    (챗봇 대화)
+     - POST /counsel/start           (상담 시작 기록)
+     - POST /counsel/initial-emotion (상담 시작 시 첫 감정 계산: 텍스트 0.6 + 표정 0.4)
+     - POST /counsel/emotion-sample  (상담 중 감정 샘플 누적)
+     - POST /counsel/finish          (상담 종료, 요약/감정평균 계산)
+     - POST /counsel/abort           (상담 중 이탈 시 정리)
+     - POST /counsel/weekly-summary  (주간 AI 요약, 캐시 포함)
+  4. 위 엔드포인트가 쓰는 Pydantic 모델들(WeeklySummaryRequest ~ CounselSummaryResponse,
+     InitialEmotionRequest/Response 포함), 헬퍼 함수(_average_emotion_scores,
+     _classify_text_emotion, _summarize_session), 세션 저장용 dict(chat_sessions,
+     counsel_sessions, weekly_summary_cache)도 전부 같이 옮길 것
+  5. 단, 맨 아래 "테스트 전용 임시 스텁" 구분선 아래(EmotionRequest/EmotionResponse/
+     emotion_stub, /emotion)는 절대 같이 옮기면 안 됨 - main.py에 진짜 버전이 따로 있음
 
 단독으로 바로 실행해서 테스트도 가능:
     uvicorn chatbot_main:app --reload --port 8000
 """
 
+import json
 import random
 import sys
 from datetime import datetime, timedelta, timezone
@@ -53,9 +73,9 @@ chat_sessions: dict[str, FeelySession] = {}
 # 이것도 chat_sessions와 마찬가지로 메모리 저장이라 서버 재시작하면 초기화됨
 counsel_sessions: dict[str, dict] = {}
 
-# 주간 AI 요약 캐시 - 감주 가망은 (회원번호, 주 시작일) 이고, 값은 {count, summary} 임.
+# 주간 AI 요약 캐시 - 캐시 키는 (회원번호, 주 시작일) 이고, 값은 {count, summary} 임.
 # "주가 끝나는 시점"이라는 건 없어서(상담이 언제 끝날지 모름), 캐시를 만들 때 반영했던
-# 상담 개수(count)와 지금 요청의 상담 개수가 같으면 캐시를 그대로 쓰고, 다르면(=새 상담이 느어난) 다시 생성함
+# 상담 개수(count)와 지금 요청의 상담 개수가 같으면 캐시를 그대로 쓰고, 다르면(=새 상담이 늘어난) 다시 생성함
 weekly_summary_cache: dict[tuple[int, str], dict] = {}
 
 # 한국 표준시(KST, UTC+9) - DST가 없는 나라라 고정 오프셋으로 충분함 (zoneinfo/tzdata 의존성 불필요)
@@ -81,6 +101,17 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     reply: str
+
+
+class InitialEmotionRequest(BaseModel):
+    sessionId: str
+    moodText: str
+    # 카메라를 안 쓰면 None -> 텍스트 100%로 처리함
+    faceScores: Optional[dict[str, float]] = None
+
+
+class InitialEmotionResponse(BaseModel):
+    emotionScores: dict[str, float]
 
 
 class CounselStartRequest(BaseModel):
@@ -131,6 +162,42 @@ def _average_emotion_scores(samples: list) -> dict:
         key: (sums[key] / counts[key] if counts[key] > 0 else 0.0)
         for key in EMOTION_KEYS
     }
+
+
+TEXT_EMOTION_SYSTEM_PROMPT = (
+    "너는 사용자가 입력한 오늘의 기분/일상 텍스트를 읽고 감정을 분류하는 도우미야. "
+    "중립, 기브, 슬픔, 분노, 당황, 불안 6개 감정 각각의 비중을 0~1 사이 값으로 추정해서 합이 1이 되게 해. "
+    "다른 설명 없이 아래 형식의 JSON만 출력해: "
+    '{"e01": 0.0, "e02": 0.0, "e03": 0.0, "e04": 0.0, "e05": 0.0, "e06": 0.0} '
+    "(e01=중립, e02=기브, e03=슬픔, e04=분노, e05=당황, e06=불안)"
+)
+
+
+def _classify_text_emotion(text: str) -> dict:
+    """오늘의 기분 텍스트를 Claude로 6개 감정 점수(합 1)로 변환함.
+    빈 텍스트거나 분류 실패/JSON 파싱 실패 시에는 중립(e01=1.0)으로 안전하게 폴백함.
+    """
+    fallback = {key: (1.0 if key == "e01" else 0.0) for key in EMOTION_KEYS}
+
+    if not text or not text.strip():
+        return fallback
+
+    try:
+        raw_reply = call_feely(
+            TEXT_EMOTION_SYSTEM_PROMPT,
+            [{"role": "user", "content": text}],
+            max_tokens=200,
+        )
+        parsed = json.loads(raw_reply)
+        scores = {key: max(0.0, float(parsed.get(key, 0.0))) for key in EMOTION_KEYS}
+        total = sum(scores.values())
+        if total <= 0:
+            return fallback
+        return {key: value / total for key, value in scores.items()}
+    except Exception as err:
+        # 파싱이든 Claude 호출 실패든 여기서 다 잡아서 상담 시작 자체가 안 멉히게 함
+        print(f"텍스트 감정 분류 실패: {err}")
+        return fallback
 
 
 SUMMARY_SYSTEM_PROMPT = (
@@ -186,6 +253,25 @@ def counsel_start(data: CounselStartRequest):
         "emotionSamples": [],
     }
     return {"ok": True}
+
+
+@app.post("/counsel/initial-emotion", response_model=InitialEmotionResponse)
+def counsel_initial_emotion(data: InitialEmotionRequest):
+    # 상담 시작 시점의 "첫 감정"을 계산함.
+    # 텍스트(오늘의 기분 입력) 0.6 + 표정분석 0.4 가중합이 기본이고,
+    # 카메라를 안 쒨서 표정 점수가 없으면(faceScores=None) 억지로 0.6:0.4를 유지하지 않고
+    # 텍스트 100%로 처리함. 이 응답은 프론트가 그대로
+    # sendEmotionSample()로 넘겨서 상담 중 감정 평균(_average_emotion_scores)에 첫 샘플로 섮이는 것을 전제로 함
+    text_scores = _classify_text_emotion(data.moodText)
+
+    if not data.faceScores:
+        return InitialEmotionResponse(emotionScores=text_scores)
+
+    combined = {
+        key: text_scores[key] * 0.6 + data.faceScores.get(key, 0.0) * 0.4
+        for key in EMOTION_KEYS
+    }
+    return InitialEmotionResponse(emotionScores=combined)
 
 
 @app.post("/counsel/emotion-sample")

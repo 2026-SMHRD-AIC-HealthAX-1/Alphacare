@@ -5,6 +5,7 @@ import {
   startCounselSession,
   sendEmotionSample,
   finishCounselSession,
+  getInitialEmotion,
   COUNSEL_ABORT_BEACON_URL,
 } from "../API/counselSession";
 import { saveCounselRecord } from "../API/counsel";
@@ -351,8 +352,8 @@ export default function CounselPage() {
   };
 
   // 카메라 사용 여부 선택 후 상담 시작
-  // (텍스트 0.6 : 표정 0.4 가중합으로 첫 감정을 추론하는 로직은
-  //  FastAPI 쪽 상담 시작 전용 엔드포인트가 만들어지면 여기서 그 엔드포인트를 호출하도록 교체)
+  // 카메라를 안 쓰는 경우 표정 점수가 없으므로 텍스트(오늘의 기분) 100%로 첫 감정을 계산함
+  // (카메라를 쓰는 경우의 첫 감정 계산은 아래 video의 onLoadedData에서 표정 점수와 함께 처리함)
   const handleCameraChoice = (useCamera: boolean) => {
     setIsCamOn(useCamera);
 
@@ -362,6 +363,13 @@ export default function CounselPage() {
       startCounselSession(chatSessionIdRef.current).catch((err) => {
         console.warn("상담 시작 기록 실패:", err);
       });
+
+      // 표정 점수 없이(텍스트 100%) 첫 감정을 계산해서 감정 평균의 첫 샘플로 반영함
+      getInitialEmotion(chatSessionIdRef.current, initialMoodText)
+        .then((scores) => sendEmotionSample(chatSessionIdRef.current, scores))
+        .catch((err) => {
+          console.debug("첫 감정 계산 실패:", err);
+        });
     }
 
     // 첫 대화로 등록
@@ -619,6 +627,17 @@ export default function CounselPage() {
                           startCounselSession(chatSessionIdRef.current).catch((err) => {
                             console.warn("상담 시작 기록 실패:", err);
                           });
+
+                          // 시작 이미지로 표정 점수를 구한 뒤, 텍스트(오늘의 기분) 0.6 : 표정 0.4로
+                          // 첫 감정을 계산해서 감정 평균의 첫 샘플로 반영함
+                          sendEmotionFrame({ sessionId: chatSessionIdRef.current, image: frame })
+                            .then((result) =>
+                              getInitialEmotion(chatSessionIdRef.current, initialMoodText, result.scores)
+                            )
+                            .then((scores) => sendEmotionSample(chatSessionIdRef.current, scores))
+                            .catch((err) => {
+                              console.debug("첫 감정 계산 실패:", err);
+                            });
                         }
                       }
                     }}

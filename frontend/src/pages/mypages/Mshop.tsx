@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { decryptMileage, formatMileage } from "../../utils/mileageCrypto";
+import { getMileageProducts, MileageProduct } from "../../API/mileage";
+import { getMemberMileage } from "../../API/auth";
 import naverpay_5000 from "../../assets/naverpay_5000.png";
 import naverpay_10000 from "../../assets/naverpay_10000.png";
 
@@ -16,14 +18,37 @@ import Feely_Diary from "../../assets/Feely_Diary.png";
 import Feely_Diary_Detail from "../../assets/Feely_Diary_Detail.png";
 
 
-{/* 보유 마일리지, 적립내역 회원번호와 연동필요, 금액권 재고 연동 필요, 금액권 교환 후 마일리지 차감내역 확인필요 */ }
+// 보유 마일리지는 GET /api/member/mileage에서 받아옴 (백엔드에 아직 없으면 추가 필요 - MemberController 참고)
+// 적립내역은 별도 조회 API가 없어서 아직 미구현
+// 상품 목록/재고/가격은 DB(GET /api/products)에서 받아옴.
+// 교환 API는 아직 없어서 교환 버튼은 확인 모달까지만 동작함 (실제 차감/재고 반영은 별도 작업 필요)
+
+// DB에는 상품 이미지가 없어서 상품명으로 로컬 이미지를 매칭함 - 매칭되는 이름이 없으면 이미지 없이 표시됨
+const PRODUCT_IMAGE_MAP: Record<string, string> = {
+    "네이버페이 5,000원": naverpay_5000,
+    "네이버페이 10,000원": naverpay_10000,
+    "스타벅스 5,000원": coffee_5000,
+    "스타벅스 10,000원": coffee_10000,
+    "GS25 5,000원": gs25_5000,
+    "GS25 10,000원": gs25_10000,
+    "배달의민족 5,000원": baemin_5000,
+    "배달의민족 10,000원": baemin_10000,
+};
+
 const diaryImages = [
     Feely_Diary,
     Feely_Diary_Detail
 ];
 
+// Feely Diary는 DB 상품이 아니라(일기형/추억형 선택 등 별도 흐름) 항상 고정으로 보여주는 카드
+const FEELY_DIARY_ITEM: { name: string; image: string; point: string; inventory?: number } = {
+    name: "Feely Diary",
+    image: Feely_Diary,
+    point: "20,000P",
+};
+
 export default function Mshop() {
-    const [selectedProduct, setSelectedProduct] = useState<{ name: string; image: string; point: string } | null>(null);
+    const [selectedProduct, setSelectedProduct] = useState<{ name: string; image: string; point: string; inventory?: number } | null>(null);
     const [diaryIndex, setDiaryIndex] = useState(0);
     const [diaryDirection, setDiaryDirection] = useState("right");
     const [isSliding, setIsSliding] = useState(false);
@@ -37,53 +62,71 @@ export default function Mshop() {
         setMileage(decryptMileage(encrypted));
     }, []);
 
-    const products = [
-        {
-            name: "네이버페이 5,000원",
-            image: naverpay_5000,
-            point: "5,000P",
-        },
-        {
-            name: "네이버페이 10,000원",
-            image: naverpay_10000,
-            point: "10,000P",
-        },
-        {
-            name: "스타벅스 5,000원",
-            image: coffee_5000,
-            point: "5,000P",
-        },
-        {
-            name: "스타벅스 10,000원",
-            image: coffee_10000,
-            point: "10,000P",
-        },
-        {
-            name: "GS25 5,000원",
-            image: gs25_5000,
-            point: "5,000P",
-        },
-        {
-            name: "GS25 10,000원",
-            image: gs25_10000,
-            point: "10,000P",
-        },
-        {
-            name: "배달의민족 5,000원",
-            image: baemin_5000,
-            point: "5,000P",
-        },
-        {
-            name: "배달의민족 10,000원",
-            image: baemin_10000,
-            point: "10,000P",
-        },
-        {
-            name: "Feely Diary",
-            image: Feely_Diary,
-            point: "20,000P",
-        }
-    ];
+    // 마일리지 상품 목록 (백엔드 DB 연동)
+    const [dbProducts, setDbProducts] = useState<MileageProduct[]>([]);
+    const [productsLoading, setProductsLoading] = useState(true);
+    const [productsError, setProductsError] = useState(false);
+
+    useEffect(() => {
+        const loadProducts = async () => {
+            try {
+                setProductsLoading(true);
+                setProductsError(false);
+                const data = await getMileageProducts();
+                setDbProducts(data);
+            } catch (err) {
+                console.error("마일리지 상품 목록을 불러오지 못했습니다:", err);
+                setProductsError(true);
+            } finally {
+                setProductsLoading(false);
+            }
+        };
+
+        loadProducts();
+    }, []);
+
+    // 보유 마일리지 (회원 데이터 기준, GET /api/member/mileage)
+    const [memberMileage, setMemberMileage] = useState<number | null>(null);
+    const [mileageLoading, setMileageLoading] = useState(true);
+
+    useEffect(() => {
+        const loadMileage = async () => {
+            try {
+                setMileageLoading(true);
+                const data = await getMemberMileage();
+                setMemberMileage(data.mileage);
+            } catch (err) {
+                console.error("보유 마일리지를 불러오지 못했습니다:", err);
+                setMemberMileage(null);
+            } finally {
+                setMileageLoading(false);
+            }
+        };
+
+        loadMileage();
+    }, []);
+
+    // 화면 3곳(상단 배지 / 상품권 교환 모달 / 다이어리 교환 모달)에서 공통으로 쓰는 표시용 문자열
+    const mileageDisplay = mileageLoading
+        ? "..."
+        : memberMileage !== null
+            ? `${memberMileage.toLocaleString()} P`
+            : "- P";
+
+    // DB 상품을 카드에서 쓰는 형태로 변환
+    // 1순위: DB에 저장된 실제 상품 이미지(prodImage, base64) - 백엔드에 등록된 상품이면 항상 있음
+    // 2순위: 상품명으로 매칭되는 로컬 이미지 (DB 이미지가 없는 예전 데이터 대비)
+    // 둘 다 없으면 빈 문자열 -> 카드에서 🎁 아이콘으로 대체
+    const productItems = dbProducts.map((p) => ({
+        name: p.prodName,
+        image: p.prodImage
+            ? `data:image/jpeg;base64,${p.prodImage}`
+            : PRODUCT_IMAGE_MAP[p.prodName] ?? "",
+        point: `${p.prodPrice.toLocaleString()}P`,
+        inventory: p.prodInventory,
+    }));
+
+    const products = [...productItems, FEELY_DIARY_ITEM];
     return (
         <>
             <style>{`
@@ -167,7 +210,16 @@ export default function Mshop() {
                     {/* 상품권 목록 */}
                     <div className="overflow-hidden">
                         <div className="grid grid-cols-2 sm:grid-cols-4 items-stretch min-w-0">
-                            {products.map((item, idx) => {
+                            {productsLoading ? (
+                                <div className="col-span-2 sm:col-span-4 flex items-center justify-center h-40 text-sm text-gray-400 dark:text-gray-500">
+                                    상품 목록을 불러오는 중입니다...
+                                </div>
+                            ) : productsError ? (
+                                <div className="col-span-2 sm:col-span-4 flex items-center justify-center h-40 text-sm text-gray-400 dark:text-gray-500">
+                                    상품 목록을 불러오지 못했습니다.
+                                </div>
+                            ) : (
+                                products.map((item, idx) => {
 
                                 // Feely Diary
                                 if (item.name === "Feely Diary") {
@@ -342,13 +394,19 @@ export default function Mshop() {
         `}
                                     >
 
-                                        {/* 상품 이미지 */}
+                                        {/* 상품 이미지 (DB에 이미지가 없는 상품이면 대체 아이콘 표시) */}
                                         <div className="w-full h-[110px] sm:h-[140px] md:h-[160px] flex items-center justify-center min-w-0 shrink-0">
-                                            <img
-                                                src={item.image}
-                                                alt={item.name}
-                                                className="max-w-full max-h-full object-contain"
-                                            />
+                                            {item.image ? (
+                                                <img
+                                                    src={item.image}
+                                                    alt={item.name}
+                                                    className="max-w-full max-h-full object-contain"
+                                                />
+                                            ) : (
+                                                <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-2xl">
+                                                    🎁
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* 상품명 */}
@@ -361,17 +419,24 @@ export default function Mshop() {
                                             {item.point}
                                         </p>
 
-                                        {/* 교환 버튼 */}
-                                        <button
-                                            onClick={() => setSelectedProduct(item)}
-                                            className="w-[120px] h-[30px] mt-3 bg-[#0D9488] text-white rounded-lg text-[14px] text-center flex items-center justify-center whitespace-nowrap"
-                                        >
-                                            교환하기
-                                        </button>
+                                        {/* 재고 없으면 품절 표시, 있으면 교환 버튼 */}
+                                        {item.inventory !== undefined && item.inventory <= 0 ? (
+                                            <span className="w-[120px] h-[30px] mt-3 bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 rounded-lg text-[14px] text-center flex items-center justify-center whitespace-nowrap">
+                                                품절
+                                            </span>
+                                        ) : (
+                                            <button
+                                                onClick={() => setSelectedProduct(item)}
+                                                className="w-[120px] h-[30px] mt-3 bg-[#0D9488] text-white rounded-lg text-[14px] text-center flex items-center justify-center whitespace-nowrap"
+                                            >
+                                                교환하기
+                                            </button>
+                                        )}
 
                                     </div>
                                 );
-                            })}
+                                })
+                            )}
                         </div>
                     </div >
 
@@ -436,7 +501,7 @@ export default function Mshop() {
                                             </span>
 
                                             <span className="font-bold">
-                                                12,500 P
+                                                {mileageDisplay}
                                             </span>
                                         </div>
 
@@ -711,7 +776,7 @@ export default function Mshop() {
                                             </span>
 
                                             <span className="font-bold text-[15px]">
-                                                12,500 P
+                                                {mileageDisplay}
                                             </span>
 
                                         </div>
