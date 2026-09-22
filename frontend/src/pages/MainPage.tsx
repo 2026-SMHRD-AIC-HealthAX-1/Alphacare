@@ -355,15 +355,6 @@ export default function MainPage() {
   }, [counselLogs]);
 
   /* =======================================================
-     오늘
-  ======================================================= */
-
-  const todayStr = useMemo(
-    () => toDateKey(new Date()),
-    []
-  );
-
-  /* =======================================================
      날짜 선택
   ======================================================= */
 
@@ -944,9 +935,10 @@ export default function MainPage() {
                   >
                     {monthCells.map(
                       (cell) => {
-                        const isToday =
-                          cell.dateStr ===
-                          todayStr;
+                        const isSelected =
+                          selectedDate &&
+                          toDateKey(selectedDate) ===
+                            cell.dateStr;
 
                         const emotion =
                           emotionByDate.get(
@@ -970,16 +962,16 @@ export default function MainPage() {
                               width:
                                 "100%",
                               border:
-                                "none",
+                                isSelected
+                                  ? "2px solid #0D9488"
+                                  : "2px solid transparent",
                               borderRadius:
                                 "10px",
                               background:
-                                isToday
-                                  ? "#111827"
-                                  : "transparent",
+                                "transparent",
                               color:
-                                isToday
-                                  ? "#ffffff"
+                                isSelected
+                                  ? "#0D9488"
                                   : cell.inCurrentMonth
                                   ? "#111827"
                                   : "#d1d5db",
@@ -1008,7 +1000,7 @@ export default function MainPage() {
                               <span
                                 style={{
                                   fontSize:
-                                    "12px",
+                                    "15px",
                                 }}
                               >
                                 {
@@ -1142,34 +1134,36 @@ export default function MainPage() {
                               height:
                                 "70px",
                               border:
-                                "none",
+                                isSelected
+                                  ? "2px solid #0D9488"
+                                  : "2px solid transparent",
                               borderRadius:
                                 "10px",
                               background:
-                                isSelected
-                                  ? "#1F6170"
-                                  : "#f8fafc",
+                                "#f8fafc",
                               color:
                                 isSelected
-                                  ? "#ffffff"
+                                  ? "#0D9488"
                                   : "#111827",
                               cursor:
                                 "pointer",
                               display:
                                 "flex",
-                              flexDirection:
-                                "column",
                               alignItems:
                                 "center",
                               justifyContent:
                                 "center",
-                              gap: "5px",
+                              position:
+                                "relative",
                             }}
                           >
                             <span
                               style={{
                                 fontSize:
                                   "12px",
+                                position:
+                                  "absolute",
+                                top: "8px",
                                 opacity:
                                   isSelected
                                     ? 0.85
@@ -1198,9 +1192,14 @@ export default function MainPage() {
 
                             {emotion && (
                               <span
-                                style={{
-                                  fontSize:
-                                    "12px",
+                              style={{
+                                fontSize:
+                                  "15px",
+                                position:
+                                  "absolute",
+                                bottom: "7px",
+                                lineHeight:
+                                  1,
                                 }}
                               >
                                 {
@@ -1407,18 +1406,24 @@ export default function MainPage() {
                                   fontWeight:
                                     700,
                                   color:
-                                    "#1F6170",
+                                    "#0D9488",
                                   padding:
                                     "6px 10px",
                                   border:
-                                    "1px solid #1F6170",
+                                    "1px solid #0D9488",
                                   borderRadius:
                                     "999px",
+                                  backgroundColor:
+                                    "transparent",
                                 }}
                               >
-                                {
-                                  dominant.emoji
-                                }{" "}
+                                <span
+                                  style={{
+                                    fontSize: "15px",
+                                  }}
+                                >
+                                  {dominant.emoji}
+                                </span>{" "}
                                 {
                                   dominant.label
                                 }{" "}
@@ -1445,7 +1450,9 @@ export default function MainPage() {
                             <div
                               style={{
                                 display:
-                                  "flex",
+                                  "grid",
+                                gridTemplateColumns:
+                                  "repeat(2, minmax(0, 1fr))",
                                 gap:
                                   "20px",
                                 marginBottom:
@@ -1457,11 +1464,9 @@ export default function MainPage() {
                               <div
                                 style={{
                                   width:
-                                    "200px",
-                                  height:
-                                    "200px",
-                                  flex:
-                                    "0 0 200px",
+                                    "100%",
+                                  aspectRatio:
+                                    "1 / 1",
                                   border:
                                     "1px solid #d1d5db",
                                   borderRadius:
@@ -1478,17 +1483,17 @@ export default function MainPage() {
                                     "center",
                                 }}
                               >
-                                {log.startImgPath ? (
+                                {log.startImage ? (
                                   <img
                                     src={
-                                      log.startImgPath
+                                      `data:image/jpeg;base64,${log.startImage}`
                                     }
                                     alt="상담 시작 시점 표정"
                                     style={{
                                       width:
-                                        "200px",
+                                        "100%",
                                       height:
-                                        "200px",
+                                        "100%",
                                       objectFit:
                                         "cover",
                                       display:
@@ -1537,11 +1542,9 @@ export default function MainPage() {
                               <div
                                 style={{
                                   width:
-                                    "200px",
-                                  height:
-                                    "200px",
-                                  flex:
-                                    "0 0 200px",
+                                    "100%",
+                                  aspectRatio:
+                                    "1 / 1",
                                   border:
                                     "1px solid #d1d5db",
                                   borderRadius:
@@ -1558,17 +1561,17 @@ export default function MainPage() {
                                     "center",
                                 }}
                               >
-                                {log.endImgPath ? (
+                                {log.endImage ? (
                                   <img
                                     src={
-                                      log.endImgPath
+                                      `data:image/jpeg;base64,${log.endImage}`
                                     }
                                     alt="상담 종료 시점 표정"
                                     style={{
                                       width:
-                                        "200px",
+                                        "100%",
                                       height:
-                                        "200px",
+                                        "100%",
                                       objectFit:
                                         "cover",
                                       display:
@@ -1667,7 +1670,15 @@ export default function MainPage() {
               오른쪽 차트
           ================================================= */}
 
-          <section
+          <div
+            style={{
+              minWidth: 0,
+              display: "flex",
+              flexDirection: "column",
+              gap: "20px",
+            }}
+          >
+            <section
             style={{
               minWidth: 0,
               border:
@@ -1807,7 +1818,9 @@ export default function MainPage() {
                     display:
                       "flex",
                     height:
-                      "360px",
+                      "400px",
+                    alignItems:
+                      "flex-start",
                   }}
                 >
                   {/* Y축 */}
@@ -1816,13 +1829,11 @@ export default function MainPage() {
                     style={{
                       width:
                         "75px",
+                      height:
+                        "360px",
                       flexShrink: 0,
-                      display:
-                        "flex",
-                      flexDirection:
-                        "column",
-                      justifyContent:
-                        "space-between",
+                      position:
+                        "relative",
                       paddingRight:
                         "12px",
                       borderRight:
@@ -1830,12 +1841,23 @@ export default function MainPage() {
                     }}
                   >
                     {EMOTION_LABELS.map(
-                      (emotion) => (
+                      (emotion, index) => (
                         <span
                           key={
                             emotion.label
                           }
                           style={{
+                            position:
+                              "absolute",
+                            left: 0,
+                            top: `${
+                              (index /
+                                (EMOTION_LABELS.length -
+                                  1)) *
+                              100
+                            }%`,
+                            transform:
+                              "translateY(-50%)",
                             display:
                               "flex",
                             alignItems:
@@ -1850,13 +1872,21 @@ export default function MainPage() {
                               600,
                           }}
                         >
-                          <span>
+                          <span
+                            style={{
+                              fontSize: "15px",
+                            }}
+                          >
                             {
                               emotion.emoji
                             }
                           </span>
 
-                          <span>
+                          <span
+                            style={{
+                              fontSize: "14px",
+                            }}
+                          >
                             {
                               emotion.label
                             }
@@ -1873,6 +1903,8 @@ export default function MainPage() {
                       position:
                         "relative",
                       flex: 1,
+                      height:
+                        "360px",
                       minWidth: 0,
                       marginLeft:
                         "16px",
@@ -2146,12 +2178,9 @@ export default function MainPage() {
                 )}
               </div>
             )}
-          </section>
+            </section>
 
-
-        </div>
-
-          {/* =================================================
+            {/* =================================================
               주간 감정 요약 / 추천 음악
           ================================================= */}
 
@@ -2160,7 +2189,6 @@ export default function MainPage() {
               display: "flex",
               flexDirection: "column",
               gap: "20px",
-              marginTop: "20px",
               border: "1px solid #e5e7eb",
               borderRadius: "20px",
               padding: "24px",
@@ -2292,6 +2320,9 @@ export default function MainPage() {
                       display: "flex",
                       flexDirection: "column",
                       gap: "12px",
+                      maxHeight: "144px",
+                      overflowY: "auto",
+                      paddingRight: "8px",
                     }}
                   >
                     {weeklyMusic.map(
@@ -2359,6 +2390,10 @@ export default function MainPage() {
                           <div
                             style={{
                               minWidth: 0,
+                              height: "40px",
+                              display: "flex",
+                              flexDirection: "column",
+                              justifyContent: "center",
                             }}
                           >
                             <p
@@ -2378,30 +2413,7 @@ export default function MainPage() {
                                   "nowrap",
                               }}
                             >
-                              {
-                                music.title
-                              }
-                            </p>
-
-                            <p
-                              style={{
-                                margin:
-                                  "3px 0 0",
-                                fontSize:
-                                  "12px",
-                                color:
-                                  "#6b7280",
-                                overflow:
-                                  "hidden",
-                                textOverflow:
-                                  "ellipsis",
-                                whiteSpace:
-                                  "nowrap",
-                              }}
-                            >
-                              {
-                                music.singer
-                              }
+                              {music.title} - {music.singer}
                             </p>
                           </div>
                         </div>
@@ -2411,7 +2423,9 @@ export default function MainPage() {
                 )}
               </div>
             </section>
-          </section>
+            </section>
+          </div>
+        </div>
 
         <style>{`
           @media (max-width: 900px) {
