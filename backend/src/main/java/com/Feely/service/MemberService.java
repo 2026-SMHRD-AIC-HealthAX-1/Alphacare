@@ -30,6 +30,10 @@ public class MemberService {
             return MemberDto.signupResult(false, MemberResponse.Message.DUPLICATE_ID);
         }
 
+        if (memberRepository.existsByPhone(request.phone().trim())) {
+            return MemberDto.signupResult(false, MemberResponse.Message.DUPLICATE_PHONE);
+        }
+
         MemberEntity member = new MemberEntity();
         member.setId(request.id().trim());
         member.setPw(PasswordUtil.sha256(request.password()));
@@ -130,7 +134,11 @@ public class MemberService {
         }
 
         if (!isBlank(request.phone())) {
-            member.setPhone(request.phone().trim());
+            String newPhone = request.phone().trim();
+            if (!member.getPhone().equals(newPhone) && memberRepository.existsByPhone(newPhone)) {
+                return MemberDto.updateResult(false, MemberResponse.Message.DUPLICATE_PHONE);
+            }
+            member.setPhone(newPhone);
         }
 
         if (request.kakaoId() != null) {

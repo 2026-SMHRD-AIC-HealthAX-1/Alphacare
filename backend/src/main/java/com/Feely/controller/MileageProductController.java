@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.Feely.common.ProductResponse;
+import com.Feely.common.MileageProductResponse;
 import com.Feely.dto.MileageProductDto;
 import com.Feely.entity.MileageProductEntity;
 import com.Feely.service.MileageProductService;
@@ -58,14 +58,14 @@ public class MileageProductController {
 
             // 상품명 누락 시 400 Bad Request 응답
             return ResponseEntity.badRequest()
-                    .body(MileageProductDto.saveResult(false, ProductResponse.Message.PRODUCT_NAME_REQUIRED));
+                    .body(MileageProductDto.saveResult(false, MileageProductResponse.Message.PRODUCT_NAME_REQUIRED));
         }
 
         // 상품 가격 유효성 검사
         if (request.getProdPrice() < 0) {
             // 상품 가격이 음수일 경우 400 Bad Request 응답
             return ResponseEntity.badRequest()
-                    .body(MileageProductDto.saveResult(false, ProductResponse.Message.PRODUCT_PRICE_REQUIRED));
+                    .body(MileageProductDto.saveResult(false, MileageProductResponse.Message.PRODUCT_PRICE_REQUIRED));
         }
 
         // 상품 등록
@@ -88,7 +88,7 @@ public class MileageProductController {
         // 상품 정보가 null인 경우 400 Bad Request 응답
         if (request == null) {
             return ResponseEntity.badRequest()
-                    .body(MileageProductDto.updateResult(false, ProductResponse.Message.PRODUCT_INPUT_INVALID));
+                    .body(MileageProductDto.updateResult(false, MileageProductResponse.Message.PRODUCT_INPUT_INVALID));
         }
 
         // 상품 수정

@@ -17,6 +17,10 @@ public interface MemberRepository extends JpaRepository<MemberEntity, Long> {
 	@Query("select count(m) > 0 from MemberEntity m where m.id = :id")
 	boolean existsByMemberId(@Param("id") String id);
 
+	// 회원가입 전에 같은 휴대폰 번호가 이미 등록되어 있는지 확인
+	@Query("select count(m) > 0 from MemberEntity m where m.phone = :phone")
+	boolean existsByPhone(@Param("phone") String phone);
+
 	// 아이디 찾기 이름, 휴대폰번호로 회원 정보 확인
 	@Query("select m from MemberEntity m where m.name = :name and m.phone = :phone")
 	Optional<MemberEntity> findMemberByNameAndPhone(@Param("name") String name, @Param("phone") String phone);

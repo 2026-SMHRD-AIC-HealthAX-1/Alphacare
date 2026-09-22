@@ -8,6 +8,7 @@ public final class MemberResponse {
     public static final class Message {
         public static final String REQUIRED_MEMBER_INFO = "필수 회원정보가 누락되었습니다.";
         public static final String DUPLICATE_ID = "이미 사용중인 아이디입니다.";
+        public static final String DUPLICATE_PHONE = "이미 사용중인 휴대폰 번호입니다.";
         public static final String SIGNUP_SUCCESS = "회원가입이 완료되었습니다.";
         public static final String DUPLICATE_MEMBER_INFO = "이미 등록된 회원정보가 있습니다.";
         public static final String LOGIN_REQUIRED_INPUT = "아이디와 비밀번호를 입력해주세요.";

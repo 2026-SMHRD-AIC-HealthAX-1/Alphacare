@@ -1,8 +1,8 @@
 package com.Feely.common;
 
-public final class ProductResponse {
+public final class MileageProductResponse {
 
-    private ProductResponse() {
+    private MileageProductResponse() {
     }
 
     public static final class Message {
