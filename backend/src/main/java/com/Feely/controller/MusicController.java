@@ -24,7 +24,7 @@ public class MusicController {
     }
 
     @GetMapping("/recommend")
-    public ResponseEntity<List<MusicEntity>> getMusic(@RequestParam("genre") String genre) {
+    public ResponseEntity<List<MusicDto>> getMusic(@RequestParam("genre") String genre) {
         return ResponseEntity.ok(musicService.getMusic(genre));
     }
 
