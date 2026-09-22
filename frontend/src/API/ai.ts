@@ -18,3 +18,16 @@ export const sendChatMessage = async (data: ChatRequest): Promise<ChatResponse> 
   const response = await axios.post<ChatResponse>(`${FASTAPI_BASE_URL}/chat`, data);
   return response.data;
 };
+
+// FastAPI 챗봇 서버가 살아있는지 확인 (상담 화면의 상태 표시등에 사용 - 켜지면 초록, 꺼지면 빨강)
+export const checkServerHealth = async (): Promise<boolean> => {
+  try {
+    await axios.get(`${FASTAPI_BASE_URL}/test`, {
+      timeout: 4000,
+      params: { _: Date.now() }, // 캐시 때문에 서버가 꺼져도 예전 응답이 재사용되는 것을 방지
+    });
+    return true;
+  } catch {
+    return false;
+  }
+};

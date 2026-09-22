@@ -3,10 +3,12 @@
 import {api} from "./axios"; // 기존 axios 인스턴스 경로에 맞게 지정
 
 // 백엔드 DB 전송용 인터페이스 (memberNo는 세션으로 식별되므로 안 보냄)
+// 주의: 필드명이 백엔드 CounselRequestDTO와 정확히 일치해야 Jackson이 바인딩함
+// (emotionScore는 단수형 - 복수형 emotionScores로 보내면 백엔드에서 null 처리되어 저장 실패함)
 export interface CounselDataPayload {
   counselDate: string;                  // 상담 시작 시각 (YYYY-MM-DD HH:mm:ss, 한국시간)
   summary: string;                      // 상담 전체 요약
-  emotionScores: Record<string, number>; // 감정 카테고리별 평균 점수 (키: e01~e06)
+  emotionScore: Record<string, number>; // 감정 카테고리별 평균 점수 (키: e01~e06)
   startImagePath: string | null;        // 상담 시작 시점 캡처 이미지
   endImagePath: string | null;          // 상담 종료 시점 캡처 이미지
   status: "COMPLETED" | "ABORTED"; // 정상종료 / 이탈 상태 구분
