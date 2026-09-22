@@ -1,13 +1,13 @@
 import { useState, useRef, useEffect } from "react";
-import Cookies from "js-cookie";
 import { sendChatMessage, checkServerHealth } from "../API/ai";
 import { sendEmotionFrame } from "../API/emotion";
 import {
   startCounselSession,
   sendEmotionSample,
   finishCounselSession,
-  COUNSEL_FINISH_BEACON_URL,
+  COUNSEL_ABORT_BEACON_URL,
 } from "../API/counselSession";
+import { saveCounselRecord } from "../API/counsel";
 import { useNavigate } from "react-router-dom";
 import FeelyLogo2 from "../assets/Feely_Logo_2.png";
 
@@ -75,6 +75,8 @@ export default function CounselPage() {
   const isNormalExit = useRef(false);
   // 시작 이미지는 영상이 처음 준비됐을 때 한 번만 자동 캡처하기 위한 가드
   const hasCapturedStartRef = useRef(false);
+  // 상담 시작 시점 캡처 이미지 - 지금은 백엔드가 안 받지만, 나중에 다시 지원할 때를 대비해 들고 있음
+  const startImageRef = useRef<string | null>(null);
   // FastAPI 챗봇 서버에 상담 1회당 하나씩 발급하는 대화 식별자 (대화 히스토리 구분용)
   const chatSessionIdRef = useRef<string>(crypto.randomUUID());
 
@@ -321,14 +323,11 @@ export default function CounselPage() {
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "hidden" && !isNormalExit.current) {
-        const payload = {
-          sessionId: chatSessionIdRef.current,
-          memberId: Cookies.get("userId") ?? "",
-          endImagePath: captureFrame(),
-          status: "ABORTED",
-        };
+        // 상담 종료 버튼을 안 누르고 이탈한 경우 - 백엔드 저장은 하지 않고
+        // FastAPI에 쌓인 세션 데이터(대화 이력, 감정 샘플)만 정리해서 메모리 누수를 막음
+        const payload = { sessionId: chatSessionIdRef.current };
         const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
-        navigator.sendBeacon(COUNSEL_FINISH_BEACON_URL, blob);
+        navigator.sendBeacon(COUNSEL_ABORT_BEACON_URL, blob);
       }
     };
 
@@ -359,7 +358,7 @@ export default function CounselPage() {
 
     if (!useCamera) {
       // 카메라를 안 쓰면 시작 이미지를 캡처할 onLoadedData가 아예 안 불리므로 여기서 바로 상담 시작을 알림
-      startCounselSession(chatSessionIdRef.current, null).catch((err) => {
+      startCounselSession(chatSessionIdRef.current).catch((err) => {
         console.warn("상담 시작 기록 실패:", err);
       });
     }
@@ -371,29 +370,26 @@ export default function CounselPage() {
     setIsInitialModalOpen(false);
   };
 
-  // 7. 상담 종료 핸들러 - FastAPI가 요약/감정평균을 계산해서 백엔드 저장까지 대신 처리함
+  // 7. 상담 종료 핸들러
+  // FastAPI에서 요약/감정평균만 계산받고, 백엔드(/api/counsel) 저장은 로그인 세션 쿠키를 든 프론트가 직접 수행함
+  // (지금 백엔드는 이미지를 안 받으므로 캡처한 종료 이미지는 아직 전송하지 않음)
   const handleFinishCounseling = async () => {
     if (!window.confirm("상담을 종료하시겠습니까?")) return;
 
     isNormalExit.current = true;
 
-    const endImage = captureFrame();
-    const memberId = Cookies.get("userId") ?? "";
-
     try {
-      const result = await finishCounselSession(
-        chatSessionIdRef.current,
-        memberId,
-        endImage,
-        "COMPLETED"
-      );
+      const summary = await finishCounselSession(chatSessionIdRef.current, "COMPLETED");
+      const result = await saveCounselRecord(summary);
 
       if (result.counselFlag) {
         alert("상담이 정상적으로 종료되었습니다.");
         navigate("/mypage");
       } else {
-        // 백엔드 저장은 실패했지만 요청 자체는 정상 응답으로 온 경우
-        alert("상담 데이터 저장에 실패했습니다. 다시 시도해주세요.");
+        // 이 API는 counselFlag:false 하나로 "세션 없음"과 "저장 중 예외"를 구분 없이 알려줘서
+        // 여기서 원인을 단정할 수 없음 (실제로 DB 컬럼 문제로 실패해도 이 분기로 옴) ->
+        // 섣불리 로그아웃시키지 않고 일반 실패 메시지만 보여줌
+        alert("상담 데이터 저장에 실패했습니다. 잠시 후 다시 시도해주세요.");
       }
     } catch (error) {
       console.error("상담 데이터 전송 실패:", error);
@@ -613,12 +609,14 @@ export default function CounselPage() {
                     muted
                     className="w-full h-full object-cover transform -scale-x-100"
                     onLoadedData={() => {
-                      // 영상이 처음 준비됐을 때 한 번만 시작 이미지로 캡처하고, 그 시점을 상담 시작으로 FastAPI에 알림
+                      // 영상이 처음 준비됐을 때 한 번만 시작 이미지로 캡처해서 프론트에 보관하고,
+                      // 그 시점을 상담 시작으로 FastAPI에 알림
                       if (!hasCapturedStartRef.current) {
                         const frame = captureFrame();
                         if (frame) {
                           hasCapturedStartRef.current = true;
-                          startCounselSession(chatSessionIdRef.current, frame).catch((err) => {
+                          startImageRef.current = frame;
+                          startCounselSession(chatSessionIdRef.current).catch((err) => {
                             console.warn("상담 시작 기록 실패:", err);
                           });
                         }

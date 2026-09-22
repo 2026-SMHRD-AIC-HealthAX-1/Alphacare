@@ -1,23 +1,36 @@
 //상담 페이지
 
-import {api} from "./axios"; // 기존 axios 인스턴스 경로에 맞게 지정
+import { api } from "./axios"; // 기존 axios 인스턴스 경로에 맞게 지정
 
-// 백엔드 DB 전송용 인터페이스 (memberNo는 세션으로 식별되므로 안 보냄)
-// 주의: 필드명이 백엔드 CounselRequestDTO와 정확히 일치해야 Jackson이 바인딩함
-// (emotionScore는 단수형 - 복수형 emotionScores로 보내면 백엔드에서 null 처리되어 저장 실패함)
-export interface CounselDataPayload {
-  counselDate: string;                  // 상담 시작 시각 (YYYY-MM-DD HH:mm:ss, 한국시간)
-  summary: string;                      // 상담 전체 요약
-  emotionScore: Record<string, number>; // 감정 카테고리별 평균 점수 (키: e01~e06)
-  startImagePath: string | null;        // 상담 시작 시점 캡처 이미지
-  endImagePath: string | null;          // 상담 종료 시점 캡처 이미지
-  status: "COMPLETED" | "ABORTED"; // 정상종료 / 이탈 상태 구분
+// FastAPI(/counsel/finish)가 계산해서 돌려준 상담 요약 데이터 (counselSession.ts의
+// CounselSummaryResult와 동일한 모양) - 이걸 그대로 백엔드가 원하는 형태로 다시 가공해서 보냄
+export interface CounselSummaryPayload {
+  counselDate: string;                   // 상담 시작 시각 (YYYY-MM-DD HH:mm:ss, 한국시간)
+  summary: string;                       // 상담 전체 요약
+  emotionScores: Record<string, number>; // 감정 카테고리별 평균 점수 (키: e01~e06)
+  status: "COMPLETED" | "ABORTED";       // 정상종료 / 이탈 상태 구분
 }
 
-// 상담 데이터 백엔드 POST 전송 함수
-export const sendCounselData = async (data: CounselDataPayload) => {
-  //api주소 설정 해야함
-  const response = await api.post("/api/counsel", data);
+// 상담 종료 시 백엔드(/api/counsel)로 직접 전송하는 함수
+// 지금 백엔드 컨트롤러가 @RequestBody(JSON)로 받고, DTO도 emotionScore 단일 값(Double) 하나만
+// 받으므로(6개 카테고리 Map 아님) 일반 JSON POST로 보냄.
+// 이미지 저장 로직도 지금은 "test" 고정 문자열이라 실제로 안 쓰이므로 이미지는 아예 안 보냄
+// (백엔드가 카테고리별 컬럼/이미지 저장을 다시 지원하면 이 함수도 다시 바꿔야 함)
+export const saveCounselRecord = async (
+  summary: CounselSummaryPayload
+): Promise<{ counselFlag: boolean }> => {
+  // 지금 백엔드는 감정점수를 6개 카테고리가 아니라 emotionScore 하나로만 받으므로,
+  // 6개 평균을 다시 한 번 평균 낸 값 하나를 임시로 보냄 (카테고리별 구분은 유실됨)
+  const scores = Object.values(summary.emotionScores);
+  const overallScore =
+    scores.length > 0 ? scores.reduce((sum, value) => sum + value, 0) / scores.length : 0;
+
+  const response = await api.post("/api/counsel", {
+    counselDate: summary.counselDate,
+    summary: summary.summary,
+    emotionScore: overallScore,
+    status: summary.status,
+  });
   return response.data;
 };
 
