@@ -1,9 +1,11 @@
 ﻿import { useRef, useEffect } from "react";
 import cam from "../assets/cam.webm";
-import face from "../assets/face.webm";
-import chat from "../assets/chat.webm";
-import text2 from "../assets/2_text.png";
-import text3 from "../assets/3_1text.png";
+// import face from "../assets/face.webm";
+// import chat from "../assets/chat.webm";
+// import text2 from "../assets/2_text.png";
+// import text3 from "../assets/3_2text.png";
+import main2 from "../assets/main3.mp4"
+import main_last from "../assets/main_last.mp4";
 
 import {
   motion,
@@ -16,8 +18,10 @@ export default function MainPage() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const camRef = useRef<HTMLVideoElement>(null);
-  const faceRef = useRef<HTMLVideoElement>(null);
-  const chatRef = useRef<HTMLVideoElement>(null);
+  // const faceRef = useRef<HTMLVideoElement>(null);
+  const main2Ref = useRef<HTMLVideoElement>(null);
+  // const chatRef = useRef<HTMLVideoElement>(null);
+  const mainLastRef = useRef<HTMLVideoElement>(null);
 
   // 현재 화면
   // 0 = 1번
@@ -25,8 +29,8 @@ export default function MainPage() {
   // 2 = 3번
   const activeScreenRef = useRef(0);
 
-  // 역재생 requestAnimationFrame 저장
-  const reverseAnimationRef = useRef<number | null>(null);
+  // 역재생 기능은 사용하지 않음
+  // const reverseAnimationRef = useRef<number | null>(null);
 
   // 1번 영상의 4초 대기 타이머
   const camRestartTimerRef = useRef<number | null>(null);
@@ -128,6 +132,7 @@ export default function MainPage() {
           camRestartTimerRef.current = null;
         }
 
+        /*
         if (reverseAnimationRef.current !== null) {
           cancelAnimationFrame(
             reverseAnimationRef.current
@@ -135,6 +140,7 @@ export default function MainPage() {
 
           reverseAnimationRef.current = null;
         }
+        */
       };
     }
 
@@ -143,6 +149,7 @@ export default function MainPage() {
        ================================================== */
 
     return () => {
+      /*
       if (reverseAnimationRef.current !== null) {
         cancelAnimationFrame(
           reverseAnimationRef.current
@@ -150,6 +157,7 @@ export default function MainPage() {
 
         reverseAnimationRef.current = null;
       }
+      */
 
       if (camRestartTimerRef.current !== null) {
         window.clearTimeout(camRestartTimerRef.current);
@@ -163,12 +171,18 @@ export default function MainPage() {
      ================================================== */
 
   useEffect(() => {
+    /*
     if (faceRef.current) {
       faceRef.current.playbackRate = 0.5;
     }
+    */
 
-    if (chatRef.current) {
-      chatRef.current.playbackRate = 1;
+    if (main2Ref.current) {
+      main2Ref.current.playbackRate = 1;
+    }
+
+    if (mainLastRef.current) {
+      mainLastRef.current.playbackRate = 1;
     }
   }, []);
 
@@ -219,12 +233,18 @@ export default function MainPage() {
       camRef.current.pause();
     }
 
+    /*
     if (faceRef.current) {
       faceRef.current.pause();
     }
+    */
 
-    if (chatRef.current) {
-      chatRef.current.pause();
+    if (main2Ref.current) {
+      main2Ref.current.pause();
+    }
+
+    if (mainLastRef.current) {
+      mainLastRef.current.pause();
     }
 
     // 1번 영상의 4초 대기 타이머도 제거
@@ -234,85 +254,82 @@ export default function MainPage() {
     }
   };
 
-  /* ==================================================
-     역재생 시작
-
-     2번 / 3번 영상에서만 사용
-     ================================================== */
-
-  const startReversePlayback = (
-    video: HTMLVideoElement,
-    speed: number
-  ) => {
-    // 기존 역재생 정리
-    if (reverseAnimationRef.current !== null) {
-      cancelAnimationFrame(
-        reverseAnimationRef.current
-      );
-
-      reverseAnimationRef.current = null;
-    }
-
-    video.pause();
-
-    // 영상 정보가 아직 준비되지 않은 경우
-    if (
-      !Number.isFinite(video.duration) ||
-      video.duration <= 0
-    ) {
-      const handleLoadedMetadata = () => {
-        startReversePlayback(video, speed);
-      };
-
-      video.addEventListener(
-        "loadedmetadata",
-        handleLoadedMetadata,
-        { once: true }
-      );
-
-      return;
-    }
-
-    // 영상 마지막에서 시작
-    video.currentTime = video.duration;
-
-    let previousTime = performance.now();
-
-    const reverseFrame = (currentTime: number) => {
-      const elapsed =
-        (currentTime - previousTime) / 1000;
-
-      previousTime = currentTime;
-
-      // 역재생 속도
-      video.currentTime = Math.max(
-        0,
-        video.currentTime - elapsed * speed
-      );
-
-      // 영상 처음까지 도착하면 정지
-      if (video.currentTime <= 0.01) {
-        video.currentTime = 0;
-        reverseAnimationRef.current = null;
-        return;
-      }
-
-      reverseAnimationRef.current =
-        requestAnimationFrame(reverseFrame);
-    };
-
-    reverseAnimationRef.current =
-      requestAnimationFrame(reverseFrame);
-  };
+  //   /* ==================================================
+  //      역재생 시작
+  //
+  //      2번 / 3번 영상에서만 사용
+  //      ================================================== */
+  //
+  //   const startReversePlayback = (
+  //     video: HTMLVideoElement,
+  //     speed: number
+  //   ) => {
+  //     // 기존 역재생 정리
+  //     if (reverseAnimationRef.current !== null) {
+  //       cancelAnimationFrame(
+  //         reverseAnimationRef.current
+  //       );
+  //
+  //       reverseAnimationRef.current = null;
+  //     }
+  //
+  //     video.pause();
+  //
+  //     // 영상 정보가 아직 준비되지 않은 경우
+  //     if (
+  //       !Number.isFinite(video.duration) ||
+  //       video.duration <= 0
+  //     ) {
+  //       const handleLoadedMetadata = () => {
+  //         startReversePlayback(video, speed);
+  //       };
+  //
+  //       video.addEventListener(
+  //         "loadedmetadata",
+  //         handleLoadedMetadata,
+  //         { once: true }
+  //       );
+  //
+  //       return;
+  //     }
+  //
+  //     // 영상 마지막에서 시작
+  //     video.currentTime = video.duration;
+  //
+  //     let previousTime = performance.now();
+  //
+  //     const reverseFrame = (currentTime: number) => {
+  //       const elapsed =
+  //         (currentTime - previousTime) / 1000;
+  //
+  //       previousTime = currentTime;
+  //
+  //       // 역재생 속도
+  //       video.currentTime = Math.max(
+  //         0,
+  //         video.currentTime - elapsed * speed
+  //       );
+  //
+  //       // 영상 처음까지 도착하면 정지
+  //       if (video.currentTime <= 0.01) {
+  //         video.currentTime = 0;
+  //         reverseAnimationRef.current = null;
+  //         return;
+  //       }
+  //
+  //       reverseAnimationRef.current =
+  //         requestAnimationFrame(reverseFrame);
+  //     };
+  //
+  //     reverseAnimationRef.current =
+  //       requestAnimationFrame(reverseFrame);
+  //   };
 
   /* ==================================================
      화면 전환 + 영상 방향 제어
 
-     아래로 이동
-     → 정방향 재생
-
-     위로 이동
-     → 2번 / 3번만 역재생
+     아래/위로 이동
+     → 2번 / 3번 영상 모두 처음부터 정방향 재생
 
      1번 영상은 역재생하지 않음
      → 다시 1번으로 돌아오면 무한 반복 시작
@@ -352,6 +369,7 @@ export default function MainPage() {
       }
 
       // 기존 역재생 취소
+      /*
       if (reverseAnimationRef.current !== null) {
         cancelAnimationFrame(
           reverseAnimationRef.current
@@ -359,6 +377,7 @@ export default function MainPage() {
 
         reverseAnimationRef.current = null;
       }
+      */
 
       // 기존 영상 정지
       stopAllVideos();
@@ -368,9 +387,16 @@ export default function MainPage() {
       if (nextScreen === 0) {
         nextVideo = camRef.current;
       } else if (nextScreen === 1) {
+        /* 기존 2번 영상(face.webm) 연결은 삭제하지 않고 주석 처리
         nextVideo = faceRef.current;
+        */
+        nextVideo = main2Ref.current;
       } else if (nextScreen === 2) {
+        // 기존 3번 영상(chat.webm) 연결은 삭제하지 않고 주석 처리
+        /*
         nextVideo = chatRef.current;
+        */
+        nextVideo = mainLastRef.current;
       }
 
       if (!nextVideo) {
@@ -379,68 +405,27 @@ export default function MainPage() {
       }
 
       /* ==================================================
-         아래로 스크롤
+         화면 전환 시 영상 재생
 
          1 → 2 → 3
-
-         영상 처음부터 정방향 재생
-         ================================================== */
-
-      if (nextScreen > previousScreen) {
-        nextVideo.currentTime = 0;
-
-        if (nextScreen === 0) {
-          /*
-           * 1번 영상
-           * 역재생 없음
-           * 무한 반복 시작
-           */
-          activeScreenRef.current = nextScreen;
-          startCamLoop();
-          return;
-        }
-
-        if (nextScreen === 1) {
-          nextVideo.playbackRate = 0.5;
-        } else {
-          nextVideo.playbackRate = 1;
-        }
-
-        nextVideo.play().catch(() => {
-          // 브라우저 자동재생 제한 방지
-        });
-      }
-
-      /* ==================================================
-         위로 스크롤
-
          3 → 2 → 1
 
-         1번 영상은 역재생하지 않음
-         → 처음부터 다시 무한 반복
-
-         2번 / 3번 영상만 역재생
+         2번 / 3번 영상은 역재생하지 않음
+         → 어느 방향으로 이동하더라도 처음부터 정방향 재생
          ================================================== */
 
-      if (nextScreen < previousScreen) {
-        // 1번으로 돌아오는 경우
-        if (nextScreen === 0) {
-          activeScreenRef.current = nextScreen;
-          startCamLoop();
-          return;
-        }
-
-        let reverseSpeed = 1;
-
-        if (nextScreen === 1) {
-          reverseSpeed = 0.5;
-        }
-
-        startReversePlayback(
-          nextVideo,
-          reverseSpeed
-        );
+      if (nextScreen === 0) {
+        activeScreenRef.current = nextScreen;
+        startCamLoop();
+        return;
       }
+
+      nextVideo.currentTime = 0;
+      nextVideo.playbackRate = 1;
+
+      nextVideo.play().catch(() => {
+        // 브라우저 자동재생 제한 방지
+      });
 
       activeScreenRef.current = nextScreen;
     }
@@ -497,7 +482,53 @@ export default function MainPage() {
 
           {/* ==================================================
               2번 화면
-              왼쪽 face.webm / 오른쪽 검정
+              기존 face.webm 화면은 삭제하지 않고 주석 처리
+              → main2.mp4 전체 화면으로 변경
+              ================================================== */}
+
+          {/*
+          <motion.div
+            style={{
+              y: secondY,
+              x: secondX,
+            }}
+            className="
+              absolute
+              top-[70px]
+              left-0
+              w-screen
+              h-[calc(100vh-70px)]
+              z-20
+              bg-black
+              overflow-hidden
+            "
+          >
+            <div className="w-full h-full flex">
+              <div className="relative w-1/2 h-full bg-white flex items-center justify-center overflow-hidden">
+                <video
+                  ref={faceRef}
+                  src={face}
+                  muted
+                  playsInline
+                  preload="auto"
+                  className="block max-w-full max-h-full object-contain"
+                />
+              </div>
+
+              <div className="relative w-1/2 h-full bg-black overflow-hidden">
+                <img
+                  src={text2}
+                  alt="Feely 소개 문구"
+                  className="absolute left-5 bottom-5 max-w-[80%] max-h-[35%] object-contain"
+                />
+              </div>
+            </div>
+          </motion.div>
+          */}
+
+          {/* ==================================================
+              2번 화면 - main2.mp4
+              화면 전체를 채우고 비율은 유지
               ================================================== */}
 
           <motion.div
@@ -516,75 +547,24 @@ export default function MainPage() {
               overflow-hidden
             "
           >
-            <div
-              className="
-                w-full
-                h-full
-                flex
-              "
-            >
-
-              {/* 2번 왼쪽 50% */}
-
-              <div
-                className="
-                  relative
-                  w-1/2
-                  h-full
-                  bg-white
-                  flex
-                  items-center
-                  justify-center
-                  overflow-hidden
-                "
-              >
-                <video
-                  ref={faceRef}
-                  src={face}
-                  muted
-                  playsInline
-                  preload="auto"
-                  className="
-                    block
-                    max-w-full
-                    max-h-full
-                    object-contain
-                  "
-                />
-              </div>
-
-              {/* 2번 오른쪽 50% */}
-
-              <div
-                className="
-                  relative
-                  w-1/2
-                  h-full
-                  bg-black
-                  overflow-hidden
-                "
-              >
-                <img
-                  src={text2}
-                  alt="Feely 소개 문구"
-                  className="
-                    absolute
-                    left-5
-                    bottom-5
-                    max-w-[80%]
-                    max-h-[35%]
-                    object-contain
-                  "
-                />
-              </div>
-
-            </div>
+            <video
+              ref={main2Ref}
+              src={main2}
+              muted
+              playsInline
+              preload="auto"
+              className="block w-full h-full object-cover"
+            />
           </motion.div>
 
           {/* ==================================================
+              기존 3번 화면 코드는 삭제하지 않고 아래에 전부 주석 처리
+              ==================================================
+
+          {/ * ==================================================
               3번 화면
               왼쪽 검정 / 오른쪽 chat.webm
-              ================================================== */}
+              ================================================== * /}
 
           <motion.div
             style={{
@@ -609,7 +589,7 @@ export default function MainPage() {
               "
             >
 
-              {/* 3번 왼쪽 50% */}
+              {/ * 3번 왼쪽 50% * /}
 
               <div
                 className="
@@ -634,7 +614,7 @@ export default function MainPage() {
                 />
               </div>
 
-              {/* 3번 오른쪽 50% */}
+              {/ * 3번 오른쪽 50% * /}
 
               <div
                 className="
@@ -663,6 +643,40 @@ export default function MainPage() {
               </div>
 
             </div>
+          </motion.div>
+          */}
+
+
+          {/* ==================================================
+              3번 화면 - main_last.mp4
+              기존 3번 화면은 위에서 전체 주석 처리
+              2번과 동일하게 화면 영역을 가득 채우고
+              원본 비율을 유지
+              ================================================== */}
+
+          <motion.div
+            style={{
+              x: thirdX,
+            }}
+            className="
+              absolute
+              top-[70px]
+              left-0
+              w-screen
+              h-[calc(100vh-70px)]
+              z-30
+              bg-black
+              overflow-hidden
+            "
+          >
+            <video
+              ref={mainLastRef}
+              src={main_last}
+              muted
+              playsInline
+              preload="auto"
+              className="block w-full h-full object-cover"
+            />
           </motion.div>
 
         </div>

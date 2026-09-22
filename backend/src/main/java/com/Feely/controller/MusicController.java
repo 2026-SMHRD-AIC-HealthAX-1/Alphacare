@@ -23,11 +23,25 @@ public class MusicController {
         this.musicService = musicService;
     }
 
+    /**
+     * 특정 장르에 해당하는 음악 목록을 조회합니다.
+     *
+     * @param genre 장르
+     * @return 음악 목록
+     */
     @GetMapping("/recommend")
     public ResponseEntity<List<MusicDto>> getMusic(@RequestParam("genre") String genre) {
         return ResponseEntity.ok(musicService.getMusic(genre));
     }
 
+    /**
+     * 새로운 음악 추천을 등록합니다.
+     *
+     * @param title  음악 제목
+     * @param singer 음악 가수
+     * @param genre  음악 장르
+     * @return 등록 결과
+     */
     @GetMapping("/setRecommend")
     public ResponseEntity<MusicDto> setRecommend(
             @RequestParam("title") String title,
@@ -41,6 +55,15 @@ public class MusicController {
         }
     }
 
+    /**
+     * 기존 음악 추천을 수정합니다.
+     *
+     * @param musicNo 음악 번호
+     * @param title   음악 제목
+     * @param singer  음악 가수
+     * @param genre   음악 장르
+     * @return 수정 결과
+     */
     @GetMapping("/updateRecommend")
     public ResponseEntity<MusicDto> updateRecommend(
             @RequestParam("music_no") Long musicNo,

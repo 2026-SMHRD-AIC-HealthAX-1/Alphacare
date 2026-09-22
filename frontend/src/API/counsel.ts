@@ -2,15 +2,13 @@
 
 import {api} from "./axios"; // 기존 axios 인스턴스 경로에 맞게 지정
 
-// 백엔드 DB 전송용 인터페이스
+// 백엔드 DB 전송용 인터페이스 (memberNo는 세션으로 식별되므로 안 보냄)
 export interface CounselDataPayload {
-  counselId?: number;       // 상담번호
-  userId: number;           // 회원번호
-  counselDate: string;      // 상담일자 (시간 포함: YYYY-MM-DD HH:mm:ss)
-  sessionTurn: number;      // 상담 차수
-  summary: string;          // 상담요약
-  emotionCategory: string;  // 대표 감정분류
-  emotionScore: number;     // 감정 점수 (0 ~ 100)
+  counselDate: string;                  // 상담 시작 시각 (YYYY-MM-DD HH:mm:ss, 한국시간)
+  summary: string;                      // 상담 전체 요약
+  emotionScores: Record<string, number>; // 감정 카테고리별 평균 점수 (키: e01~e06)
+  startImagePath: string | null;        // 상담 시작 시점 캡처 이미지
+  endImagePath: string | null;          // 상담 종료 시점 캡처 이미지
   status: "COMPLETED" | "ABORTED"; // 정상종료 / 이탈 상태 구분
 }
 
@@ -38,6 +36,7 @@ export interface CounselRecord {
 }
 
 // 로그인한 회원의 상담 기록 전체 조회 함수 (세션 기준으로 백엔드가 회원을 판별함)
+// 세션 만료(401) 처리는 axios.ts의 공통 인터셉터가 처리하므로 여기서 별도 분기 불필요
 export const getCounselData = async (): Promise<CounselRecord[]> => {
   const response = await api.get("/api/counsel");
   return response.data;

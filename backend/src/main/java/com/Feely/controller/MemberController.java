@@ -148,11 +148,13 @@ public class MemberController{
             return ResponseEntity.ok(result);
         }
 
+        // 4) 회원 정보 수정 실패 시 상태 코드 분기
         if (MemberResponse.Message.NEED_MEMBER_NO.equals(result.message())
                 || MemberResponse.Message.MEMBER_INFO_NOT_FOUND.equals(result.message())) {
             return ResponseEntity.status(400).body(result);
         }
 
+        // 5) 아이디 중복 시 상태 코드 분기
         if (MemberResponse.Message.DUPLICATE_ID.equals(result.message())) {
             return ResponseEntity.status(409).body(result);
         }

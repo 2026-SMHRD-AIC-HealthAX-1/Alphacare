@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { sendCounselData, CounselDataPayload } from "../API/counsel";
+import { sendChatMessage } from "../API/ai";
 import { useNavigate } from "react-router-dom";
 
 interface Message {
@@ -10,11 +11,6 @@ interface Message {
   emotionTag?: string;
 }
 
-// 백엔드 전송용 페이로드에 이미지 필드 확장
-interface ExtendedCounselDataPayload extends CounselDataPayload {
-  startImage?: string | null;
-  endImage?: string | null;
-}
 
 export default function CounselPage() {
   const navigate = useNavigate();
@@ -23,16 +19,21 @@ export default function CounselPage() {
   const [isMicOn, setIsMicOn] = useState(false);
   const [inputText, setInputText] = useState("");
 
-  // 초기 기분 입력 모달 상태
+  // 초기 기분 입력 모달 상태 (mood: 기분 입력 단계, camera: 카메라 사용 여부 확인 단계)
   const [isInitialModalOpen, setIsInitialModalOpen] = useState(true);
+  const [preCounselStep, setPreCounselStep] = useState<"mood" | "camera">("mood");
   const [initialMoodText, setInitialMoodText] = useState("");
 
-  // 시작 / 종료 표정 테스트용 데이터 State
+  // 상담 시작 / 종료 시점에 웹캠에서 캡처한 이미지(base64)
   const [startImage, setStartImage] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
   const isNormalExit = useRef(false);
+  // 시작 이미지는 영상이 처음 준비됐을 때 한 번만 자동 캡처하기 위한 가드
+  const hasCapturedStartRef = useRef(false);
+  // FastAPI 챗봇 서버에 상담 1회당 하나씩 발급하는 대화 식별자 (대화 히스토리 구분용)
+  const chatSessionIdRef = useRef<string>(crypto.randomUUID());
 
   // 1. 웹캠 미디어 스트림 제어
   useEffect(() => {
@@ -59,22 +60,55 @@ export default function CounselPage() {
     };
   }, [isCamOn]);
 
-  // 2. 테스트 데이터 생성 함수
-  const getMockCounselData = (status: "COMPLETED" | "ABORTED"): CounselDataPayload => {
-    const now = new Date();
-    const formattedDate = now.toISOString().replace("T", " ").substring(0, 19);
+  // 2. 시간 변환 / 프레임 캡처 / 전송용 데이터 조립 함수들
+  // Date.toISOString()은 항상 UTC 기준이라 그대로 쓰면 백엔드(LocalDateTime)에
+  // 9시간 어긋난 시간이 저장됨 - 타임존을 Asia/Seoul로 명시해서 항상 한국시간으로 변환함
+  const getKoreanDateTimeString = (date: Date): string => {
+    const parts = new Intl.DateTimeFormat("ko-KR", {
+      timeZone: "Asia/Seoul",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(date);
 
+    const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "00";
+
+    return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}:${get("second")}`;
+  };
+
+  // 현재 비디오 프레임을 캡처해서 base64(JPEG) 문자열로 반환 (카메라가 꺼져있으면 null)
+  const captureFrame = (): string | null => {
+    const video = videoRef.current;
+    if (!video || video.videoWidth === 0 || video.videoHeight === 0) return null;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/jpeg", 0.8);
+  };
+
+  // 백엔드로 보낼 상담 데이터 조립
+  // TODO: summary/emotionScores는 FastAPI 쪽 대화요약 + 감정평균 엔드포인트 연동 후 실제 값으로 채워야 함
+  // (지금은 자리만 잡아둔 상태라 비어있는 값이 그대로 전송됨)
+  const buildCounselPayload = (
+    status: "COMPLETED" | "ABORTED",
+    endImage: string | null
+  ): CounselDataPayload => {
     return {
-      counselId: 101,
-      userId: 1000,
-      counselDate: formattedDate,
-      sessionTurn: 1,
-      summary:
-        status === "COMPLETED"
-          ? "오늘 길어진 업무 회의로 눈과 마음의 피로감을 호소했으나, 공감 대화를 통해 편안함과 안도감을 회복함."
-          : "상담 진행 중 비정상 이탈 발생 (이탈 시점까지의 데이터)",
-      emotionCategory: "편안함",
-      emotionScore: 58,
+      counselDate: getKoreanDateTimeString(new Date()),
+      summary: "",
+      emotionScores: {},
+      startImagePath: startImage,
+      endImagePath: endImage,
       status,
     };
   };
@@ -90,11 +124,7 @@ export default function CounselPage() {
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "hidden" && !isNormalExit.current) {
-        const payload: ExtendedCounselDataPayload = {
-          ...getMockCounselData("ABORTED"),
-          startImage: startImage || "startImg",
-          endImage: "endImg",
-        };
+        const payload = buildCounselPayload("ABORTED", captureFrame());
         const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
         navigator.sendBeacon("/api/counsel", blob);
       }
@@ -109,15 +139,21 @@ export default function CounselPage() {
     };
   }, [startImage]);
 
-  // 4. 초기 기분 제출 및 상담/표정분석 시작 (테스트용 이미지 데이터 전달)
-  const handleStartCounseling = () => {
+  // 4. 초기 기분 제출 -> 카메라 사용 여부 확인 단계로 이동
+  const handleMoodSubmit = () => {
     if (!initialMoodText.trim()) {
       alert("오늘의 기분이나 일상을 간단히 입력해주세요!");
       return;
     }
 
-    // 테스트용 더미 데이터 세팅
-    setStartImage("startImg");
+    setPreCounselStep("camera");
+  };
+
+  // 카메라 사용 여부 선택 후 상담 시작
+  // (텍스트 0.6 : 표정 0.4 가중합으로 첫 감정을 추론하는 로직은
+  //  FastAPI 쪽 상담 시작 전용 엔드포인트가 만들어지면 여기서 그 엔드포인트를 호출하도록 교체)
+  const handleCameraChoice = (useCamera: boolean) => {
+    setIsCamOn(useCamera);
 
     // 첫 대화로 등록
     handleSendMessage(initialMoodText);
@@ -126,17 +162,13 @@ export default function CounselPage() {
     setIsInitialModalOpen(false);
   };
 
-  // 5. 상담 종료 핸들러 (테스트용 이미지 데이터 전달)
+  // 5. 상담 종료 핸들러
   const handleFinishCounseling = async () => {
     if (!window.confirm("상담을 종료하시겠습니까?")) return;
 
     isNormalExit.current = true;
 
-    const payload: ExtendedCounselDataPayload = {
-      ...getMockCounselData("COMPLETED"),
-      startImage: startImage || "startImg",
-      endImage: "endImg",
-    };
+    const payload = buildCounselPayload("COMPLETED", captureFrame());
 
     try {
       const result = 
@@ -166,7 +198,7 @@ export default function CounselPage() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSendMessage = (customText?: string) => {
+  const handleSendMessage = async (customText?: string) => {
     const textToSend = customText || inputText;
     if (!textToSend.trim()) return;
 
@@ -182,50 +214,104 @@ export default function CounselPage() {
     setMessages((prev) => [...prev, userMsg]);
     if (!customText) setInputText("");
 
-    setTimeout(() => {
+    // FastAPI 챗봇 서버에 실제 메시지를 보내고 응답을 받아옴
+    try {
+      const result = await sendChatMessage({
+        sessionId: chatSessionIdRef.current,
+        message: textToSend,
+      });
+
       const aiReply: Message = {
         id: Date.now() + 1,
         sender: "ai",
-        text: "말씀해주셔서 감사해요. 솔직한 감정을 나누는 것만으로도 마음이 한결 가벼워질 수 있어요. 표정을 보며 함께 이야기 나눠볼게요.",
+        text: result.reply,
         time: new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }),
-        emotionTag: "초기 표정/감정 분석 완료",
       };
       setMessages((prev) => [...prev, aiReply]);
-    }, 1000);
+    } catch (error) {
+      console.error("AI 챗봇 응답 오류:", error);
+      const errorReply: Message = {
+        id: Date.now() + 1,
+        sender: "ai",
+        text: "죄송해요, 지금 응답을 받아오는 데 문제가 생겼어요. 잠시 후 다시 시도해주세요.",
+        time: new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }),
+      };
+      setMessages((prev) => [...prev, errorReply]);
+    }
   };
 
   return (
     <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 py-4 space-y-6 relative">
 
-      {/* 초기 기분 입력 모달 팝업 */}
+      {/* 초기 기분 입력 / 카메라 사용 확인 모달 팝업 */}
       {isInitialModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
-            <div className="text-center space-y-2">
-              <span className="text-4xl">👋</span>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                오늘 하루는 어떠셨나요?
-              </h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                상담을 시작하기 전, 오늘 있었던 일이나 지금 느끼는 감정을 편하게 남겨주세요.
-              </p>
-            </div>
+            {preCounselStep === "mood" ? (
+              <>
+                <div className="text-center space-y-2">
+                  <span className="text-4xl">👋</span>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                    오늘 하루는 어떠셨나요?
+                  </h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    상담을 시작하기 전, 오늘 있었던 일이나 지금 느끼는 감정을 편하게 남겨주세요.
+                  </p>
+                </div>
 
-            <textarea
-              rows={3}
-              value={initialMoodText}
-              onChange={(e) => setInitialMoodText(e.target.value)}
-              placeholder="예: 오늘 프로젝트 회의가 길어져서 조금 피곤해요..."
-              className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1F6170] resize-none"
-            />
+                <textarea
+                  rows={3}
+                  value={initialMoodText}
+                  onChange={(e) => setInitialMoodText(e.target.value)}
+                  onKeyDown={(e) => {
+                    // Enter로 바로 제출, Shift+Enter는 줄바꿈으로 남겨둠
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleMoodSubmit();
+                    }
+                  }}
+                  placeholder="예: 오늘 프로젝트 회의가 길어져서 조금 피곤해요..."
+                  className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1F6170] resize-none"
+                />
 
-            <button
-              type="button"
-              onClick={handleStartCounseling}
-              className="w-full py-3 bg-[#1F6170] hover:bg-[#184d59] text-white font-medium rounded-xl transition-all shadow-md active:scale-98"
-            >
-              상담 시작하기 (표정 분석 개시)
-            </button>
+                <button
+                  type="button"
+                  onClick={handleMoodSubmit}
+                  className="w-full py-3 bg-[#1F6170] hover:bg-[#184d59] text-white font-medium rounded-xl transition-all shadow-md active:scale-98"
+                >
+                  다음
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="text-center space-y-2">
+                  <span className="text-4xl">📷</span>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                    카메라를 사용하시겠어요?
+                  </h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    표정을 함께 분석하면 더 정확한 상담이 가능해요. 원치 않으시면 대화만으로도 진행할 수 있어요.
+                  </p>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleCameraChoice(false)}
+                    className="flex-1 py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-xl transition-all"
+                  >
+                    사용 안 함
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleCameraChoice(true)}
+                    className="flex-1 py-3 bg-[#1F6170] hover:bg-[#184d59] text-white font-medium rounded-xl transition-all shadow-md active:scale-98"
+                  >
+                    사용하기
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -282,6 +368,16 @@ export default function CounselPage() {
                     playsInline
                     muted
                     className="w-full h-full object-cover transform -scale-x-100"
+                    onLoadedData={() => {
+                      // 영상이 처음 준비됐을 때 한 번만 시작 이미지로 캡처
+                      if (!hasCapturedStartRef.current) {
+                        const frame = captureFrame();
+                        if (frame) {
+                          setStartImage(frame);
+                          hasCapturedStartRef.current = true;
+                        }
+                      }
+                    }}
                   />
 
                   {!isInitialModalOpen && (

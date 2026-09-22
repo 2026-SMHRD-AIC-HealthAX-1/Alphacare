@@ -1,7 +1,8 @@
 ﻿import { Link } from "react-router-dom";
-import logo from "../assets/Feely_Logo.png";
+import logo from "../assets/Feely_Logo_2.png";
 import { useState, useEffect } from "react";
 import { logout } from "../API/auth";
+import { clearAuthCookies } from "../API/axios";
 import Cookies from "js-cookie";
 
 export default function Header() {
@@ -26,8 +27,7 @@ export default function Header() {
       } catch (error) {
         console.error("로그아웃 오류 발생")
     } finally {
-      Cookies.remove("isLoggedIn", { path : "/"});
-      Cookies.remove("userId", { path : "/"});
+      clearAuthCookies();
 
       setIsLoggedIn(false);
       setUserId("");
@@ -45,13 +45,13 @@ export default function Header() {
             <img
               src={logo}
               alt="Feely Logo"
-              className="h-16 w-auto object-contain -translate-y-2"
+              className="h-12 w-auto object-contain -translate-y--2"
             />
           </Link>
         </div>
 
         {/* 네비게이션 메뉴 */}
-        <nav className="flex items-center gap-1 sm:gap-3 text-xs sm:text-base font-medium whitespace-nowrap ml-auto -translate-y-3">
+        <nav className="flex items-center gap-1 sm:gap-3 text-xs sm:text-base font-medium whitespace-nowrap ml-auto -translate-y-1">
           {/* 상담 페이지 */}
           <Link to="/Counsel" className="hover:underline">
             상담하기

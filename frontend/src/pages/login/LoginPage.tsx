@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
-import Cookies from "js-cookie";
 import { loginUser } from "../../API/auth";
+import { setAuthCookies } from "../../API/axios";
 
 export default function LoginPage() {
   const [userId, setUserId] = useState("");
@@ -22,8 +22,7 @@ export default function LoginPage() {
       });
 
       if (res.loginFlag) {
-        Cookies.set("isLoggedIn", "true", { expires: 1, path: "/" });
-        Cookies.set("userId", userId, { expires: 1, path: "/" });
+        setAuthCookies(userId);
 
         alert(`${userId}님, 환영합니다!`);
         window.location.href = "/";
@@ -95,7 +94,7 @@ export default function LoginPage() {
                 </Link>
                 <button
                   type="submit"
-                  className="flex-1 h-11 flex items-center justify-center bg-[#1F6170] text-white font-bold text-base sm:text-lg rounded-lg shadow-sm hover:opacity-90 transition-opacity"
+                  className="flex-1 h-11 flex items-center justify-center bg-[#0D9488] text-white font-bold text-base sm:text-lg rounded-lg shadow-sm hover:opacity-90 transition-opacity"
                 >
                   로그인
                 </button>
