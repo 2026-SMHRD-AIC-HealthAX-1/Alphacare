@@ -13,40 +13,41 @@ public record MemberDto(
         @JsonProperty("joinFlag") Boolean joinFlag,
         @JsonProperty("isDuplicate") Boolean isDuplicate,
         @JsonProperty("loginFlag") Boolean loginFlag,
-        @JsonProperty("message") String message) {
+        @JsonProperty("message") String message,
+        @JsonProperty("mileage") Integer mileage) {
 
     // 회원가입 결과 응답 생성
     public static MemberDto signupResult(boolean joinFlag, String message) {
-        return new MemberDto(null, null, null, null, null, joinFlag, false, false, message);
+        return new MemberDto(null, null, null, null, null, joinFlag, false, false, message, null);
     }
 
     // 아이디 중복 확인 응답 생성
     public static MemberDto duplicateResult(boolean isDuplicate) {
-        return new MemberDto(null, null, null, null, null, false, isDuplicate, false, null);
+        return new MemberDto(null, null, null, null, null, false, isDuplicate, false, null, null);
     }
 
     // 아이디 찾기 응답 생성
     public static MemberDto FindIdResult(String id, String message) {
-        return new MemberDto(id, null, null, null, null, false, false, false, message);
+        return new MemberDto(id, null, null, null, null, false, false, false, message, null);
     }
 
     // 비밀번호 찾기 응답 생성
     public static MemberDto findPasswordResult(boolean success, String temporaryPassword, String message) {
-        return new MemberDto(null, temporaryPassword, null, null, null, false, false, false, message);
+        return new MemberDto(null, temporaryPassword, null, null, null, false, false, false, message, null);
     }
 
     // 회원정보 수정 결과 응답 생성
     public static MemberDto updateResult(boolean success, String message) {
-        return new MemberDto(null, null, null, null, null, false, false, false, message);
+        return new MemberDto(null, null, null, null, null, false, false, false, message, null);
     }
 
     // 로그인 결과 응답 생성
-    public static MemberDto loginResult(boolean loginFlag, String message) {
-        return new MemberDto(null, null, null, null, null, false, false, loginFlag, message);
+    public static MemberDto loginResult(boolean loginFlag, String message, Integer mileage) {
+        return new MemberDto(null, null, null, null, null, false, false, loginFlag, message, mileage);
     }
 
     // 로그아웃 결과 응답 생성
     public static MemberDto logoutResult(boolean success, String message) {
-        return new MemberDto(null, null, null, null, null, false, false, false, message);
+        return new MemberDto(null, null, null, null, null, false, false, false, message, null);
     }
 }
