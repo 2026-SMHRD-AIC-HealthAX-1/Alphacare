@@ -11,15 +11,22 @@ import com.Feely.repository.MemberRepository;
 import com.Feely.util.MileageCryptoUtil;
 import com.Feely.util.PasswordUtil;
 
+import com.Feely.repository.CounselRepository;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 import jakarta.servlet.http.HttpSession;
 
 @Service
 public class MemberService {
 
     private final MemberRepository memberRepository;
+    private final CounselRepository counselRepository;
 
-    public MemberService(MemberRepository memberRepository) {
+    public MemberService(MemberRepository memberRepository, CounselRepository counselRepository) {
         this.memberRepository = memberRepository;
+        this.counselRepository = counselRepository;
     }
 
     // 회원가입
@@ -190,5 +197,37 @@ public class MemberService {
 
     private String blankToNull(String value) {
         return isBlank(value) ? null : value.trim();
+    }
+
+    // 마일리지 누적
+    public void setMileage(Long memberNo) {
+
+        // 오늘 날짜
+        LocalDate today = LocalDate.now();
+
+        // 오늘 00:00:00
+        LocalDateTime start = today.atStartOfDay();
+
+        // 내일 00:00:00
+        LocalDateTime end = today.plusDays(1).atStartOfDay();
+        
+        // 오늘 해당 회원의 상담 횟수
+        long todayCounselCount = 
+            counselRepository.countByMember_MemberNoAndCounselDttmBetween(memberNo, start, end);
+
+        System.out.println("오늘 상담 횟수 : " + todayCounselCount);
+
+        // 상담 저장 이후 1개면 오늘 최초 상담
+        if (todayCounselCount == 1) {
+
+            // 회원 조회
+            MemberEntity member = memberRepository.findById(memberNo).orElseThrow(() -> new IllegalArgumentException(MemberResponse.Message.MEMBER_NOT_FOUND));
+
+            member.setMileage(member.getMileage() + 1000);
+
+            memberRepository.save(member);
+
+            System.out.println("1000 마일리지 지급 완료");
+        }
     }
 }
