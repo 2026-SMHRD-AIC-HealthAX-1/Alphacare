@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { getMileageProducts, MileageProduct } from "../../API/mileage";
+import { getMileageProducts, MileageProduct, exchangeMileageProduct } from "../../API/mileage";
 import naverpay_5000 from "../../assets/naverpay_5000.png";
 import naverpay_10000 from "../../assets/naverpay_10000.png";
 
@@ -17,10 +17,10 @@ import Feely_Diary_Detail from "../../assets/Feely_Diary_Detail.png";
 
 
 // 보유 마일리지는 로그인 응답 body에 실려오는 mileage값을 로그인 시점에 localStorage("memberMileage")에
-// 저장해두고, 마일리지샵에서는 그 캐시된 값을 그대로 읽어서 보여줌 (별도 조회 API 호출 없음)
+// 저장해두고, 마일리지샵에서는 그 캐시된 값을 초기값으로 표시함. 교환 성공 시에는 백엔드가
+// GET /api/products/exchange/{prodNo} 응답으로 돌려주는 차감 후 마일리지값으로 갱신함
 // 적립내역은 별도 조회 API가 없어서 아직 미구현
 // 상품 목록/재고/가격은 DB(GET /api/products)에서 받아옴.
-// 교환 API는 아직 없어서 교환 버튼은 확인 모달까지만 동작함 (실제 차감/재고 반영은 별도 작업 필요)
 
 // DB에는 상품 이미지가 없어서 상품명으로 로컬 이미지를 매칭함 - 매칭되는 이름이 없으면 이미지 없이 표시됨
 const PRODUCT_IMAGE_MAP: Record<string, string> = {
@@ -46,8 +46,15 @@ const FEELY_DIARY_ITEM: { name: string; image: string; point: string; inventory?
     point: "20,000P",
 };
 
+// 다이어리 종류 -> 교환 시 실제로 넘겨야 하는 DB 상품(prodNo)을 찾기 위한 상품명 매핑
+// prodNo를 숫자로 하드코딩하지 않고, 상품 목록(dbProducts)에서 이 이름으로 찾아서 사용함
+const DIARY_PRODUCT_NAME: Record<string, string> = {
+    "일기형": "Diary_diary",
+    "추억형": "Diary_memory",
+};
+
 export default function Mshop() {
-    const [selectedProduct, setSelectedProduct] = useState<{ name: string; image: string; point: string; inventory?: number } | null>(null);
+    const [selectedProduct, setSelectedProduct] = useState<{ name: string; image: string; point: string; inventory?: number; prodNo?: number } | null>(null);
     const [diaryIndex, setDiaryIndex] = useState(0);
     const [diaryDirection, setDiaryDirection] = useState("right");
     const [isSliding, setIsSliding] = useState(false);
@@ -77,9 +84,9 @@ export default function Mshop() {
         loadProducts();
     }, []);
 
-    // 보유 마일리지 - 로그인 시 응답 body로 받아서 localStorage에 저장해둔 값을 그대로 읽어서 사용
-    // (별도 조회 API 없이, 로그인 시점에 캐시된 값을 마일리지샵에서 그대로 표시)
-    const [memberMileage] = useState<number | null>(() => {
+    // 보유 마일리지 - 로그인 시 응답 body로 받아서 localStorage에 저장해둔 값을 초기값으로 사용하고,
+    // 교환에 성공하면 백엔드가 돌려주는 차감 후 값으로 갱신함(applyMileage)
+    const [memberMileage, setMemberMileage] = useState<number | null>(() => {
         try {
             const cached = localStorage.getItem("memberMileage");
             return cached !== null ? Number(cached) : null;
@@ -88,10 +95,58 @@ export default function Mshop() {
         }
     });
 
+    // 교환 요청 진행 상태 / 실패 메시지 (모달 안에서 표시)
+    const [exchanging, setExchanging] = useState(false);
+    const [exchangeError, setExchangeError] = useState<string | null>(null);
+
     // 화면 3곳(상단 배지 / 상품권 교환 모달 / 다이어리 교환 모달)에서 공통으로 쓰는 표시용 문자열
     const mileageDisplay = memberMileage !== null
         ? `${memberMileage.toLocaleString()} P`
         : "- P";
+
+    // 교환 성공 시 마일리지 상태 + localStorage 캐시를 같이 갱신
+    const applyMileage = (value: number | null) => {
+        setMemberMileage(value);
+        if (value !== null) {
+            try {
+                localStorage.setItem("memberMileage", String(value));
+            } catch {
+                // localStorage를 못 쓰는 환경이면 무시
+            }
+        }
+    };
+
+    // 상품 교환 요청 - GET /api/products/exchange/{prodNo} 호출 결과에 따라 성공/실패 처리
+    // (401은 axios.ts의 공통 인터셉터가 세션만료 처리를 이미 하므로 여기서는 그 외 실패만 처리)
+    const requestExchange = async (prodNo: number): Promise<boolean> => {
+        setExchanging(true);
+        setExchangeError(null);
+        try {
+            const data = await exchangeMileageProduct(prodNo);
+            if (data.success === false) {
+                setExchangeError(data.message || "교환에 실패했습니다.");
+                return false;
+            }
+            applyMileage(data.mileage);
+            return true;
+        } catch (err: any) {
+            // 401(세션 만료)은 axios 인터셉터가 알림 + 메인페이지 이동을 공통으로 처리하므로
+            // 여기서 별도 메시지를 띄우면 리다이렉트 직전에 잘못된 문구가 잠깐 보일 수 있어 건너뜀
+            if (err?.response?.status === 401) {
+                return false;
+            }
+
+            const serverMessage = err?.response?.data?.message;
+            setExchangeError(
+                typeof serverMessage === "string" && serverMessage
+                    ? serverMessage
+                    : "교환 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+            );
+            return false;
+        } finally {
+            setExchanging(false);
+        }
+    };
 
     // DB 상품을 카드에서 쓰는 형태로 변환
     // 1순위: DB에 저장된 실제 상품 이미지(prodImage, base64) - 백엔드에 등록된 상품이면 항상 있음
@@ -108,6 +163,7 @@ export default function Mshop() {
                 : PRODUCT_IMAGE_MAP[p.prodName] ?? "",
             point: `${p.prodPrice.toLocaleString()}P`,
             inventory: p.prodInventory,
+            prodNo: p.prodNo,
         }));
 
     const products = [...productItems, FEELY_DIARY_ITEM];
@@ -339,7 +395,10 @@ export default function Mshop() {
 
                                                     {/* 일기형 */}
                                                     <button
-                                                        onClick={() => setSelectedDiaryType("일기형")}
+                                                        onClick={() => {
+                                                            setExchangeError(null);
+                                                            setSelectedDiaryType("일기형");
+                                                        }}
                                                         className="relative top-0 sm:top-[30px] w-[120px] h-[30px] bg-[#0D9488] text-sm sm:text-[15px] text-white rounded-lg flex items-center justify-center text-center mb-3 sm:mb-5"
                                                     >
                                                         일기형
@@ -352,7 +411,10 @@ export default function Mshop() {
 
                                                     {/* 추억형 */}
                                                     <button
-                                                        onClick={() => setSelectedDiaryType("추억형")}
+                                                        onClick={() => {
+                                                            setExchangeError(null);
+                                                            setSelectedDiaryType("추억형");
+                                                        }}
                                                         className="relative top-0 sm:top-[30px] w-[120px] h-[30px] bg-[#0D9488] text-sm sm:text-[15px] text-white rounded-lg flex items-center justify-center text-center"
                                                     >
                                                         추억형
@@ -410,7 +472,10 @@ export default function Mshop() {
                                             </span>
                                         ) : (
                                             <button
-                                                onClick={() => setSelectedProduct(item)}
+                                                onClick={() => {
+                                                    setExchangeError(null);
+                                                    setSelectedProduct(item);
+                                                }}
                                                 className="w-[120px] h-[30px] mt-3 bg-[#0D9488] text-white rounded-lg text-[14px] text-center flex items-center justify-center whitespace-nowrap"
                                             >
                                                 교환하기
@@ -454,7 +519,10 @@ export default function Mshop() {
                                         </h2>
 
                                         <button
-                                            onClick={() => setSelectedProduct(null)}
+                                            onClick={() => {
+                                                setExchangeError(null);
+                                                setSelectedProduct(null);
+                                            }}
                                             className="text-xl text-gray-500 dark:text-gray-400"
                                         >
                                             ✕
@@ -500,17 +568,22 @@ export default function Mshop() {
                                         </div>
                                     </div>
 
+                                    {/* 실패 메시지 */}
+                                    {exchangeError && (
+                                        <p className="text-red-500 text-sm text-center mb-4">{exchangeError}</p>
+                                    )}
+
                                     {/* 최종 교환 버튼 */}
                                     <button
-                                        onClick={() => {
-                                            console.log("상품 교환:", selectedProduct.name);
-
-                                            // 실제 교환 API 연결 부분
-                                            setSelectedProduct(null);
+                                        onClick={async () => {
+                                            if (selectedProduct.prodNo === undefined) return;
+                                            const success = await requestExchange(selectedProduct.prodNo);
+                                            if (success) setSelectedProduct(null);
                                         }}
-                                        className="w-full bg-[#0D9488] text-white py-3 rounded-lg font-semibold"
+                                        disabled={exchanging}
+                                        className="w-full bg-[#0D9488] text-white py-3 rounded-lg font-semibold disabled:opacity-60"
                                     >
-                                        교환하기
+                                        {exchanging ? "처리 중..." : "교환하기"}
                                     </button>
 
                                 </div>
@@ -534,6 +607,7 @@ export default function Mshop() {
 
                                         <button
                                             onClick={() => {
+                                                setExchangeError(null);
                                                 setSelectedDiaryType(null);
                                                 setDiaryStartDate("");
                                                 setDiaryEndDate("");
@@ -782,9 +856,14 @@ export default function Mshop() {
                                     </div>
 
 
+                                    {/* 실패 메시지 */}
+                                    {exchangeError && (
+                                        <p className="text-red-500 text-sm text-center mb-4">{exchangeError}</p>
+                                    )}
+
                                     {/* 최종 교환 버튼 */}
                                     <button
-                                        onClick={() => {
+                                        onClick={async () => {
 
                                             {/* 추억형 기간 미선택 확인 */ }
                                             if (
@@ -799,15 +878,20 @@ export default function Mshop() {
                                                 return;
                                             }
 
+                                            {/* 다이어리 종류 -> 실제 DB 상품번호(prodNo) 찾기 */ }
+                                            const prodNo = selectedDiaryType
+                                                ? dbProducts.find(
+                                                    (p) => p.prodName === DIARY_PRODUCT_NAME[selectedDiaryType]
+                                                )?.prodNo
+                                                : undefined;
 
-                                            {/* 실제 교환 API 연결 부분 */ }
-                                            console.log(
-                                                "다이어리 교환:",
-                                                selectedDiaryType,
-                                                diaryStartDate,
-                                                diaryEndDate
-                                            );
+                                            if (prodNo === undefined) {
+                                                setExchangeError("다이어리 상품 정보를 찾을 수 없습니다.");
+                                                return;
+                                            }
 
+                                            const success = await requestExchange(prodNo);
+                                            if (!success) return;
 
                                             {/* 팝업 닫기 */ }
                                             setSelectedDiaryType(null);
@@ -818,16 +902,18 @@ export default function Mshop() {
 
                                         }}
                                         disabled={
-                                            selectedDiaryType === "추억형" &&
-                                            (!diaryStartDate || !diaryEndDate)
+                                            exchanging ||
+                                            (selectedDiaryType === "추억형" &&
+                                                (!diaryStartDate || !diaryEndDate))
                                         }
-                                        className={`w-full py-3 rounded-lg font-semibold text-[16px] text-white ${selectedDiaryType === "추억형" &&
-                                            (!diaryStartDate || !diaryEndDate)
+                                        className={`w-full py-3 rounded-lg font-semibold text-[16px] text-white ${exchanging ||
+                                            (selectedDiaryType === "추억형" &&
+                                                (!diaryStartDate || !diaryEndDate))
                                             ? "bg-gray-300 dark:bg-gray-600 cursor-not-allowed"
                                             : "bg-[#0D9488] hover:bg-[#0D9488]"
                                             }`}
                                     >
-                                        교환하기
+                                        {exchanging ? "처리 중..." : "교환하기"}
                                     </button>
 
                                 </div>
