@@ -48,7 +48,7 @@ export default function Header() {
       setIsLoggedIn(false);
       setUserId("");
       alert("로그아웃 되었습니다.")
-      window.location.href = "/";
+      window.location.assign(import.meta.env.BASE_URL);
     }
   };
 
@@ -57,7 +57,18 @@ export default function Header() {
       <div className="w-full px-1 sm:px-5 py-2 flex items-center justify-between">
         {/* 로고 */}
         <div className="flex items-center">
-          <Link to="/">
+          <Link
+            to="/"
+            onClick={(event) => {
+              const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+              const currentPath = window.location.pathname.replace(/\/$/, "");
+
+              if (currentPath === basePath) {
+                event.preventDefault();
+                window.location.reload();
+              }
+            }}
+          >
             <img
               src={logo}
               alt="Feely Logo"
