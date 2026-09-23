@@ -53,21 +53,17 @@ public class CounselEntity {
     private String counselSum;
 
 
-    @Lob 
-    @NonNull 
+    @Lob
     @Column (
         name = "START_IMAGE",
-        columnDefinition = "mediumblob",
-        nullable = false
+        columnDefinition = "mediumblob"
     )
     private byte[] startImage;
 
-    @Lob 
-    @NonNull 
+    @Lob
     @Column (
         name = "END_IMAGE",
-        columnDefinition = "mediumblob",
-        nullable = false
+        columnDefinition = "mediumblob"
     )
     private byte[] endImage;
 
@@ -76,8 +72,8 @@ public class CounselEntity {
     // e01 : 중립
     // e02 : 기쁨
     // e03 : 슬픔
-    // e04 : 분노
-    // e05 : 당황
+    // e04 : 화남
+    // e05 : 우울
     // e06 : 불안
 
     @NonNull 
