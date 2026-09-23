@@ -1,7 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import CounselCalendar from "./EmotionCalender";
-import EmotionGraph from "./WeeklyReport";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Mshop from "./Mshop";
 import { updateMember, logout } from "../../API/auth";
 import { clearAuthCookies } from "../../API/axios";
@@ -9,7 +7,9 @@ import { isValidPassword, isValidPhone, sanitizePhoneInput } from "../../utils/v
 
 export default function MyPage() {
   const navigate = useNavigate();
-  const [activeMenu, setActiveMenu] = useState<"profile" | "graph" | "calendar" | "Mshop">("calendar");
+  const [searchParams] = useSearchParams();
+  // 헤더의 사용자 이름 드롭다운 메뉴에서 전달되는 tab 값으로 화면을 분기 (profile: 회원정보수정, Mshop: 마일리지샵)
+  const activeTab = searchParams.get("tab") === "Mshop" ? "Mshop" : "profile";
 
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
@@ -70,150 +70,101 @@ export default function MyPage() {
   };
 
   return (
-    <div className="flex items-start max-w-7xl mx-auto py-4 px-2 sm:px-6 gap-8 min-h-[750px]">
-      {/* 1. LNB 좌측 서브메뉴 (항상 고정) */}
-      <aside className="w-40 flex-shrink-0 space-y-2 pr-6 sticky top-4 self-start relative after:absolute after:top-14 sm:after:top-20 after:right-0 after:w-px after:h-[192px] after:bg-gray-200 dark:after:bg-gray-700">
-        <div className="pt-14 sm:pt-20">
-          <button
-            onClick={() => setActiveMenu("calendar")}
-            className={`w-full text-center py-2.5 px-3 rounded-lg text-base transition-colors ${activeMenu === "calendar"
-              ? "text-[#1F6170] font-bold dark:text-teal-400"
-              : "text-gray-600 dark:text-white hover:text-[#1F6170]"
-              }`}
-          >
-            상담 캘린더
-          </button>
-          <button
-            onClick={() => setActiveMenu("graph")}
-            className={`w-full text-center py-2.5 px-3 rounded-lg text-base transition-colors ${activeMenu === "graph"
-              ? "text-[#1F6170] font-bold dark:text-teal-400"
-              : "text-gray-600 dark:text-white hover:text-[#1F6170]"
-              }`}
-          >
-            감정 그래프
-          </button>
+    <div className="max-w-7xl mx-auto py-4 px-2 sm:px-6 min-h-[750px]">
+      {activeTab === "profile" && (
+        <div className="w-full flex justify-center">
+          <div className="w-full max-w-[800px] p-6 sm:p-8 dark:border-gray-700">
 
-          <button
-            onClick={() => setActiveMenu("Mshop")}
-            className={`w-full text-center py-2.5 px-3 rounded-lg text-base transition-colors ${activeMenu === "Mshop"
-              ? "text-[#1F6170] font-bold dark:text-teal-400"
-              : "text-gray-600 dark:text-white hover:text-[#1F6170]"
-              }`}
-          >
-            마일리지 샵
-          </button>
+            {/* 제목 */}
+            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-[80px] text-center">
+              회원정보 수정
+            </h2>
 
-          <button
-            onClick={() => setActiveMenu("profile")}
-            className={`w-full text-center py-2.5 px-3 rounded-lg text-base transition-colors ${activeMenu === "profile"
-              ? "text-[#1F6170] font-bold dark:text-teal-400"
-              : "text-gray-600 dark:text-white hover:text-[#1F6170]"
-              }`}
-          >
-            회원정보수정
-          </button>
-        </div>
-      </aside>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleUpdateMember();
+              }}
+              className="w-full max-w-[500px] mx-auto mt-[50px] space-y-6"
+            >
 
-      {/* 2. 메인 콘텐츠 영역 */}
-      <main className="flex-1 min-w-0">
-        {activeMenu === "profile" && (
-  <div className="w-full flex justify-center">
-    <div className="w-full max-w-[800px] p-6 sm:p-8 dark:border-gray-700">
+              {/* 비밀번호 */}
+              <div className="grid grid-cols-[130px_1fr] items-start gap-4">
+                <label className="pt-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  비밀번호
+                </label>
 
-      {/* 제목 */}
-      <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-[80px] text-center">
-        회원정보 수정
-      </h2>
+                <div className="w-full">
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-50 h-11 px-4 border border-gray-300 rounded-lg text-sm outline-none focus:border-[#1F6170]"
+                  />
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleUpdateMember();
-        }}
-        className="w-full max-w-[500px] mx-auto mt-[50px] space-y-6"
-      >
+                  <p className="text-[12px] text-gray-400 mt-2">
+                    영어, 숫자, 특수문자로 구성된 8자리 이상
+                  </p>
+                </div>
+              </div>
 
-        {/* 비밀번호 */}
-        <div className="grid grid-cols-[130px_1fr] items-start gap-4">
-          <label className="pt-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
-            비밀번호
-          </label>
 
-          <div className="w-full">
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-50 h-11 px-4 border border-gray-300 rounded-lg text-sm outline-none focus:border-[#1F6170]"
-            />
+              {/* 비밀번호 확인 */}
+              <div className="grid grid-cols-[130px_1fr] items-center gap-4">
+                <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  비밀번호 확인
+                </label>
 
-            <p className="text-[12px] text-gray-400 mt-2">
-              영어, 숫자, 특수문자로 구성된 8자리 이상
-            </p>
+                <input
+                  type="password"
+                  value={passwordConfirm}
+                  onChange={(e) => setPasswordConfirm(e.target.value)}
+                  className="w-50 h-11 px-4 border border-gray-300 rounded-lg text-sm outline-none focus:border-[#1F6170]"
+                />
+              </div>
+
+
+              {/* 핸드폰번호 */}
+              <div className="grid grid-cols-[130px_1fr] items-start gap-4">
+                <label className="pt-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  핸드폰번호
+                </label>
+
+                <div className="w-full">
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={phone}
+                    maxLength={11}
+                    onChange={(e) => setPhone(sanitizePhoneInput(e.target.value))}
+                    placeholder="`-`을 제외한 전화번호를 입력해주세요"
+                    className="w-50 h-11 px-4 border border-gray-300 rounded-lg text-[13px] outline-none focus:border-[#1F6170]"
+                  />
+
+                  <p className="text-[12px] text-gray-400 mt-2">
+                    010으로 시작하는 11자리 숫자로 입력해주세요.
+                  </p>
+                </div>
+              </div>
+
+
+              {/* 정보수정완료 */}
+              <div className="flex justify-center pt-6">
+                <button
+                  type="submit"
+                  disabled={updating}
+                  className="w-[170px] h-[40px] bg-[#0D9488] text-white rounded-lg font-semibold text-sm flex items-center justify-center hover:bg-[#0D9488] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {updating ? "수정 중..." : "정보수정완료"}
+                </button>
+              </div>
+
+            </form>
           </div>
         </div>
-
-
-        {/* 비밀번호 확인 */}
-        <div className="grid grid-cols-[130px_1fr] items-center gap-4">
-          <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-            비밀번호 확인
-          </label>
-
-          <input
-            type="password"
-            value={passwordConfirm}
-            onChange={(e) => setPasswordConfirm(e.target.value)}
-            className="w-50 h-11 px-4 border border-gray-300 rounded-lg text-sm outline-none focus:border-[#1F6170]"
-          />
-        </div>
-
-
-        {/* 핸드폰번호 */}
-        <div className="grid grid-cols-[130px_1fr] items-start gap-4">
-          <label className="pt-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
-            핸드폰번호
-          </label>
-
-          <div className="w-full">
-            <input
-              type="tel"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              value={phone}
-              maxLength={11}
-              onChange={(e) => setPhone(sanitizePhoneInput(e.target.value))}
-              placeholder="`-`을 제외한 전화번호를 입력해주세요"
-              className="w-50 h-11 px-4 border border-gray-300 rounded-lg text-[13px] outline-none focus:border-[#1F6170]"
-            />
-
-            <p className="text-[12px] text-gray-400 mt-2">
-              010으로 시작하는 11자리 숫자로 입력해주세요.
-            </p>
-          </div>
-        </div>
-
-
-        {/* 정보수정완료 */}
-        <div className="flex justify-center pt-6">
-          <button
-            type="submit"
-            disabled={updating}
-                    className="w-[170px] h-[40px] bg-[#0D9488] text-white rounded-lg font-semibold text-sm flex items-center justify-center hover:bg-[#0D9488] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {updating ? "수정 중..." : "정보수정완료"}
-          </button>
-        </div>
-
-      </form>
-    </div>
-  </div>
-)}
-        {activeMenu === "calendar" && <CounselCalendar />}
-        {activeMenu === "graph" && <EmotionGraph />}
-        {activeMenu === "Mshop" && <Mshop />}
-      </main>
+      )}
+      {activeTab === "Mshop" && <Mshop />}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 ﻿import { Link } from "react-router-dom";
 import logo from "../assets/Feely_Logo_2.png";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { logout } from "../API/auth";
 import { clearAuthCookies } from "../API/axios";
 import Cookies from "js-cookie";
@@ -10,6 +10,10 @@ export default function Header() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [userId, setUserId] = useState<string>("");
 
+  // 사용자 이름 드롭다운 메뉴(회원정보수정, 마일리지샵) 표시 여부
+  const [menuOpen, setMenuOpen] = useState<boolean>(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
   // 마운트 시 쿠키 확인
   useEffect(() => {
     const authStatus = Cookies.get("isLoggedIn") === "true";
@@ -17,6 +21,18 @@ export default function Header() {
 
     setIsLoggedIn(authStatus);
     setUserId(savedUserId);
+  }, []);
+
+  // 드롭다운 메뉴 바깥을 클릭하면 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // 로그아웃 처리 함수
@@ -62,14 +78,6 @@ export default function Header() {
               {/* 세로 구분선 */}
               <span className="text-gray-300 font-light select-none">|</span>
 
-              {/* 마이페이지 이동 버튼 */}
-              <Link to="/MyPage" className="hover:underline">
-                MyPage
-              </Link>
-
-              {/* 세로 구분선 */}
-              <span className="text-gray-300 font-light select-none">|</span>
-
               {/* 로그아웃 버튼 */}
               <button
                 onClick={handleLogout}
@@ -81,10 +89,43 @@ export default function Header() {
               {/* 세로 구분선 */}
               <span className="text-gray-300 font-light select-none">|</span>
 
-              {/* 회원 정보 문구 */}
-              <span className="text-[#1F6170] dark:text-teal-400 font-semibold">
-                {userId}님
-              </span>
+              {/* 회원 이름: 마우스를 올리거나 클릭하면 회원정보수정/마일리지샵 메뉴가 나타남 */}
+              <div
+                ref={menuRef}
+                className="relative"
+                onMouseEnter={() => setMenuOpen(true)}
+                onMouseLeave={() => setMenuOpen(false)}
+              >
+                <button
+                  onClick={() => setMenuOpen((prev) => !prev)}
+                  className="text-[#1F6170] dark:text-teal-400 font-semibold bg-transparent border-none p-0 cursor-pointer"
+                >
+                  {userId}님
+                </button>
+
+                {menuOpen && (
+                  // 버튼-메뉴 사이 여백을 margin이 아닌 padding으로 만들어서,
+                  // 그 사이로 마우스가 지나가도 메뉴 영역을 벗어난 것으로 처리되지 않게 함
+                  <div className="absolute right-0 top-full w-36 pt-2 z-50">
+                    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden">
+                      <Link
+                        to="/MyPage?tab=profile"
+                        onClick={() => setMenuOpen(false)}
+                        className="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        회원정보수정
+                      </Link>
+                      <Link
+                        to="/MyPage?tab=Mshop"
+                        onClick={() => setMenuOpen(false)}
+                        className="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        마일리지 샵
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
             </>
           ) : (
             <>
