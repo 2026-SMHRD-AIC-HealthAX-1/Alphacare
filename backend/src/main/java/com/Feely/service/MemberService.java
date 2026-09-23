@@ -64,7 +64,7 @@ public class MemberService {
     // 로그인
     public MemberDto login(MemberDto request, HttpSession session) {
         if (isBlank(request.id()) || isBlank(request.password())) {
-            return MemberDto.loginResult(false, MemberResponse.Message.LOGIN_REQUIRED_INPUT);
+            return MemberDto.loginResult(false, MemberResponse.Message.LOGIN_REQUIRED_INPUT,null);
         }
 
         MemberEntity member = memberRepository.findMemberById(request.id().trim()).orElse(null);
@@ -72,7 +72,7 @@ public class MemberService {
         boolean passwordMatches = member != null && (member.getPw().equals(hashedPassword) );
 
         if (member == null || !passwordMatches) {
-            return MemberDto.loginResult(false, MemberResponse.Message.LOGIN_FAIL);
+            return MemberDto.loginResult(false, MemberResponse.Message.LOGIN_FAIL,null);
         }
 
         MemberSessionDto sessionMember = new MemberSessionDto(
@@ -88,7 +88,7 @@ public class MemberService {
         String encryptedMileage = MileageCryptoUtil.encrypt(member.getMileage());
         session.setAttribute("member", sessionMember);
         session.setAttribute("memberMileage", encryptedMileage);
-        return MemberDto.loginResult(true, MemberResponse.Message.LOGIN_SUCCESS);
+        return MemberDto.loginResult(true, MemberResponse.Message.LOGIN_SUCCESS, member.getMileage());
     }
 
     // 중복 확인
