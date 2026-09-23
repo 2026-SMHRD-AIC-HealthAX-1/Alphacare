@@ -29,8 +29,10 @@ export interface LoginRequest {
 }
 
 //로그인 응답
+// mileage는 백엔드가 로그인 응답에 포함해주면 그 값을 받아 씀 (아직 없으면 undefined)
 export interface LoginResponse {
   loginFlag : boolean;
+  mileage? : number | null;
 }
 
 //아이디 찾기

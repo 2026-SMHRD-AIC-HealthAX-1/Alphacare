@@ -104,23 +104,21 @@ export default function Header() {
                 </button>
 
                 {menuOpen && (
-                  // 버튼-메뉴 사이 여백을 margin이 아닌 padding으로 만들어서,
-                  // 그 사이로 마우스가 지나가도 메뉴 영역을 벗어난 것으로 처리되지 않게 함
                   <div className="absolute right-0 top-full w-36 pt-2 z-50">
                     <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden">
-                      <Link
-                        to="/MyPage?tab=profile"
-                        onClick={() => setMenuOpen(false)}
-                        className="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                      >
-                        회원정보수정
-                      </Link>
                       <Link
                         to="/MyPage?tab=Mshop"
                         onClick={() => setMenuOpen(false)}
                         className="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                       >
                         마일리지 샵
+                      </Link>
+                      <Link
+                        to="/MyPage?tab=profile"
+                        onClick={() => setMenuOpen(false)}
+                        className="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        회원정보수정
                       </Link>
                     </div>
                   </div>

@@ -24,6 +24,15 @@ export default function LoginPage() {
       if (res.loginFlag) {
         setAuthCookies(userId);
 
+        // 로그인 응답에 마일리지값이 포함되어 있으면 화면 표시용으로 캐시해둠
+        if (res.mileage !== undefined && res.mileage !== null) {
+          try {
+            localStorage.setItem("memberMileage", String(res.mileage));
+          } catch {
+            // localStorage를 못 쓰는 환경이면 무시
+          }
+        }
+
         alert(`${userId}님, 환영합니다!`);
         window.location.href = "/";
       } else {

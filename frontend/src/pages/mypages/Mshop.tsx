@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { decryptMileage, formatMileage } from "../../utils/mileageCrypto";
 import { getMileageProducts, MileageProduct } from "../../API/mileage";
-import { getMemberMileage } from "../../API/auth";
 import naverpay_5000 from "../../assets/naverpay_5000.png";
 import naverpay_10000 from "../../assets/naverpay_10000.png";
 
@@ -18,7 +16,8 @@ import Feely_Diary from "../../assets/Feely_Diary.png";
 import Feely_Diary_Detail from "../../assets/Feely_Diary_Detail.png";
 
 
-// 보유 마일리지는 GET /api/member/mileage에서 받아옴 (백엔드에 아직 없으면 추가 필요 - MemberController 참고)
+// 보유 마일리지는 로그인 응답 body에 실려오는 mileage값을 로그인 시점에 localStorage("memberMileage")에
+// 저장해두고, 마일리지샵에서는 그 캐시된 값을 그대로 읽어서 보여줌 (별도 조회 API 호출 없음)
 // 적립내역은 별도 조회 API가 없어서 아직 미구현
 // 상품 목록/재고/가격은 DB(GET /api/products)에서 받아옴.
 // 교환 API는 아직 없어서 교환 버튼은 확인 모달까지만 동작함 (실제 차감/재고 반영은 별도 작업 필요)
@@ -55,13 +54,6 @@ export default function Mshop() {
     const [selectedDiaryType, setSelectedDiaryType] = useState<string | null>(null);
     const [diaryStartDate, setDiaryStartDate] = useState("");
     const [diaryEndDate, setDiaryEndDate] = useState("");
-    const [mileage, setMileage] = useState(0);
-
-    useEffect(() => {
-        const encrypted = localStorage.getItem("memberMileage") ?? "";
-        setMileage(decryptMileage(encrypted));
-    }, []);
-
     // 마일리지 상품 목록 (백엔드 DB 연동)
     const [dbProducts, setDbProducts] = useState<MileageProduct[]>([]);
     const [productsLoading, setProductsLoading] = useState(true);
@@ -85,46 +77,38 @@ export default function Mshop() {
         loadProducts();
     }, []);
 
-    // 보유 마일리지 (회원 데이터 기준, GET /api/member/mileage)
-    const [memberMileage, setMemberMileage] = useState<number | null>(null);
-    const [mileageLoading, setMileageLoading] = useState(true);
-
-    useEffect(() => {
-        const loadMileage = async () => {
-            try {
-                setMileageLoading(true);
-                const data = await getMemberMileage();
-                setMemberMileage(data.mileage);
-            } catch (err) {
-                console.error("보유 마일리지를 불러오지 못했습니다:", err);
-                setMemberMileage(null);
-            } finally {
-                setMileageLoading(false);
-            }
-        };
-
-        loadMileage();
-    }, []);
+    // 보유 마일리지 - 로그인 시 응답 body로 받아서 localStorage에 저장해둔 값을 그대로 읽어서 사용
+    // (별도 조회 API 없이, 로그인 시점에 캐시된 값을 마일리지샵에서 그대로 표시)
+    const [memberMileage] = useState<number | null>(() => {
+        try {
+            const cached = localStorage.getItem("memberMileage");
+            return cached !== null ? Number(cached) : null;
+        } catch {
+            return null;
+        }
+    });
 
     // 화면 3곳(상단 배지 / 상품권 교환 모달 / 다이어리 교환 모달)에서 공통으로 쓰는 표시용 문자열
-    const mileageDisplay = mileageLoading
-        ? "..."
-        : memberMileage !== null
-            ? `${memberMileage.toLocaleString()} P`
-            : "- P";
+    const mileageDisplay = memberMileage !== null
+        ? `${memberMileage.toLocaleString()} P`
+        : "- P";
 
     // DB 상품을 카드에서 쓰는 형태로 변환
     // 1순위: DB에 저장된 실제 상품 이미지(prodImage, base64) - 백엔드에 등록된 상품이면 항상 있음
     // 2순위: 상품명으로 매칭되는 로컬 이미지 (DB 이미지가 없는 예전 데이터 대비)
     // 둘 다 없으면 빈 문자열 -> 카드에서 🎁 아이콘으로 대체
-    const productItems = dbProducts.map((p) => ({
-        name: p.prodName,
-        image: p.prodImage
-            ? `data:image/jpeg;base64,${p.prodImage}`
-            : PRODUCT_IMAGE_MAP[p.prodName] ?? "",
-        point: `${p.prodPrice.toLocaleString()}P`,
-        inventory: p.prodInventory,
-    }));
+    // Diary_diary / Diary_memory는 DB에 남아있는 다이어리 상품이지만
+    // 화면에는 아래의 큰 Feely Diary 카드 하나만 노출하므로 목록에서 제외
+    const productItems = dbProducts
+        .filter((p) => p.prodName !== "Diary_diary" && p.prodName !== "Diary_memory")
+        .map((p) => ({
+            name: p.prodName,
+            image: p.prodImage
+                ? `data:image/jpeg;base64,${p.prodImage}`
+                : PRODUCT_IMAGE_MAP[p.prodName] ?? "",
+            point: `${p.prodPrice.toLocaleString()}P`,
+            inventory: p.prodInventory,
+        }));
 
     const products = [...productItems, FEELY_DIARY_ITEM];
     return (
@@ -189,13 +173,13 @@ export default function Mshop() {
 
                     {/* 상단 마일리지 영역 */}
                     <div className="p-4 sm:p-6 mb-0">
-                        <div className="grid grid-cols-1 sm:grid-cols-2">
+                        <div className="w-full flex justify-center">
 
                             {/* 보유 마일리지 */}
-                            <div className="flex items-center justify-center gap-3 py-2 sm:py-0 relative left-[-100px]">
+                            <div className="flex items-center justify-center gap-3 py-2 sm:py-0">
                                 <p className="text-gray-500 dark:text-gray-400">보유 마일리지</p>
                                 <p className="text-2xl sm:text-3xl font-bold text-gray-600 dark:text-teal-400">
-                                    {formatMileage(mileage)}
+                                    {mileageDisplay}
                                 </p>
                             </div>
 
@@ -237,7 +221,7 @@ export default function Mshop() {
                                         <React.Fragment key={idx}>
 
                                             {/* 다이어리 이미지 */}
-                                            <div className="col-span-2 sm:col-span-3 min-w-0 h-[260px] sm:h-[300px] lg:h-[350px] p-0 m-0 overflow-hidden relative">
+                                            <div className="col-span-2 sm:col-span-3 min-w-0 h-[260px] sm:h-[300px] lg:h-[350px] xl:h-[400px] 2xl:h-[440px] p-0 m-0 overflow-hidden relative">
                                                 <div className="w-full h-full overflow-hidden relative">
 
                                                     {/* 현재 이미지 */}
@@ -334,7 +318,7 @@ export default function Mshop() {
                                             </div>
 
                                             {/* 다이어리 선택 버튼 */}
-                                            <div className="col-span-2 sm:col-span-1 h-[260px] sm:h-[300px] lg:h-[350px] min-w-0 relative overflow-hidden">
+                                            <div className="col-span-2 sm:col-span-1 h-[260px] sm:h-[300px] lg:h-[350px] xl:h-[400px] 2xl:h-[440px] min-w-0 relative overflow-hidden">
 
                                                 <div className="absolute inset-0 flex flex-col items-center justify-center translate-y-0 sm:translate-y-[-10px] px-2">
 
