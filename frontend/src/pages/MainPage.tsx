@@ -4,29 +4,18 @@ import Cookies from "js-cookie";
 
 import { getCounselData, CounselRecord } from "../API/counsel";
 import { getRecommendedMusic, MusicRecommendation } from "../API/music";
+import {
+  EMOTION_LABELS,
+  getDominantEmotion,
+  getDominantEmotionIndex,
+  formatEmotionPercent,
+} from "../utils/emotion";
 
 import test1 from "../assets/test5.mp4";
 import face from "../assets/mainface.png";
 import chat from "../assets/chat.png";
 import EmotionCalender from "../assets/EmotionCalender.png";
 import Report from "../assets/Report.png";
-
-/* =========================================================
-   감정 데이터
-========================================================= */
-
-const EMOTION_LABELS: {
-  key: keyof CounselRecord;
-  label: string;
-  emoji: string;
-}[] = [
-  { key: "e01Rate", label: "중립", emoji: "😐" },
-  { key: "e02Rate", label: "기쁨", emoji: "😃" },
-  { key: "e03Rate", label: "슬픔", emoji: "😢" },
-  { key: "e04Rate", label: "분노", emoji: "😡" },
-  { key: "e05Rate", label: "당황", emoji: "😳" },
-  { key: "e06Rate", label: "불안", emoji: "😰" },
-];
 
 /* =========================================================
    날짜 함수
@@ -90,42 +79,6 @@ const DAY_LABELS = [
   "금",
   "토",
 ];
-
-/* =========================================================
-   대표 감정
-========================================================= */
-
-const getDominantEmotion = (log: CounselRecord) => {
-  return EMOTION_LABELS.reduce((max, current) =>
-    Number(log[current.key]) > Number(log[max.key])
-      ? current
-      : max
-  );
-};
-
-const getDominantEmotionIndex = (
-  dayLogs: CounselRecord[]
-) => {
-  if (dayLogs.length === 0) return null;
-
-  const sums = EMOTION_LABELS.map(() => 0);
-
-  dayLogs.forEach((log) => {
-    EMOTION_LABELS.forEach((emotion, index) => {
-      sums[index] += Number(log[emotion.key]) || 0;
-    });
-  });
-
-  let maxIndex = 0;
-
-  sums.forEach((value, index) => {
-    if (value > sums[maxIndex]) {
-      maxIndex = index;
-    }
-  });
-
-  return maxIndex;
-};
 
 /* =========================================================
    MainPage
@@ -1491,6 +1444,7 @@ export default function MainPage() {
                               </span>
 
                               <span
+                                className="relative group cursor-default"
                                 style={{
                                   fontSize:
                                     "12px",
@@ -1519,15 +1473,35 @@ export default function MainPage() {
                                   dominant.label
                                 }{" "}
                                 (
-                                {Number(
+                                {formatEmotionPercent(
                                   log[
                                     dominant
                                       .key
                                   ]
-                                ).toFixed(
-                                  0
                                 )}
                                 %)
+
+                                {/* 호버 시 감정 점수 6개를 높은 순으로 보여주는 툴팁 (EmotionCalender.tsx와 동일한 패턴)
+                                    바깥쪽 래퍼는 margin 대신 padding-top(pt-2)으로 간격을 줘서, 배지와 툴팁 사이
+                                    빈 공간도 group의 hover 영역에 포함시킴 - 그래야 마우스가 배지에서 툴팁으로
+                                    이동하는 중간에 hover가 끊겨서 사라지지 않고, 툴팁 위로 마우스를 올려도 유지됨 */}
+                                <div className="absolute right-0 top-full z-20 hidden w-40 pt-2 group-hover:block">
+                                  <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg p-2">
+                                    <ul className="space-y-1">
+                                      {[...EMOTION_LABELS]
+                                        .sort((a, b) => Number(log[b.key]) - Number(log[a.key]))
+                                        .map((item) => (
+                                          <li
+                                            key={item.key}
+                                            className="flex items-center justify-between gap-2 text-xs font-normal text-gray-700 dark:text-gray-200"
+                                          >
+                                            <span>{item.emoji} {item.label}</span>
+                                            <span className="font-semibold">{formatEmotionPercent(log[item.key])}%</span>
+                                          </li>
+                                        ))}
+                                    </ul>
+                                  </div>
+                                </div>
                               </span>
                             </div>
 

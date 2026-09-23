@@ -1,22 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { getCounselData, CounselRecord } from "../../API/counsel";
-
-// 감정분류(e01~e06) 코드에 대응하는 라벨/이모지
-const EMOTION_LABELS: { key: keyof CounselRecord; label: string; emoji: string }[] = [
-  { key: "e01Rate", label: "중립", emoji: "\ud83d\ude10" },
-  { key: "e02Rate", label: "기쁨", emoji: "\ud83d\ude03" },
-  { key: "e03Rate", label: "슬픔", emoji: "\ud83d\ude22" },
-  { key: "e04Rate", label: "분노", emoji: "\ud83d\ude21" },
-  { key: "e05Rate", label: "당황", emoji: "\ud83d\ude33" },
-  { key: "e06Rate", label: "불안", emoji: "\ud83d\ude30" },
-];
-
-// 6개 감정 점수 중 가장 높은 값을 대표 감정으로 결정
-const getDominantEmotion = (log: CounselRecord) => {
-  return EMOTION_LABELS.reduce((max, cur) =>
-    Number(log[cur.key]) > Number(log[max.key]) ? cur : max
-  );
-};
+import { EMOTION_LABELS, getDominantEmotion, formatEmotionPercent } from "../../utils/emotion";
 
 // "YYYY-MM-DD HH:mm:ss" -> 캘린더 매칭/표시용으로 분리
 const splitDttm = (dttm: string) => {
@@ -299,23 +283,28 @@ export default function MyPageCalendarContent() {
                             {formattedDate} {timePart}
                           </span>
                           <span className="relative group text-[#1F6170] dark:text-teal-400 text-xs font-bold px-3 py-1.5 rounded-full border border-[#1F6170] cursor-default">
-                            {dominant.emoji} {dominant.label} ({Number(log[dominant.key]).toFixed(0)}%)
+                            {dominant.emoji} {dominant.label} ({formatEmotionPercent(log[dominant.key])}%)
 
-                            {/* 호버 시 감정 점수 6개를 높은 순으로 보여주는 툴팁 */}
-                            <div className="pointer-events-none absolute right-0 top-full mt-2 z-20 hidden group-hover:block w-40 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg p-2">
-                              <ul className="space-y-1">
-                                {[...EMOTION_LABELS]
-                                  .sort((a, b) => Number(log[b.key]) - Number(log[a.key]))
-                                  .map((item) => (
-                                    <li
-                                      key={item.key}
-                                      className="flex items-center justify-between gap-2 text-xs font-normal text-gray-700 dark:text-gray-200"
-                                    >
-                                      <span>{item.emoji} {item.label}</span>
-                                      <span className="font-semibold">{Number(log[item.key]).toFixed(0)}%</span>
-                                    </li>
-                                  ))}
-                              </ul>
+                            {/* 호버 시 감정 점수 6개를 높은 순으로 보여주는 툴팁
+                                바깥쪽 래퍼는 margin 대신 padding-top(pt-2)으로 간격을 줘서, 배지와 툴팁 사이
+                                빈 공간도 group의 hover 영역에 포함시킴 - 그래야 마우스가 배지에서 툴팁으로
+                                이동하는 중간에 hover가 끊겨서 사라지지 않고, 툴팁 위로 마우스를 올려도 유지됨 */}
+                            <div className="absolute right-0 top-full z-20 hidden w-40 pt-2 group-hover:block">
+                              <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg p-2">
+                                <ul className="space-y-1">
+                                  {[...EMOTION_LABELS]
+                                    .sort((a, b) => Number(log[b.key]) - Number(log[a.key]))
+                                    .map((item) => (
+                                      <li
+                                        key={item.key}
+                                        className="flex items-center justify-between gap-2 text-xs font-normal text-gray-700 dark:text-gray-200"
+                                      >
+                                        <span>{item.emoji} {item.label}</span>
+                                        <span className="font-semibold">{formatEmotionPercent(log[item.key])}%</span>
+                                      </li>
+                                    ))}
+                                </ul>
+                              </div>
                             </div>
                           </span>
                         </div>

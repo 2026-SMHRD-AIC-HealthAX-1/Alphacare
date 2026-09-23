@@ -65,9 +65,14 @@ public class CounselService {
         entity.setE05Rate(BigDecimal.valueOf(emotionScore.get("e05")));
         entity.setE06Rate(BigDecimal.valueOf(emotionScore.get("e06")));
 
+        // 카메라를 안 쓴 상담은 startImage/endImage가 아예 안 올 수 있음(null) - 이 경우 이미지 없이 저장함
         try {
-            entity.setStartImage(startImage.getBytes());
-            entity.setEndImage(endImage.getBytes());
+            if (startImage != null && !startImage.isEmpty()) {
+                entity.setStartImage(startImage.getBytes());
+            }
+            if (endImage != null && !endImage.isEmpty()) {
+                entity.setEndImage(endImage.getBytes());
+            }
         } catch (IOException e) {
             throw new RuntimeException(CounselResponse.Message.COUNSEL_INVALID_IMAGE, e);
         }

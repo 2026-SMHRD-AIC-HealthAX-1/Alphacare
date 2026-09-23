@@ -2,18 +2,9 @@ import { useEffect, useState } from "react";
 import { getCounselData, CounselRecord } from "../../API/counsel";
 import { getRecommendedMusic, MusicRecommendation } from "../../API/music";
 import { getWeeklyAiSummary } from "../../API/counselSession";
+import { EMOTION_LABELS, getDominantEmotionIndex } from "../../utils/emotion";
 
 const DAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
-
-// 감정분류(e01~e06) 라벨/이모지 - EmotionCalender.tsx와 동일한 순서
-const EMOTION_LABELS: { key: keyof CounselRecord; label: string; emoji: string }[] = [
-  { key: "e01Rate", label: "중립", emoji: "😐" },
-  { key: "e02Rate", label: "기쁨", emoji: "😃" },
-  { key: "e03Rate", label: "슬픔", emoji: "😢" },
-  { key: "e04Rate", label: "분노", emoji: "😡" },
-  { key: "e05Rate", label: "당황", emoji: "😳" },
-  { key: "e06Rate", label: "불안", emoji: "😰" },
-];
 
 // 주어진 날짜가 속한 주의 월요일 반환 (일요일이면 전주 월요일 취급)
 const getMonday = (date: Date) => {
@@ -55,24 +46,6 @@ const parseDttm = (dttm: string) => {
 // Date -> "YYYY-MM-DD" (로컬 기준)
 const toDateKey = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-
-// 여러 상담 기록의 감정 비율을 합산해 가장 높은 감정의 인덱스를 반환 (기록 없으면 null)
-const getDominantEmotionIndex = (dayLogs: CounselRecord[]) => {
-  if (dayLogs.length === 0) return null;
-
-  const sums = EMOTION_LABELS.map(() => 0);
-  dayLogs.forEach((log) => {
-    EMOTION_LABELS.forEach((e, i) => {
-      sums[i] += Number(log[e.key]) || 0;
-    });
-  });
-
-  let maxIndex = 0;
-  sums.forEach((v, i) => {
-    if (v > sums[maxIndex]) maxIndex = i;
-  });
-  return maxIndex;
-};
 
 export default function EmotionGraph() {
   // 이번 주 월요일을 기준으로 관리 (이전/다음 버튼으로 한 주씩 이동)
