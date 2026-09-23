@@ -14,6 +14,8 @@ public final class MileageProductResponse {
         public static final String PRODUCT_UPDATE_SUCCESS = "상품이 수정되었습니다.";
         public static final String PRODUCT_LIST_SUCCESS = "상품 목록을 조회했습니다.";
         public static final String PRODUCT_INPUT_INVALID = "상품 정보가 올바르지 않습니다.";
+        public static final String PRODUCT_OUT_OF_INVENTORY = "상품 재고가 없습니다.";
+        public static final String PRODUCT_EXCHANGE_SUCCESS = "상품 교환에 성공하였습니다.";
     }
 
     public enum ErrorCode {
@@ -24,7 +26,9 @@ public final class MileageProductResponse {
         PRODUCT_REGISTRATION_SUCCESS("PRODUCT_200"),
         PRODUCT_UPDATE_SUCCESS("PRODUCT_201"),
         PRODUCT_LIST_SUCCESS("PRODUCT_200"),
-        PRODUCT_INPUT_INVALID("PRODUCT_005");
+        PRODUCT_INPUT_INVALID("PRODUCT_005"),
+        PRODUCT_EXCHANGE_SUCCESS("PRODUCT_007"),
+        PRODUCT_OUT_OF_INVENTORY("PRODUCT_006");
 
         private final String code;
 
