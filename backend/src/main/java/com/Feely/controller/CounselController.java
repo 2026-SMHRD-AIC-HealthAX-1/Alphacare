@@ -37,8 +37,10 @@ public class CounselController {
     @PostMapping("/counsel")
     public Map<String, Boolean> saveCounsel(
         @RequestPart ("data") CounselRequestDTO dto,
-        @RequestPart ("startImage") MultipartFile startImage,
-        @RequestPart ("endImage") MultipartFile endImage,
+        // 카메라를 안 쓴 상담은 시작/종료 이미지가 없어서 이 파트 자체가 안 옴 - required=false로
+        // 안 바꾸면 Spring이 컨트롤러 진입 전에 400(MissingServletRequestPartException)부터 던짐
+        @RequestPart (value = "startImage", required = false) MultipartFile startImage,
+        @RequestPart (value = "endImage", required = false) MultipartFile endImage,
         HttpSession session) {
 
             Map<String, Boolean> counselFlag = new HashMap<>();
