@@ -18,6 +18,23 @@ import EmotionCalender from "../assets/EmotionCalender.png";
 import Report from "../assets/Report.png";
 
 /* =========================================================
+   감정 라벨 문구 임시 오버라이드 (메인페이지만 우선 반영)
+   e04: 분노 -> 화남, e05: 당황 -> 우울 로 팀에서 문구가 바뀜.
+   utils/emotion.ts는 EmotionCalender/WeeklyReport도 같이 쓰고 있어서
+   공용 라벨은 그대로 두고, 화면에 보여줄 때만 여기서 문구를 바꿔치기함.
+   (음악 추천 API(getRecommendedMusic)는 기존 라벨 문구를 장르 검색 키로 그대로 쓰고 있어서
+   그쪽은 건드리지 않고 weeklyDominantLabel 원본을 그대로 넘김 - 별도로 표시용 값만 만듦)
+========================================================= */
+
+const EMOTION_LABEL_OVERRIDES: Partial<Record<keyof CounselRecord, string>> = {
+  e04Rate: "화남",
+  e05Rate: "우울",
+};
+
+const emotionLabel = (item: { key: keyof CounselRecord; label: string }) =>
+  EMOTION_LABEL_OVERRIDES[item.key] ?? item.label;
+
+/* =========================================================
    날짜 함수
 ========================================================= */
 
@@ -541,9 +558,11 @@ export default function MainPage() {
           }/${time.getDate()} ${
             DAY_LABELS[time.getDay()]
           } ${hh}:${mm} · ${
-            EMOTION_LABELS[
-              dominantIndex
-            ].label
+            emotionLabel(
+              EMOTION_LABELS[
+                dominantIndex
+              ]
+            )
           }`,
         };
       })
@@ -586,10 +605,18 @@ export default function MainPage() {
     return getDominantEmotionIndex(chartLogs);
   }, [chartLogs]);
 
+  // 음악 추천 API(getRecommendedMusic)가 이 값을 장르 검색 키로 그대로 쓰고 있어서
+  // 원래 라벨 문구를 유지함 (표시용 문구는 weeklyDominantDisplayLabel을 따로 씀)
   const weeklyDominantLabel =
     weeklyDominantIndex === null
       ? null
       : EMOTION_LABELS[weeklyDominantIndex].label;
+
+  // 화면에 보여줄 때만 문구를 덮어씀 (e04: 분노->화남, e05: 당황->우울)
+  const weeklyDominantDisplayLabel =
+    weeklyDominantIndex === null
+      ? null
+      : emotionLabel(EMOTION_LABELS[weeklyDominantIndex]);
 
   const [weeklyMusic, setWeeklyMusic] =
     useState<MusicRecommendation[]>([]);
@@ -1470,7 +1497,7 @@ export default function MainPage() {
                                   {dominant.emoji}
                                 </span>{" "}
                                 {
-                                  dominant.label
+                                  emotionLabel(dominant)
                                 }{" "}
                                 (
                                 {formatEmotionPercent(
@@ -1495,7 +1522,7 @@ export default function MainPage() {
                                             key={item.key}
                                             className="flex items-center justify-between gap-2 text-xs font-normal text-gray-700 dark:text-gray-200"
                                           >
-                                            <span>{item.emoji} {item.label}</span>
+                                            <span>{item.emoji} {emotionLabel(item)}</span>
                                             <span className="font-semibold">{formatEmotionPercent(log[item.key])}%</span>
                                           </li>
                                         ))}
@@ -1509,9 +1536,10 @@ export default function MainPage() {
                                 ★★★ 사진 영역 ★★★
                                 
                                 사진이 있어도 200x200
-                                사진이 없어도 200x200 영역 유지
+                                시작/종료 사진이 하나라도 있을 때만 그림 - 카메라 안 쓴 상담은 요약만 나오게 함
                             ================================================= */}
 
+                            {(log.startImage || log.endImage) && (
                             <div
                               style={{
                                 display:
@@ -1680,6 +1708,7 @@ export default function MainPage() {
                                 )}
                               </div>
                             </div>
+                            )}
 
                             {/* =================================================
                                 ★ 상담 요약
@@ -1953,7 +1982,7 @@ export default function MainPage() {
                             }}
                           >
                             {
-                              emotion.label
+                              emotionLabel(emotion)
                             }
                           </span>
                         </span>
@@ -2336,8 +2365,8 @@ export default function MainPage() {
               >
                 {!selectedDate
                   ? "캘린더에서 날짜를 선택해주세요."
-                  : weeklyDominantLabel
-                  ? `이번 주는 '${weeklyDominantLabel}' 감정이 가장 많이 나타났어요.`
+                  : weeklyDominantDisplayLabel
+                  ? `이번 주는 '${weeklyDominantDisplayLabel}' 감정이 가장 많이 나타났어요.`
                   : "이번 주에는 아직 상담 기록이 없어요."}
               </p>
             </section>
@@ -2411,8 +2440,8 @@ export default function MainPage() {
                       lineHeight: 1.7,
                     }}
                   >
-                    {weeklyDominantLabel
-                      ? `'${weeklyDominantLabel}' 감정에 등록된 추천 음악이 아직 없어요.`
+                    {weeklyDominantDisplayLabel
+                      ? `'${weeklyDominantDisplayLabel}' 감정에 등록된 추천 음악이 아직 없어요.`
                       : "추천을 받으려면 이번 주 상담 기록이 필요해요."}
                   </p>
                 ) : (

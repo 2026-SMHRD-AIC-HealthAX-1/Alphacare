@@ -409,7 +409,7 @@ export default function CounselPage() {
 
       if (result.counselFlag) {
         alert("상담이 정상적으로 종료되었습니다.");
-        navigate("/mypage");
+        navigate("/");
       } else {
         // 이 API는 counselFlag:false 하나로 여러 실패 원인을 구분 없이 알려줘서 원인을 단정할 수 없음
         alert("상담 데이터 저장에 실패했습니다. 잠시 후 다시 시도해주세요.");
