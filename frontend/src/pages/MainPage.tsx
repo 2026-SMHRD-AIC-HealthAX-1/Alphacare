@@ -4,7 +4,7 @@ import Cookies from "js-cookie";
 import { getCounselData, CounselRecord } from "../API/counsel";
 import { getRecommendedMusic, MusicRecommendation } from "../API/music";
 
-import test1 from "../assets/test3.mp4";
+import test1 from "../assets/test5.mp4";
 import face from "../assets/face_1.png";
 import CounselImg from "../assets/CounselImg_2.png";
 import EmotionCalender from "../assets/EmotionCalender.png";
@@ -1983,26 +1983,62 @@ export default function MainPage() {
                       viewBox="0 0 100 100"
                       preserveAspectRatio="none"
                     >
+                      <defs>
+                        <linearGradient
+                          id="dashboardEmotionAreaGradient"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="0%"
+                            stopColor="#0D9488"
+                            stopOpacity="0.25"
+                          />
+                          <stop
+                            offset="100%"
+                            stopColor="#0D9488"
+                            stopOpacity="0"
+                          />
+                        </linearGradient>
+                      </defs>
                       {chartTimePoints.length >
                         1 && (
-                        <polyline
-                          points={chartTimePoints
-                            .map(
-                              (
-                                point
-                              ) =>
-                                `${point.x},${point.y}`
-                            )
-                            .join(
-                              " "
-                            )}
-                          fill="none"
-                          stroke="#FF0000"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          vectorEffect="non-scaling-stroke"
-                        />
+                        <>
+                          <polygon
+                            points={`${chartTimePoints[0].x},100 ${chartTimePoints
+                              .map(
+                                (point) =>
+                                  `${point.x},${point.y}`
+                              )
+                              .join(" ")} ${
+                              chartTimePoints[
+                                chartTimePoints.length - 1
+                              ].x
+                            },100`}
+                            fill="url(#dashboardEmotionAreaGradient)"
+                            stroke="none"
+                          />
+                          <polyline
+                            points={chartTimePoints
+                              .map(
+                                (
+                                  point
+                                ) =>
+                                  `${point.x},${point.y}`
+                              )
+                              .join(
+                                " "
+                              )}
+                            fill="none"
+                            stroke="#0D9488"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            vectorEffect="non-scaling-stroke"
+                          />
+                        </>
                       )}
                     </svg>
 
@@ -2048,7 +2084,7 @@ export default function MainPage() {
                             borderRadius:
                               "50%",
                             backgroundColor:
-                              "#FF0000",
+                              "#0D9488",
                             boxShadow:
                               "0 1px 4px rgba(0,0,0,0.15)",
                             cursor:
@@ -2490,7 +2526,7 @@ export default function MainPage() {
               width: "100vw",
               height: "auto",
               left: 0,
-              top: "50%",
+              top: "calc(50% - 20px)",
               transform:
                 "translateY(-50%)",
               display: "block",
@@ -2618,7 +2654,7 @@ export default function MainPage() {
                     ? "translateX(-100vw)"
                     : "translateX(0)"
                   : isAnimating
-                  ? "translateX(0)"
+                  ? "translateX(100vw)"
                   : "translateX(0)",
               transition:
                 isAnimating
@@ -2757,7 +2793,15 @@ export default function MainPage() {
               "0 4px 12px rgba(0,0,0,0.15)",
           }}
         >
-          ‹
+          <span
+            style={{
+              fontSize: "18px",
+              lineHeight: 1,
+              transform: "translateY(-1px)",
+            }}
+          >
+            ‹
+          </span>
         </button>
 
         {/* 오른쪽 화살표 */}
@@ -2799,7 +2843,15 @@ export default function MainPage() {
               "0 4px 12px rgba(0,0,0,0.15)",
           }}
         >
-          ›
+          <span
+            style={{
+              fontSize: "18px",
+              lineHeight: 1,
+              transform: "translateY(-1px)",
+            }}
+          >
+            ›
+          </span>
         </button>
 
         {/* 인디케이터 */}
