@@ -28,7 +28,17 @@ export const clearAuthCookies = () => {
 
 // 세션이 끊겼을 때(로그인 쿠키 삭제 + 알림 + 메인페이지 이동) 공통 처리
 // counsel.ts 등 다른 곳에서도 재사용할 수 있도록 별도 함수로 분리함
+//
+// 한 화면에서 API 요청이 여러 개 동시에 나가는 경우(예: useEffect 여러 개, 혹은 개발 모드
+// StrictMode가 effect를 두 번 실행하는 것) 401도 여러 번 같이 오는데, alert()는 화면을 막는
+// 동기 함수라 첫 alert가 닫히기 전에 뒤이어 온 401들도 각자 handleSessionExpired를 또 호출해서
+// 알림창이 여러 번 뜨는 문제가 있었음 - 플래그로 한 번만 실행되게 막음
+let sessionExpiredHandled = false;
+
 export const handleSessionExpired = () => {
+  if (sessionExpiredHandled) return;
+  sessionExpiredHandled = true;
+
   clearAuthCookies();
   alert("세션이 만료되었습니다. 다시 로그인해주세요.");
   window.location.href = "/";

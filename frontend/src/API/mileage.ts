@@ -1,5 +1,6 @@
 // 마일리지 상품 조회
 import { api } from "./axios";
+import { MemberMileageResponse } from "./user";
 
 // 백엔드 MileageProductDto와 매칭되는 타입 (목록 조회 응답에도 message/success가 같이 오지만 화면엔 안 씀)
 // prodImage는 백엔드가 byte[](mediumblob)로 내려주는데, Jackson이 자동으로 base64 문자열로 직렬화해줌
@@ -17,4 +18,12 @@ export interface MileageProduct {
 export const getMileageProducts = async (): Promise<MileageProduct[]> => {
   const response = await api.get<MileageProduct[]>("/api/products");
   return Array.isArray(response.data) ? response.data : [];
+};
+
+// 마일리지 상품 교환 - GET /api/products/exchange/{prodNo} 호출 하나로 백엔드가 재고/마일리지
+// 확인, 차감, 저장까지 다 처리하고 결과(성공 여부 + 차감 후 마일리지)를 돌려줌.
+// 로그인 세션 쿠키가 필요해서(백엔드가 세션으로 회원을 확인) axios 인스턴스(api)를 그대로 사용함
+export const exchangeMileageProduct = async (prodNo: number): Promise<MemberMileageResponse> => {
+  const response = await api.get<MemberMileageResponse>(`/api/products/exchange/${prodNo}`);
+  return response.data;
 };
