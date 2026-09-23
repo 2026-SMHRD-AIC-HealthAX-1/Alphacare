@@ -11,10 +11,15 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.Feely.common.MemberResponse;
 import com.Feely.common.MileageProductResponse;
 import com.Feely.dto.MileageProductDto;
+import com.Feely.dto.MemberSessionDto;
 import com.Feely.entity.MileageProductEntity;
 import com.Feely.service.MileageProductService;
+import com.Feely.util.MileageCryptoUtil;
+
+import jakarta.servlet.http.HttpSession;
 
 @RestController
 @RequestMapping("/api")
@@ -104,6 +109,37 @@ public class MileageProductController {
         // 상품 수정 성공 시 200 OK 응답
         return ResponseEntity.ok(result);
     }
+
+    // 상품 교환 
+    @GetMapping("/products/exchange/{prodNo}")
+    public ResponseEntity<MileageProductDto> exchangeProduct(@PathVariable Long prodNo, HttpSession session) {
+        
+        // 회원 정보 가져오기
+        // MileageProductDto result;
+
+        // 세션에서 회원 정보 가져오기
+        MemberSessionDto member = (MemberSessionDto) session.getAttribute("member");
+
+        // Object memberNoObj = session.getAttribute("memberNo");
+
+        // 로그인 정보 없을 시
+        if(member == null) {
+            return ResponseEntity.status(401)
+                                 .body(MileageProductDto.exchangeResult(false, MemberResponse.Message.NEED_LOGIN, null));
+        }
+
+        Long memberNo = member.getMemberNo();
+
+        // 상품 교환
+        MileageProductDto result = mileageProductService.exchangeProduct(prodNo, memberNo);
+
+        // 교환 후 변경된 마일리지로 갱신
+        String encryptedMileage = MileageCryptoUtil.encrypt(result.mileage());
+        session.setAttribute("memberMileage", encryptedMileage);
+
+        return ResponseEntity.ok(result);
+    }
+    
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();

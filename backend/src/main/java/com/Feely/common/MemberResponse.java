@@ -24,6 +24,7 @@ public final class MemberResponse {
         public static final String MEMBER_INFO_NOT_FOUND = "회원정보를 찾을 수 없습니다.";
         public static final String UPDATE_SUCCESS = "회원정보가 수정되었습니다.";
         public static final String LOGOUT_SUCCESS = "로그아웃되었습니다.";
+        public static final String MEMBER_NOT_ENOUGH_MILEAGE = "마일리지가 부족합니다.";
     }
 
     public enum ErrorCode {
@@ -43,6 +44,7 @@ public final class MemberResponse {
         NEED_MEMBER_NO("MEMBER_010"),
         MEMBER_INFO_NOT_FOUND("MEMBER_011"),
         UPDATE_SUCCESS("MEMBER_200"),
+        MEMBER_NOT_ENOUGHT_MILEAGE("MEMBER_100"),
         LOGOUT_SUCCESS("MEMBER_200");
 
         private final String code;
