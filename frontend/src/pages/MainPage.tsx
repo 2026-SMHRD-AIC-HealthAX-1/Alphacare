@@ -1,13 +1,15 @@
 ﻿import { useState, useRef, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import Cookies from "js-cookie";
 
 import { getCounselData, CounselRecord } from "../API/counsel";
 import { getRecommendedMusic, MusicRecommendation } from "../API/music";
 
 import test1 from "../assets/test5.mp4";
-import face from "../assets/face_1.png";
-import CounselImg from "../assets/CounselImg_2.png";
+import face from "../assets/mainface.png";
+import chat from "../assets/chat.png";
 import EmotionCalender from "../assets/EmotionCalender.png";
+import Report from "../assets/Report.png";
 
 /* =========================================================
    감정 데이터
@@ -130,6 +132,7 @@ const getDominantEmotionIndex = (
 ========================================================= */
 
 export default function MainPage() {
+  const navigate = useNavigate();
   /* =======================================================
      로그인
   ======================================================= */
@@ -157,13 +160,13 @@ export default function MainPage() {
   ======================================================= */
 
   const [selectedDate, setSelectedDate] =
-    useState<Date | null>(null);
+    useState<Date | null>(() => new Date());
 
   const [calendarViewDate, setCalendarViewDate] =
     useState<Date>(() => new Date());
 
   const [isWeeklyCalendar, setIsWeeklyCalendar] =
-    useState(false);
+    useState(true);
 
   /* =======================================================
      기존 메인 슬라이드
@@ -183,11 +186,41 @@ export default function MainPage() {
   const [dragOffset, setDragOffset] = useState(0);
 
   const baseSlides = [
-    { image: face, alt: "Face" },
-    { image: CounselImg, alt: "Counsel" },
+    {
+      image: face,
+      alt: "Face",
+      imageOffset: "-230px",
+      label: "감정 인식",
+      title: "표정을 읽고, 마음을 이해해요.",
+      descriptionLead: "웹캠으로 사용자의 표정을 인식해요.",
+      description: "AI가 당신의 감정 변화를 함께 살펴봅니다.",
+    },
+    {
+      image: chat,
+      alt: "Counsel",
+      imageOffset: "-230px",
+      label: "AI 상담",
+      title: "언제든, 편하게 이야기하세요.",
+      descriptionLead: "언제든 편하게 마음속 이야기를 꺼내보세요.",
+      description: "Feely AI 상담사가 당신의 마음을 듣고 함께 정리해 드려요.",
+    },
     {
       image: EmotionCalender,
       alt: "Emotion Calendar",
+      imageOffset: "-327px",
+      label: "상담 기록",
+      title: "오늘의 마음을 한눈에 정리해요.",
+      descriptionLead: "상담이 끝난 뒤 오늘의 이야기를 요약해 드려요.",
+      description: "상담 내용을 요약하고, 감정의 변화를 기록으로 남겨요.",
+    },
+    {
+      image: Report,
+      alt: "Weekly Emotion Report",
+      imageOffset: "-348px",
+      label: "주간 리포트",
+      title: "한 주의 감정 흐름을 차트로 살펴봐요.",
+      descriptionLead: "일주일 동안의 상담 기록을 차트로 확인하세요.",
+      description: "상담 요약을 바탕으로 여섯 가지 감정 흐름을 차트로 보여드려요.",
     },
   ];
 
@@ -440,6 +473,11 @@ export default function MainPage() {
     counselLogs,
     selectedDate,
   ]);
+
+  const isSelectedToday =
+    selectedDate !== null &&
+    toDateKey(selectedDate) ===
+      toDateKey(new Date());
 
   /* =======================================================
      차트 날짜
@@ -744,6 +782,7 @@ export default function MainPage() {
   if (isLoggedIn) {
     return (
       <main
+        className="dashboard-main"
         style={{
           width: "100%",
           maxWidth: "1400px",
@@ -755,6 +794,7 @@ export default function MainPage() {
         }}
       >
         <div
+          className="dashboard-grid"
           style={{
             display: "grid",
             gridTemplateColumns:
@@ -1303,6 +1343,29 @@ export default function MainPage() {
                 ) : selectedDateLogs.length ===
                   0 ? (
                   <div
+                    onClick={() => {
+                      if (isSelectedToday) {
+                        navigate("/Counsel");
+                      }
+                    }}
+                    onKeyDown={(event) => {
+                      if (
+                        isSelectedToday &&
+                        (event.key === "Enter" ||
+                          event.key === " ")
+                      ) {
+                        event.preventDefault();
+                        navigate("/Counsel");
+                      }
+                    }}
+                    role={
+                      isSelectedToday
+                        ? "button"
+                        : undefined
+                    }
+                    tabIndex={
+                      isSelectedToday ? 0 : undefined
+                    }
                     style={{
                       minHeight:
                         "200px",
@@ -1318,11 +1381,38 @@ export default function MainPage() {
                           "1px dashed #d1d5db",
                         borderRadius:
                           "12px",
-                        boxSizing:
-                          "border-box",
+                      boxSizing:
+                        "border-box",
+                      cursor:
+                        isSelectedToday
+                          ? "pointer"
+                          : "default",
                     }}
                   >
-                    선택한 날짜에 상담 기록이 없습니다.
+                    {isSelectedToday ? (
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          gap: "6px",
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        <strong
+                          style={{
+                            color: "#4b5563",
+                          }}
+                        >
+                          오늘의 상담 기록이 아직 없어요.
+                        </strong>
+                        <span>
+                          필요할 때 언제든 상담을 시작할 수 있어요.
+                        </span>
+                      </div>
+                    ) : (
+                      "선택한 날짜에 상담 기록이 없습니다."
+                    )}
                   </div>
                 ) : (
                   <div
@@ -1373,6 +1463,7 @@ export default function MainPage() {
                             {/* 상담 시간 / 감정 */}
 
                             <div
+                              className="daily-photo-grid"
                               style={{
                                 display:
                                   "flex",
@@ -2465,8 +2556,26 @@ export default function MainPage() {
 
         <style>{`
           @media (max-width: 900px) {
-            main > div {
+            .dashboard-main {
+              padding: 24px 16px 56px !important;
+            }
+
+            .dashboard-grid {
               grid-template-columns: 1fr !important;
+            }
+          }
+
+          @media (max-width: 520px) {
+            .dashboard-main {
+              padding: 16px 12px 40px !important;
+            }
+
+            .dashboard-main section {
+              padding: 16px !important;
+            }
+
+            .daily-photo-grid {
+              gap: 12px !important;
             }
           }
         `}</style>
@@ -2482,6 +2591,7 @@ export default function MainPage() {
 
   return (
     <main
+      className="landing-main"
       style={{
         width: "100vw",
         position: "relative",
@@ -2498,6 +2608,7 @@ export default function MainPage() {
       =================================================== */}
 
       <section
+        className="landing-hero"
         style={{
           width: "100vw",
           marginTop: 30,
@@ -2506,6 +2617,7 @@ export default function MainPage() {
         }}
       >
         <div
+          className="landing-hero-media"
           style={{
             position: "relative",
             width: "100vw",
@@ -2536,6 +2648,7 @@ export default function MainPage() {
           {/* 기존 텍스트 */}
 
           <div
+            className="landing-hero-copy"
             style={{
               position: "absolute",
               left: "4%",
@@ -2564,6 +2677,7 @@ export default function MainPage() {
       {/* 영상 아래 여백 */}
 
       <div
+        className="landing-hero-spacer"
         style={{
           width: "100vw",
           height: "180px",
@@ -2575,10 +2689,12 @@ export default function MainPage() {
       =================================================== */}
 
       <section
+        className="landing-slider"
         style={{
           position: "relative",
           width: "100vw",
           height: "500px",
+          marginBottom: "80px",
           backgroundColor:
             "#f5f5f5",
           overflow: "hidden",
@@ -2587,6 +2703,7 @@ export default function MainPage() {
         }}
       >
         <div
+          className="landing-slider-viewport"
           onMouseDown={(e) =>
             handleTouchStart(
               e.clientX
@@ -2633,6 +2750,7 @@ export default function MainPage() {
           }}
         >
           <div
+            className="landing-slider-track"
             onTransitionEnd={
               handleTransitionEnd
             }
@@ -2663,20 +2781,23 @@ export default function MainPage() {
             }}
           >
             <div
+              className="landing-slide"
               style={{
                 flex:
                   "0 0 100vw",
                 width: "100vw",
-                height: "500px",
-                display:
-                  "flex",
-                alignItems:
+              height: "500px",
+              display:
+                "flex",
+              position: "relative",
+              alignItems:
                   "center",
                 justifyContent:
                   "center",
               }}
             >
               <img
+                className="landing-slide-image"
                 src={
                   slideDirection ===
                   1
@@ -2698,30 +2819,109 @@ export default function MainPage() {
                   objectFit:
                     "contain",
                   transform:
-                    "translateX(-300px)",
+                    `translateX(${(slideDirection === 1
+                      ? baseSlides[currentSlide]
+                      : baseSlides[targetSlide]
+                    ).imageOffset})`,
                   userSelect:
                     "none",
                   pointerEvents:
                     "none",
                 }}
               />
+              {(slideDirection === 1
+                ? baseSlides[currentSlide]
+                : baseSlides[targetSlide]
+              ).title && (
+                <div
+                  className="landing-slide-copy"
+                  style={{
+                    position: "absolute",
+                    left: "calc(50% + 16px)",
+                    top: "calc(50% + 130px)",
+                    transform: "translateY(-50%)",
+                    color: "#111827",
+                  }}
+                >
+                  <p
+                    style={{
+                      margin: "0 0 15px",
+                      fontSize: "32px",
+                      fontWeight: 700,
+                      color: "#0D9488",
+                      letterSpacing: "0.5px",
+                    }}
+                  >
+                    {(slideDirection === 1
+                      ? baseSlides[currentSlide]
+                      : baseSlides[targetSlide]
+                    ).label}
+                  </p>
+                  <h2
+                    style={{
+                      margin: 0,
+                      fontSize: "24px",
+                      lineHeight: 1.3,
+                      fontWeight: 800,
+                      letterSpacing: "-1.5px",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {(slideDirection === 1
+                      ? baseSlides[currentSlide]
+                      : baseSlides[targetSlide]
+                    ).title}
+                  </h2>
+                  <p
+                    className="landing-slide-description"
+                    style={{
+                      margin: "3px 0 0",
+                      fontSize: "16px",
+                      lineHeight: 1.6,
+                      color: "#4b5563",
+                    }}
+                  >
+                    {(slideDirection === 1
+                      ? baseSlides[currentSlide]
+                      : baseSlides[targetSlide]
+                    ).descriptionLead}
+                  </p>
+                  <p
+                    className="landing-slide-description"
+                    style={{
+                      margin: "1px 0 0",
+                      fontSize: "16px",
+                      lineHeight: 1.6,
+                      color: "#4b5563",
+                    }}
+                  >
+                    {(slideDirection === 1
+                      ? baseSlides[currentSlide]
+                      : baseSlides[targetSlide]
+                    ).description}
+                  </p>
+                </div>
+              )}
             </div>
 
             <div
+              className="landing-slide"
               style={{
                 flex:
                   "0 0 100vw",
                 width: "100vw",
-                height: "500px",
-                display:
-                  "flex",
-                alignItems:
+              height: "500px",
+              display:
+                "flex",
+              position: "relative",
+              alignItems:
                   "center",
                 justifyContent:
                   "center",
               }}
             >
               <img
+                className="landing-slide-image"
                 src={
                   slideDirection ===
                   1
@@ -2743,13 +2943,89 @@ export default function MainPage() {
                   objectFit:
                     "contain",
                   transform:
-                    "translateX(-300px)",
+                    `translateX(${(slideDirection === 1
+                      ? baseSlides[targetSlide]
+                      : baseSlides[currentSlide]
+                    ).imageOffset})`,
                   userSelect:
                     "none",
                   pointerEvents:
                     "none",
                 }}
               />
+              {(slideDirection === 1
+                ? baseSlides[targetSlide]
+                : baseSlides[currentSlide]
+              ).title && (
+                <div
+                  className="landing-slide-copy"
+                  style={{
+                    position: "absolute",
+                    left: "calc(50% + 16px)",
+                    top: "calc(50% + 130px)",
+                    transform: "translateY(-50%)",
+                    color: "#111827",
+                  }}
+                >
+                  <p
+                    style={{
+                      margin: "0 0 15px",
+                      fontSize: "32px",
+                      fontWeight: 700,
+                      color: "#0D9488",
+                      letterSpacing: "0.5px",
+                    }}
+                  >
+                    {(slideDirection === 1
+                      ? baseSlides[targetSlide]
+                      : baseSlides[currentSlide]
+                    ).label}
+                  </p>
+                  <h2
+                    style={{
+                      margin: 0,
+                      fontSize: "24px",
+                      lineHeight: 1.3,
+                      fontWeight: 800,
+                      letterSpacing: "-1.5px",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {(slideDirection === 1
+                      ? baseSlides[targetSlide]
+                      : baseSlides[currentSlide]
+                    ).title}
+                  </h2>
+                  <p
+                    className="landing-slide-description"
+                    style={{
+                      margin: "3px 0 0",
+                      fontSize: "16px",
+                      lineHeight: 1.6,
+                      color: "#4b5563",
+                    }}
+                  >
+                    {(slideDirection === 1
+                      ? baseSlides[targetSlide]
+                      : baseSlides[currentSlide]
+                    ).descriptionLead}
+                  </p>
+                  <p
+                    className="landing-slide-description"
+                    style={{
+                      margin: "3px 0 0",
+                      fontSize: "16px",
+                      lineHeight: 1.6,
+                      color: "#4b5563",
+                    }}
+                  >
+                    {(slideDirection === 1
+                      ? baseSlides[targetSlide]
+                      : baseSlides[currentSlide]
+                    ).description}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -2757,6 +3033,7 @@ export default function MainPage() {
         {/* 왼쪽 화살표 */}
 
         <button
+          className="landing-slider-arrow landing-slider-arrow-left"
           type="button"
           onClick={
             prevSlide
@@ -2807,6 +3084,7 @@ export default function MainPage() {
         {/* 오른쪽 화살표 */}
 
         <button
+          className="landing-slider-arrow landing-slider-arrow-right"
           type="button"
           onClick={
             nextSlide
@@ -2916,6 +3194,147 @@ export default function MainPage() {
           )}
         </div>
       </section>
+      <style>{`
+        @media (max-width: 900px) {
+          .landing-hero-media {
+            height: max(300px, 46vw) !important;
+          }
+
+          .landing-hero-copy {
+            font-size: clamp(48px, 8vw, 88px) !important;
+            letter-spacing: -5px !important;
+          }
+
+          .landing-hero-spacer {
+            height: 100px !important;
+          }
+
+          .landing-slider,
+          .landing-slider-viewport,
+          .landing-slider-track,
+          .landing-slide {
+            height: 480px !important;
+          }
+
+          .landing-slide-image {
+            height: 320px !important;
+            max-width: 46vw !important;
+            transform: translateX(-22vw) !important;
+          }
+
+          .landing-slide-copy {
+            left: 55% !important;
+            top: calc(50% + 110px) !important;
+            max-width: 40vw;
+          }
+
+          .landing-slide-copy > p:first-child {
+            font-size: 26px !important;
+          }
+
+          .landing-slide-copy h2 {
+            font-size: 20px !important;
+            white-space: normal !important;
+          }
+
+          .landing-slide-description {
+            font-size: 14px !important;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .landing-hero {
+            margin-top: 12px !important;
+          }
+
+          .landing-hero-media {
+            height: 280px !important;
+          }
+
+          .landing-hero-media > video {
+            width: auto !important;
+            min-width: 100% !important;
+            height: 100% !important;
+            left: 50% !important;
+            top: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            object-fit: cover;
+          }
+
+          .landing-hero-copy {
+            left: 6% !important;
+            top: 68% !important;
+            font-size: 42px !important;
+            letter-spacing: -3px !important;
+            line-height: 1.1 !important;
+          }
+
+          .landing-hero-spacer {
+            height: 64px !important;
+          }
+
+          .landing-slider,
+          .landing-slider-viewport,
+          .landing-slider-track,
+          .landing-slide {
+            height: 480px !important;
+          }
+
+          .landing-slider {
+            margin-bottom: 48px !important;
+          }
+
+          .landing-slide {
+            align-items: center !important;
+            padding-top: 0;
+          }
+
+          .landing-slide-image {
+            position: static;
+            height: min(260px, 54vw) !important;
+            max-width: 46vw !important;
+            transform: translateX(-24vw) !important;
+          }
+
+          .landing-slide-copy {
+            left: 55% !important;
+            right: auto;
+            top: calc(50% + 95px) !important;
+            max-width: 40vw;
+            transform: translateY(-50%) !important;
+            text-align: left;
+          }
+
+          .landing-slide-copy > p:first-child {
+            margin-bottom: 10px !important;
+            font-size: clamp(18px, 6vw, 26px) !important;
+          }
+
+          .landing-slide-copy h2 {
+            font-size: clamp(14px, 4.5vw, 19px) !important;
+            letter-spacing: -1px !important;
+          }
+
+          .landing-slide-description {
+            margin-top: 6px !important;
+            font-size: clamp(12px, 3.5vw, 14px) !important;
+            line-height: 1.5 !important;
+          }
+
+          .landing-slider-arrow {
+            width: 36px !important;
+            height: 36px !important;
+          }
+
+          .landing-slider-arrow-left {
+            left: 12px !important;
+          }
+
+          .landing-slider-arrow-right {
+            right: 12px !important;
+          }
+        }
+      `}</style>
     </main>
   );
 }
