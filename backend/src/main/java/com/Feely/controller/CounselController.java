@@ -18,6 +18,7 @@ import com.Feely.dto.CounselRequestDTO;
 import com.Feely.dto.CounselResponseDTO;
 import com.Feely.dto.MemberSessionDto;
 import com.Feely.service.CounselService;
+import com.Feely.service.MemberService;
 
 import jakarta.servlet.http.HttpSession;
 
@@ -26,9 +27,11 @@ import jakarta.servlet.http.HttpSession;
 public class CounselController {
 
     private final CounselService counselService;
+    private final MemberService memberService;
 
-    public CounselController(CounselService counselService) {
+    public CounselController(CounselService counselService, MemberService memberService) {
         this.counselService = counselService;
+        this.memberService = memberService;
     }
 
     @PostMapping("/counsel")
@@ -55,9 +58,13 @@ public class CounselController {
                 Long memberNo = member.getMemberNo();
 
                 counselService.saveCounsel(dto, memberNo, startImage, endImage);
+                
+                // 마일리지 누적
+                memberService.setMileage(memberNo);
 
                 counselFlag.put("counselFlag", true);
                 
+
             } catch (Exception e) {
                 e.printStackTrace();
                 counselFlag.put("counselFlag", false);
