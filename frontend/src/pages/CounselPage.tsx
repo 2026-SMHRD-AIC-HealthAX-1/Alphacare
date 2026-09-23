@@ -10,6 +10,7 @@ import {
 } from "../API/counselSession";
 import { saveCounselRecord } from "../API/counsel";
 import { useNavigate } from "react-router-dom";
+import Cookies from "js-cookie";
 import FeelyLogo2 from "../assets/Feely_Logo_2.png";
 
 // 4-4-4-4 박스 호흡법 단계 (각 4초씩 반복)
@@ -71,6 +72,9 @@ export default function CounselPage() {
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
+  // 채팅 목록 스크롤 컨테이너 자신 - 새 메시지가 오면 이 컨테이너의 스크롤만 맨 아래로 내림
+  // (scrollIntoView를 쓰면 상위 페이지까지 같이 스크롤돼서 좌측 카메라 영역이 화면 밖으로 밀려나는 문제가 있었음)
+  const chatContainerRef = useRef<HTMLDivElement | null>(null);
   // 마이크 음성인식(SpeechRecognition) 인스턴스 보관용
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const isNormalExit = useRef(false);
@@ -386,6 +390,17 @@ export default function CounselPage() {
 
     isNormalExit.current = true;
 
+    // 로그인하지 않은 사용자는 회원 기준으로 DB에 저장할 수 없으므로,
+    // 백엔드(/api/counsel) 저장 요청은 아예 보내지 않고 FastAPI 세션 정리만 한 뒤 메인으로 이동함
+    const isLoggedIn = Cookies.get("isLoggedIn") === "true";
+    if (!isLoggedIn) {
+      finishCounselSession(chatSessionIdRef.current, "ABORTED").catch((err) => {
+        console.warn("상담 세션 정리 실패:", err);
+      });
+      navigate("/");
+      return;
+    }
+
     const endImage = captureFrame();
 
     try {
@@ -410,7 +425,12 @@ export default function CounselPage() {
   const [messages, setMessages] = useState<Message[]>([]);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    // scrollIntoView는 상위 스크롤 컨테이너(페이지 전체)까지 같이 끌어올려서 좌측 카메라
+    // 영역이 화면 밖으로 밀려나는 문제가 있어, 채팅 컨테이너 자신의 스크롤 위치만 맨 아래로 옮김
+    const container = chatContainerRef.current;
+    if (container) {
+      container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+    }
   }, [messages]);
 
   const handleSendMessage = async (customText?: string) => {
@@ -747,7 +767,7 @@ export default function CounselPage() {
             </div>
           </div>
 
-          <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4 bg-gray-50/30 dark:bg-gray-900/30">
+          <div ref={chatContainerRef} className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4 bg-gray-50/30 dark:bg-gray-900/30">
             {messages.map((msg) => (
               <div
                 key={msg.id}

@@ -53,21 +53,20 @@ public class CounselEntity {
     private String counselSum;
 
 
+    // 카메라를 안 쓴 상담은 시작/종료 이미지가 없을 수 있어서 nullable로 바꿈 (기존엔 필수라 저장 자체가 막혔음)
     @Lob 
-    @NonNull 
     @Column (
         name = "START_IMAGE",
         columnDefinition = "mediumblob",
-        nullable = false
+        nullable = true
     )
     private byte[] startImage;
 
     @Lob 
-    @NonNull 
     @Column (
         name = "END_IMAGE",
         columnDefinition = "mediumblob",
-        nullable = false
+        nullable = true
     )
     private byte[] endImage;
 
