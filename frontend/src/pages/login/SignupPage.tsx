@@ -1,17 +1,15 @@
-// import { Link } from "react-router-dom";
+import { ApiError } from "../../API/axios";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { checkDuplicateId, signupUser } from "../../API/auth";
 import { isValidPassword, isValidPhone, sanitizePhoneInput } from "../../utils/validation";
 
 export default function SignupPage() {
-  //기능 구현 부분
 
-  //회원가입 완료시 페이지 자동이동을 위한 navigate
-  //Link와 다른점은 link는 직접 UI를 클릭할때 발생하지만 nav는 코드 로직 실행 결과에 따라 발생
+  // 회원가입 완료 후 페이지 이동
   const navigate = useNavigate();
 
-  //입력 필드 기본 값 선언
+  // 입력값 상태
   const [userId, setuserId] = useState("");
   const [checkId, setcheckId] = useState(false);
   const [userPw, setuserPw] = useState("");
@@ -19,22 +17,22 @@ export default function SignupPage() {
   const [name, setName] = useState("");
   const [phone, setphone] = useState("");
 
-  //아이디 입력칸 수정 시 중복확인 상태 초기화
+  // 아이디 수정 시 중복확인 상태 초기화
   const renameCheckId = (e: React.ChangeEvent<HTMLInputElement>) => {
     setuserId(e.target.value);
     setcheckId(false);
   }
 
-  //아이디 중복 확인 기능
+  // 아이디 중복 확인
   const clickCheckDuplicate = async () => {
-    //아이디 입력란 공백시
+    // 아이디 공백 체크
     if (!userId.trim()) {
       alert("아이디를 입력해주세요");
       return
     }
 
     try {
-      //아이디 중복시 true, 미중복시 false
+      // 중복이면 true
       const isDuplicate = await checkDuplicateId(userId);
 
       if (isDuplicate) {
@@ -43,22 +41,21 @@ export default function SignupPage() {
       }
       else {
         alert("사용 가능한 아이디 입니다.")
-        //아이디 중복 확인 여부 통과
         setcheckId(true);
       }
-    } catch (error) {
+    } catch {
       console.log("중복 확인 오류");
       alert("중복 확인 중 오류 발생")
       setcheckId(false);
     }
   }
 
-  //휴대폰 번호 숫자가 아닌 문자 제거, 11자리까지만 허용
+  // 휴대폰 번호: 숫자만, 11자리 제한
   const checkphone = (e: React.ChangeEvent<HTMLInputElement>) => {
     setphone(sanitizePhoneInput(e.target.value));
   }
 
-  //회원가입
+  // 회원가입
   const postSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -88,7 +85,6 @@ export default function SignupPage() {
     }
 
     try {
-      // 백엔드 MemberDto 필드명에 정확히 일치시킴
       const result = await signupUser({
         id: userId,
         pw: userPw,
@@ -99,12 +95,16 @@ export default function SignupPage() {
         loginFlag : false
       });
 
-      // 201 Created 성공 처리
+      if (!result.joinFlag) {
+        alert(result.message || "회원가입에 실패했습니다.");
+        return;
+      }
       alert(result.message || "회원가입이 완료되었습니다.");
       navigate("/Login");
-    } catch (error: any) {
+    } catch (e) {
+      const error = e as ApiError;
       console.error("회원가입 오류 : ", error);
-      // 400(필수값 누락), 409(아이디 중복) 등 백엔드가 보낸 message 필드 출력
+      // 백엔드 에러 메시지 표시
       if (error.response?.data?.message) {
         alert(error.response.data.message);
       } else {
@@ -113,7 +113,7 @@ export default function SignupPage() {
     }
   };
 
-  //디자인 구현부분
+  // 화면
   return (
     <div className="min-h-[calc(100vh-80px)] flex flex-col items-center justify-center px-4 py-8 sm:py-12">
       <div className="w-full max-w-xl mx-auto space-y-4 sm:space-y-6">

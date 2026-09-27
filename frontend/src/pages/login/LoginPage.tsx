@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
 import { loginUser } from "../../API/auth";
-import { setAuthCookies } from "../../API/axios";
+import { setAuthCookies, ApiError } from "../../API/axios";
 
 export default function LoginPage() {
   const [userId, setUserId] = useState("");
@@ -23,22 +23,13 @@ export default function LoginPage() {
 
       if (res.loginFlag) {
         setAuthCookies(userId);
-
-        // 로그인 응답에 마일리지값이 포함되어 있으면 화면 표시용으로 캐시해둠
-        if (res.mileage !== undefined && res.mileage !== null) {
-          try {
-            localStorage.setItem("memberMileage", String(res.mileage));
-          } catch {
-            // localStorage를 못 쓰는 환경이면 무시
-          }
-        }
-
         alert(`${userId}님, 환영합니다!`);
-        window.location.href = "/";
+        window.location.href = import.meta.env.BASE_URL;
       } else {
         alert("아이디 또는 비밀번호가 일치하지 않습니다.");
       }
-    } catch (error: any) {
+    } catch (e) {
+      const error = e as ApiError;
       if (error?.response?.status === 401) {
         // 아이디/비밀번호 불일치
         alert("아이디 또는 비밀번호가 일치하지 않습니다.");

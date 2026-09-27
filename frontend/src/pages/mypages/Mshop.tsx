@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react'
+import { ApiError } from "../../API/axios";
 import { getMileageProducts, MileageProduct, exchangeMileageProduct } from "../../API/mileage";
+import { getMemberMileage, getMileageHistory, MileageHistoryItem } from "../../API/auth";
 import naverpay_5000 from "../../assets/naverpay_5000.png";
 import naverpay_10000 from "../../assets/naverpay_10000.png";
 
@@ -16,13 +18,9 @@ import Feely_Diary from "../../assets/Feely_Diary.png";
 import Feely_Diary_Detail from "../../assets/Feely_Diary_Detail.png";
 
 
-// 보유 마일리지는 로그인 응답 body에 실려오는 mileage값을 로그인 시점에 localStorage("memberMileage")에
-// 저장해두고, 마일리지샵에서는 그 캐시된 값을 초기값으로 표시함. 교환 성공 시에는 백엔드가
-// GET /api/products/exchange/{prodNo} 응답으로 돌려주는 차감 후 마일리지값으로 갱신함
-// 적립내역은 별도 조회 API가 없어서 아직 미구현
-// 상품 목록/재고/가격은 DB(GET /api/products)에서 받아옴.
+// 마일리지샵: 보유 마일리지 조회, 상품 목록(DB) 표시, 상품 교환
 
-// DB에는 상품 이미지가 없어서 상품명으로 로컬 이미지를 매칭함 - 매칭되는 이름이 없으면 이미지 없이 표시됨
+// 상품명 -> 로컬 이미지 매칭 (DB 이미지가 없을 때 사용)
 const PRODUCT_IMAGE_MAP: Record<string, string> = {
     "네이버페이 5,000원": naverpay_5000,
     "네이버페이 10,000원": naverpay_10000,
@@ -39,15 +37,14 @@ const diaryImages = [
     Feely_Diary_Detail
 ];
 
-// Feely Diary는 DB 상품이 아니라(일기형/추억형 선택 등 별도 흐름) 항상 고정으로 보여주는 카드
+// Feely Diary 고정 카드 (일기형/추억형 선택)
 const FEELY_DIARY_ITEM: { name: string; image: string; point: string; inventory?: number } = {
     name: "Feely Diary",
     image: Feely_Diary,
     point: "20,000P",
 };
 
-// 다이어리 종류 -> 교환 시 실제로 넘겨야 하는 DB 상품(prodNo)을 찾기 위한 상품명 매핑
-// prodNo를 숫자로 하드코딩하지 않고, 상품 목록(dbProducts)에서 이 이름으로 찾아서 사용함
+// 다이어리 종류 -> DB 상품명 매핑 (prodNo 조회용)
 const DIARY_PRODUCT_NAME: Record<string, string> = {
     "일기형": "Diary_diary",
     "추억형": "Diary_memory",
@@ -61,7 +58,7 @@ export default function Mshop() {
     const [selectedDiaryType, setSelectedDiaryType] = useState<string | null>(null);
     const [diaryStartDate, setDiaryStartDate] = useState("");
     const [diaryEndDate, setDiaryEndDate] = useState("");
-    // 마일리지 상품 목록 (백엔드 DB 연동)
+    // 마일리지 상품 목록
     const [dbProducts, setDbProducts] = useState<MileageProduct[]>([]);
     const [productsLoading, setProductsLoading] = useState(true);
     const [productsError, setProductsError] = useState(false);
@@ -84,40 +81,35 @@ export default function Mshop() {
         loadProducts();
     }, []);
 
-    // 보유 마일리지 - 로그인 시 응답 body로 받아서 localStorage에 저장해둔 값을 초기값으로 사용하고,
-    // 교환에 성공하면 백엔드가 돌려주는 차감 후 값으로 갱신함(applyMileage)
-    const [memberMileage, setMemberMileage] = useState<number | null>(() => {
-        try {
-            const cached = localStorage.getItem("memberMileage");
-            return cached !== null ? Number(cached) : null;
-        } catch {
-            return null;
-        }
-    });
+    // 보유 마일리지 (진입 시 조회, 교환 성공 시 갱신)
+    const [memberMileage, setMemberMileage] = useState<number | null>(null);
 
-    // 교환 요청 진행 상태 / 실패 메시지 (모달 안에서 표시)
+    useEffect(() => {
+        getMemberMileage()
+            .then((data) => setMemberMileage(data.mileage))
+            .catch((err) => console.error("보유 마일리지를 불러오지 못했습니다:", err));
+    }, []);
+
+    // 마일리지 사용/적립 내역
+    const [mileageHistory, setMileageHistory] = useState<MileageHistoryItem[]>([]);
+    const [historyOpen, setHistoryOpen] = useState(false);
+
+    useEffect(() => {
+        getMileageHistory()
+            .then(setMileageHistory)
+            .catch((err) => console.error("마일리지 내역을 불러오지 못했습니다:", err));
+    }, []);
+
+    // 교환 진행 상태 / 실패 메시지
     const [exchanging, setExchanging] = useState(false);
     const [exchangeError, setExchangeError] = useState<string | null>(null);
 
-    // 화면 3곳(상단 배지 / 상품권 교환 모달 / 다이어리 교환 모달)에서 공통으로 쓰는 표시용 문자열
+    // 보유 마일리지 표시 문자열
     const mileageDisplay = memberMileage !== null
         ? `${memberMileage.toLocaleString()} P`
         : "- P";
 
-    // 교환 성공 시 마일리지 상태 + localStorage 캐시를 같이 갱신
-    const applyMileage = (value: number | null) => {
-        setMemberMileage(value);
-        if (value !== null) {
-            try {
-                localStorage.setItem("memberMileage", String(value));
-            } catch {
-                // localStorage를 못 쓰는 환경이면 무시
-            }
-        }
-    };
-
-    // 상품 교환 요청 - GET /api/products/exchange/{prodNo} 호출 결과에 따라 성공/실패 처리
-    // (401은 axios.ts의 공통 인터셉터가 세션만료 처리를 이미 하므로 여기서는 그 외 실패만 처리)
+    // 상품 교환 요청 (401은 axios 인터셉터에서 처리)
     const requestExchange = async (prodNo: number): Promise<boolean> => {
         setExchanging(true);
         setExchangeError(null);
@@ -127,11 +119,11 @@ export default function Mshop() {
                 setExchangeError(data.message || "교환에 실패했습니다.");
                 return false;
             }
-            applyMileage(data.mileage);
+            setMemberMileage(data.mileage);
             return true;
-        } catch (err: any) {
-            // 401(세션 만료)은 axios 인터셉터가 알림 + 메인페이지 이동을 공통으로 처리하므로
-            // 여기서 별도 메시지를 띄우면 리다이렉트 직전에 잘못된 문구가 잠깐 보일 수 있어 건너뜀
+        } catch (e) {
+          const err = e as ApiError;
+            // 401은 인터셉터에서 처리하므로 메시지 생략
             if (err?.response?.status === 401) {
                 return false;
             }
@@ -148,12 +140,8 @@ export default function Mshop() {
         }
     };
 
-    // DB 상품을 카드에서 쓰는 형태로 변환
-    // 1순위: DB에 저장된 실제 상품 이미지(prodImage, base64) - 백엔드에 등록된 상품이면 항상 있음
-    // 2순위: 상품명으로 매칭되는 로컬 이미지 (DB 이미지가 없는 예전 데이터 대비)
-    // 둘 다 없으면 빈 문자열 -> 카드에서 🎁 아이콘으로 대체
-    // Diary_diary / Diary_memory는 DB에 남아있는 다이어리 상품이지만
-    // 화면에는 아래의 큰 Feely Diary 카드 하나만 노출하므로 목록에서 제외
+    // DB 상품을 카드 형태로 변환 (이미지: DB 이미지 > 로컬 이미지 > 기본 아이콘)
+    // 다이어리 상품은 Feely Diary 카드로 따로 표시하므로 목록에서 제외
     const productItems = dbProducts
         .filter((p) => p.prodName !== "Diary_diary" && p.prodName !== "Diary_memory")
         .map((p) => ({
@@ -225,7 +213,7 @@ export default function Mshop() {
 
 
             <div className="w-full max-w-7xl mx-auto py-4 px-2 sm:px-4 lg:px-6 min-h-screen">
-                <main className="w-full min-w-0">
+                <div className="w-full min-w-0">
 
                     {/* 상단 마일리지 영역 */}
                     <div className="p-4 sm:p-6 mb-0">
@@ -237,9 +225,37 @@ export default function Mshop() {
                                 <p className="text-2xl sm:text-3xl font-bold text-gray-600 dark:text-teal-400">
                                     {mileageDisplay}
                                 </p>
+                                <button
+                                    type="button"
+                                    onClick={() => setHistoryOpen((prev) => !prev)}
+                                    className="ml-2 text-sm text-gray-500 dark:text-gray-400 underline hover:text-teal-500"
+                                >
+                                    {historyOpen ? "내역 닫기" : "내역 보기"}
+                                </button>
                             </div>
 
                         </div>
+
+                        {/* 마일리지 적립/사용 내역 */}
+                        {historyOpen && (
+                            <div className="max-w-md mx-auto mt-4 border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-100 dark:divide-gray-700 max-h-64 overflow-y-auto">
+                                {mileageHistory.length === 0 ? (
+                                    <p className="text-center text-gray-400 text-sm py-4">내역이 없습니다.</p>
+                                ) : (
+                                    mileageHistory.map((h, idx) => (
+                                        <div key={idx} className="flex items-center justify-between px-4 py-2 text-sm">
+                                            <div>
+                                                <p className="text-gray-700 dark:text-gray-200">{h.reason}</p>
+                                                <p className="text-gray-400 text-xs">{h.createdAt}</p>
+                                            </div>
+                                            <p className={h.type === "EARN" ? "text-green-500 font-semibold" : "text-red-500 font-semibold"}>
+                                                {h.amount > 0 ? `+${h.amount}` : h.amount} P
+                                            </p>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {/* 마일리지와 상품권 영역 구분선 */}
@@ -440,7 +456,7 @@ export default function Mshop() {
         `}
                                     >
 
-                                        {/* 상품 이미지 (DB에 이미지가 없는 상품이면 대체 아이콘 표시) */}
+                                        {/* 상품 이미지 (없으면 기본 아이콘) */}
                                         <div className="w-full h-[110px] sm:h-[140px] md:h-[160px] flex items-center justify-center min-w-0 shrink-0">
                                             {item.image ? (
                                                 <img
@@ -668,8 +684,7 @@ export default function Mshop() {
 
                                                                 setDiaryStartDate(newStartDate);
 
-                                                                // 시작일을 새로 선택하면
-                                                                // 기존 종료일 초기화
+                                                                // 시작일 변경 시 종료일 초기화
                                                                 setDiaryEndDate("");
                                                             }}
                                                             className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-[12px] outline-none focus:border-[#1F6170]"
@@ -878,7 +893,7 @@ export default function Mshop() {
                                                 return;
                                             }
 
-                                            {/* 다이어리 종류 -> 실제 DB 상품번호(prodNo) 찾기 */ }
+                                            {/* 다이어리 종류로 DB 상품번호(prodNo) 찾기 */ }
                                             const prodNo = selectedDiaryType
                                                 ? dbProducts.find(
                                                     (p) => p.prodName === DIARY_PRODUCT_NAME[selectedDiaryType]
@@ -922,7 +937,7 @@ export default function Mshop() {
                         )
                     }
 
-                </main >
+                </div>
             </div >
         </>
     );

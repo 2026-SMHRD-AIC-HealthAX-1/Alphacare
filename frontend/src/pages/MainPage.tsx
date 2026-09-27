@@ -2,8 +2,14 @@
 import { useNavigate } from "react-router-dom";
 import Cookies from "js-cookie";
 
-import { getCounselData, CounselRecord } from "../API/counsel";
+import {
+  getCounselData,
+  CounselRecord,
+  getSavedWeeklySummary,
+  saveWeeklySummary,
+} from "../API/counsel";
 import { getRecommendedMusic, MusicRecommendation } from "../API/music";
+import { generateWeeklySummary, WeeklySummaryItem } from "../API/counselSession";
 import {
   EMOTION_LABELS,
   getDominantEmotion,
@@ -16,23 +22,6 @@ import face from "../assets/mainface.png";
 import chat from "../assets/chat.png";
 import EmotionCalender from "../assets/EmotionCalender.png";
 import Report from "../assets/Report.png";
-
-/* =========================================================
-   감정 라벨 문구 임시 오버라이드 (메인페이지만 우선 반영)
-   e04: 분노 -> 화남, e05: 당황 -> 우울 로 팀에서 문구가 바뀜.
-   utils/emotion.ts는 EmotionCalender/WeeklyReport도 같이 쓰고 있어서
-   공용 라벨은 그대로 두고, 화면에 보여줄 때만 여기서 문구를 바꿔치기함.
-   (음악 추천 API(getRecommendedMusic)는 기존 라벨 문구를 장르 검색 키로 그대로 쓰고 있어서
-   그쪽은 건드리지 않고 weeklyDominantLabel 원본을 그대로 넘김 - 별도로 표시용 값만 만듦)
-========================================================= */
-
-const EMOTION_LABEL_OVERRIDES: Partial<Record<keyof CounselRecord, string>> = {
-  e04Rate: "화남",
-  e05Rate: "우울",
-};
-
-const emotionLabel = (item: { key: keyof CounselRecord; label: string }) =>
-  EMOTION_LABEL_OVERRIDES[item.key] ?? item.label;
 
 /* =========================================================
    날짜 함수
@@ -558,11 +547,9 @@ export default function MainPage() {
           }/${time.getDate()} ${
             DAY_LABELS[time.getDay()]
           } ${hh}:${mm} · ${
-            emotionLabel(
-              EMOTION_LABELS[
-                dominantIndex
-              ]
-            )
+            EMOTION_LABELS[
+              dominantIndex
+            ].label
           }`,
         };
       })
@@ -605,18 +592,10 @@ export default function MainPage() {
     return getDominantEmotionIndex(chartLogs);
   }, [chartLogs]);
 
-  // 음악 추천 API(getRecommendedMusic)가 이 값을 장르 검색 키로 그대로 쓰고 있어서
-  // 원래 라벨 문구를 유지함 (표시용 문구는 weeklyDominantDisplayLabel을 따로 씀)
   const weeklyDominantLabel =
     weeklyDominantIndex === null
       ? null
       : EMOTION_LABELS[weeklyDominantIndex].label;
-
-  // 화면에 보여줄 때만 문구를 덮어씀 (e04: 분노->화남, e05: 당황->우울)
-  const weeklyDominantDisplayLabel =
-    weeklyDominantIndex === null
-      ? null
-      : emotionLabel(EMOTION_LABELS[weeklyDominantIndex]);
 
   const [weeklyMusic, setWeeklyMusic] =
     useState<MusicRecommendation[]>([]);
@@ -627,13 +606,11 @@ export default function MainPage() {
   const [weeklyMusicError, setWeeklyMusicError] =
     useState(false);
 
+  // 이번 주 대표 감정으로 추천 음악 조회
   useEffect(() => {
-    if (!selectedDate || weeklyDominantLabel === null) {
-      setWeeklyMusic([]);
-      setWeeklyMusicError(false);
-      setWeeklyMusicLoading(false);
-      return;
-    }
+    if (weeklyDominantLabel === null) return;
+
+    let cancelled = false;
 
     const loadWeeklyMusic = async () => {
       try {
@@ -645,21 +622,91 @@ export default function MainPage() {
             weeklyDominantLabel
           );
 
-        setWeeklyMusic(data);
+        if (!cancelled) setWeeklyMusic(data);
       } catch (error) {
         console.error(
           "추천 음악을 불러오지 못했습니다:",
           error
         );
 
-        setWeeklyMusicError(true);
+        if (!cancelled) setWeeklyMusicError(true);
       } finally {
-        setWeeklyMusicLoading(false);
+        if (!cancelled) setWeeklyMusicLoading(false);
       }
     };
 
     loadWeeklyMusic();
+
+    return () => {
+      cancelled = true;
+    };
   }, [weeklyDominantLabel]);
+
+  // 이번 주 상담 순서대로의 (요약, 대표 감정) 목록 (AI 요약 요청용)
+  const weeklySummaryItems = useMemo((): WeeklySummaryItem[] => {
+    return [...chartLogs]
+      .sort(
+        (a, b) =>
+          parseDttm(a.counselDttm).getTime() -
+          parseDttm(b.counselDttm).getTime()
+      )
+      .map((log) => ({
+        summary: log.counselSum,
+        emotion: getDominantEmotion(log).label,
+      }));
+  }, [chartLogs]);
+
+  const [weeklySummaryText, setWeeklySummaryText] = useState("");
+  const [weeklySummaryLoading, setWeeklySummaryLoading] = useState(false);
+
+  // 저장된 주간 요약을 먼저 확인하고, 없거나 상담이 늘었으면 새로 생성해서 저장함
+  useEffect(() => {
+    const memberNo = chartLogs[0]?.memberNo;
+    const weekStart = chartDateKeys[0];
+    const counselCount = weeklySummaryItems.length;
+
+    if (counselCount === 0 || !memberNo || !weekStart) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadWeeklySummary = async () => {
+      try {
+        setWeeklySummaryLoading(true);
+
+        const saved = await getSavedWeeklySummary(weekStart, counselCount);
+        if (saved) {
+          if (!cancelled) setWeeklySummaryText(saved.summary);
+          return;
+        }
+
+        const summary = await generateWeeklySummary(weeklySummaryItems);
+        if (!cancelled) setWeeklySummaryText(summary);
+
+        if (summary) {
+          saveWeeklySummary({ weekStart, summary, counselCount }).catch((err) => {
+            console.warn("주간 감정 요약 저장 실패:", err);
+          });
+        }
+      } catch (error) {
+        console.error(
+          "이번 주 감정 요약을 불러오지 못했습니다:",
+          error
+        );
+
+        if (!cancelled) setWeeklySummaryText("");
+      } finally {
+        if (!cancelled) setWeeklySummaryLoading(false);
+      }
+    };
+
+    loadWeeklySummary();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [weeklySummaryItems, chartDateKeys, chartLogs]);
 
   /* =======================================================
      기존 슬라이드
@@ -761,7 +808,7 @@ export default function MainPage() {
 
   if (isLoggedIn) {
     return (
-      <main
+      <div
         className="dashboard-main"
         style={{
           width: "100%",
@@ -803,13 +850,13 @@ export default function MainPage() {
             <section
               style={{
                 border:
-                  "1px solid #e5e7eb",
+                  "1px solid var(--fe-border)",
                 borderRadius:
                   "20px",
                 padding:
                   "24px",
                 backgroundColor:
-                  "#ffffff",
+                  "var(--fe-surface)",
                 boxSizing:
                   "border-box",
                 overflow:
@@ -848,7 +895,7 @@ export default function MainPage() {
                         background:
                           "transparent",
                         color:
-                          "#6b7280",
+                          "var(--fe-muted)",
                         cursor:
                           "pointer",
                         fontSize:
@@ -865,7 +912,7 @@ export default function MainPage() {
                         fontWeight:
                           700,
                         color:
-                          "#111827",
+                          "var(--fe-text)",
                       }}
                     >
                       {
@@ -894,7 +941,7 @@ export default function MainPage() {
                         background:
                           "transparent",
                         color:
-                          "#6b7280",
+                          "var(--fe-muted)",
                         cursor:
                           "pointer",
                         fontSize:
@@ -910,7 +957,7 @@ export default function MainPage() {
                       display:
                         "grid",
                       gridTemplateColumns:
-                        "repeat(7, 1fr)",
+                        "repeat(7, minmax(0, 1fr))",
                       textAlign:
                         "center",
                       fontSize:
@@ -918,7 +965,7 @@ export default function MainPage() {
                       fontWeight:
                         600,
                       color:
-                        "#9ca3af",
+                        "var(--fe-subtle)",
                       marginBottom:
                         "8px",
                     }}
@@ -949,8 +996,10 @@ export default function MainPage() {
                       display:
                         "grid",
                       gridTemplateColumns:
-                        "repeat(7, 1fr)",
+                        "repeat(7, minmax(0, 1fr))",
                       gap: "6px",
+                      containerType:
+                        "inline-size",
                     }}
                   >
                     {monthCells.map(
@@ -983,7 +1032,7 @@ export default function MainPage() {
                                 "100%",
                               border:
                                 isSelected
-                                  ? "2px solid #0D9488"
+                                  ? "2px solid var(--fe-accent)"
                                   : "2px solid transparent",
                               borderRadius:
                                 "10px",
@@ -991,10 +1040,10 @@ export default function MainPage() {
                                 "transparent",
                               color:
                                 isSelected
-                                  ? "#0D9488"
+                                  ? "var(--fe-accent)"
                                   : cell.inCurrentMonth
-                                  ? "#111827"
-                                  : "#d1d5db",
+                                  ? "var(--fe-text)"
+                                  : "var(--fe-faint)",
                               cursor:
                                 "pointer",
                               display:
@@ -1005,9 +1054,15 @@ export default function MainPage() {
                                 "center",
                               justifyContent:
                                 "center",
-                              gap: "3px",
+                              gap: "2px",
+                              minHeight: 0,
+                              minWidth: 0,
+                              padding: 0,
+                              overflow:
+                                "hidden",
+                              lineHeight: 1,
                               fontSize:
-                                "14px",
+                                "clamp(10px, 3.6cqw, 14px)",
                             }}
                           >
                             <span>
@@ -1020,7 +1075,7 @@ export default function MainPage() {
                               <span
                                 style={{
                                   fontSize:
-                                    "15px",
+                                    "clamp(10px, 3.9cqw, 15px)",
                                 }}
                               >
                                 {
@@ -1059,7 +1114,7 @@ export default function MainPage() {
                         fontWeight:
                           700,
                         color:
-                          "#111827",
+                          "var(--fe-text)",
                       }}
                     >
                       {weeklyDates[0]
@@ -1090,11 +1145,11 @@ export default function MainPage() {
                       }
                       style={{
                         border:
-                          "1px solid #d1d5db",
+                          "1px solid var(--fe-faint)",
                         background:
-                          "#ffffff",
+                          "var(--fe-surface)",
                         color:
-                          "#4b5563",
+                          "var(--fe-text-2)",
                         borderRadius:
                           "8px",
                         padding:
@@ -1116,7 +1171,7 @@ export default function MainPage() {
                       display:
                         "grid",
                       gridTemplateColumns:
-                        "repeat(7, 1fr)",
+                        "repeat(7, minmax(0, 1fr))",
                       gap: "6px",
                     }}
                   >
@@ -1155,16 +1210,16 @@ export default function MainPage() {
                                 "70px",
                               border:
                                 isSelected
-                                  ? "2px solid #0D9488"
+                                  ? "2px solid var(--fe-accent)"
                                   : "2px solid transparent",
                               borderRadius:
                                 "10px",
                               background:
-                                "#f8fafc",
+                                "var(--fe-surface-2)",
                               color:
                                 isSelected
-                                  ? "#0D9488"
-                                  : "#111827",
+                                  ? "var(--fe-accent)"
+                                  : "var(--fe-text)",
                               cursor:
                                 "pointer",
                               display:
@@ -1244,13 +1299,13 @@ export default function MainPage() {
               <section
                 style={{
                   border:
-                    "1px solid #e5e7eb",
+                    "1px solid var(--fe-border)",
                   borderRadius:
                     "20px",
                   padding:
                     "24px",
                   backgroundColor:
-                    "#ffffff",
+                    "var(--fe-surface)",
                   boxSizing:
                     "border-box",
                 }}
@@ -1264,7 +1319,7 @@ export default function MainPage() {
                     fontWeight:
                       700,
                     color:
-                      "#111827",
+                      "var(--fe-text)",
                   }}
                 >
                   {selectedDate.getFullYear()}
@@ -1298,7 +1353,7 @@ export default function MainPage() {
                       justifyContent:
                         "center",
                       color:
-                        "#9ca3af",
+                        "var(--fe-subtle)",
                     }}
                   >
                     상담 기록을 불러오는 중입니다...
@@ -1315,7 +1370,7 @@ export default function MainPage() {
                       justifyContent:
                         "center",
                       color:
-                        "#9ca3af",
+                        "var(--fe-subtle)",
                     }}
                   >
                     상담 기록을 불러오지 못했습니다.
@@ -1356,9 +1411,9 @@ export default function MainPage() {
                         justifyContent:
                           "center",
                         color:
-                          "#9ca3af",
+                          "var(--fe-subtle)",
                         border:
-                          "1px dashed #d1d5db",
+                          "1px dashed var(--fe-faint)",
                         borderRadius:
                           "12px",
                       boxSizing:
@@ -1381,7 +1436,7 @@ export default function MainPage() {
                       >
                         <strong
                           style={{
-                            color: "#4b5563",
+                            color: "var(--fe-text-2)",
                           }}
                         >
                           오늘의 상담 기록이 아직 없어요.
@@ -1436,7 +1491,7 @@ export default function MainPage() {
                               borderTop:
                                 index >
                                 0
-                                  ? "1px solid #e5e7eb"
+                                  ? "1px solid var(--fe-border)"
                                   : "none",
                             }}
                           >
@@ -1462,7 +1517,7 @@ export default function MainPage() {
                                   fontWeight:
                                     700,
                                   color:
-                                    "#1F6170",
+                                    "var(--fe-accent-strong)",
                                 }}
                               >
                                 {
@@ -1478,11 +1533,11 @@ export default function MainPage() {
                                   fontWeight:
                                     700,
                                   color:
-                                    "#0D9488",
+                                    "var(--fe-accent)",
                                   padding:
                                     "6px 10px",
                                   border:
-                                    "1px solid #0D9488",
+                                    "1px solid var(--fe-accent)",
                                   borderRadius:
                                     "999px",
                                   backgroundColor:
@@ -1497,7 +1552,7 @@ export default function MainPage() {
                                   {dominant.emoji}
                                 </span>{" "}
                                 {
-                                  emotionLabel(dominant)
+                                  dominant.label
                                 }{" "}
                                 (
                                 {formatEmotionPercent(
@@ -1508,10 +1563,7 @@ export default function MainPage() {
                                 )}
                                 %)
 
-                                {/* 호버 시 감정 점수 6개를 높은 순으로 보여주는 툴팁 (EmotionCalender.tsx와 동일한 패턴)
-                                    바깥쪽 래퍼는 margin 대신 padding-top(pt-2)으로 간격을 줘서, 배지와 툴팁 사이
-                                    빈 공간도 group의 hover 영역에 포함시킴 - 그래야 마우스가 배지에서 툴팁으로
-                                    이동하는 중간에 hover가 끊겨서 사라지지 않고, 툴팁 위로 마우스를 올려도 유지됨 */}
+                                {/* 호버 시 감정 점수 6개를 높은 순으로 보여주는 툴팁 */}
                                 <div className="absolute right-0 top-full z-20 hidden w-40 pt-2 group-hover:block">
                                   <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg p-2">
                                     <ul className="space-y-1">
@@ -1522,7 +1574,7 @@ export default function MainPage() {
                                             key={item.key}
                                             className="flex items-center justify-between gap-2 text-xs font-normal text-gray-700 dark:text-gray-200"
                                           >
-                                            <span>{item.emoji} {emotionLabel(item)}</span>
+                                            <span>{item.emoji} {item.label}</span>
                                             <span className="font-semibold">{formatEmotionPercent(log[item.key])}%</span>
                                           </li>
                                         ))}
@@ -1561,11 +1613,11 @@ export default function MainPage() {
                                   aspectRatio:
                                     "1 / 1",
                                   border:
-                                    "1px solid #d1d5db",
+                                    "1px solid var(--fe-faint)",
                                   borderRadius:
                                     "10px",
                                   backgroundColor:
-                                    "#f9fafb",
+                                    "var(--fe-surface-2)",
                                   overflow:
                                     "hidden",
                                   display:
@@ -1620,7 +1672,7 @@ export default function MainPage() {
                                       fontSize:
                                         "13px",
                                       color:
-                                        "#9ca3af",
+                                        "var(--fe-subtle)",
                                       fontWeight:
                                         500,
                                     }}
@@ -1639,11 +1691,11 @@ export default function MainPage() {
                                   aspectRatio:
                                     "1 / 1",
                                   border:
-                                    "1px solid #d1d5db",
+                                    "1px solid var(--fe-faint)",
                                   borderRadius:
                                     "10px",
                                   backgroundColor:
-                                    "#f9fafb",
+                                    "var(--fe-surface-2)",
                                   overflow:
                                     "hidden",
                                   display:
@@ -1698,7 +1750,7 @@ export default function MainPage() {
                                       fontSize:
                                         "13px",
                                       color:
-                                        "#9ca3af",
+                                        "var(--fe-subtle)",
                                       fontWeight:
                                         500,
                                     }}
@@ -1726,7 +1778,7 @@ export default function MainPage() {
                                   fontWeight:
                                     700,
                                   color:
-                                    "#111827",
+                                    "var(--fe-text)",
                                 }}
                               >
                                 상담 요약
@@ -1740,7 +1792,7 @@ export default function MainPage() {
                                   lineHeight:
                                     1.7,
                                   color:
-                                    "#6b7280",
+                                    "var(--fe-muted)",
                                   whiteSpace:
                                     "pre-line",
                                 }}
@@ -1776,13 +1828,13 @@ export default function MainPage() {
             style={{
               minWidth: 0,
               border:
-                "1px solid #e5e7eb",
+                "1px solid var(--fe-border)",
               borderRadius:
                 "20px",
               padding:
                 "24px",
               backgroundColor:
-                "#ffffff",
+                "var(--fe-surface)",
               boxSizing:
                 "border-box",
             }}
@@ -1801,7 +1853,7 @@ export default function MainPage() {
                   fontWeight:
                     700,
                   color:
-                    "#111827",
+                    "var(--fe-text)",
                 }}
               >
                 일주일 동안의 감정 변화
@@ -1814,7 +1866,7 @@ export default function MainPage() {
                   fontSize:
                     "13px",
                   color:
-                    "#9ca3af",
+                    "var(--fe-subtle)",
                 }}
               >
                 {selectedDate &&
@@ -1847,13 +1899,13 @@ export default function MainPage() {
                   justifyContent:
                     "center",
                   color:
-                    "#9ca3af",
+                    "var(--fe-subtle)",
                   fontSize:
                     "14px",
                   backgroundColor:
-                    "#f9fafb",
+                    "var(--fe-surface-2)",
                   border:
-                    "1px solid #e5e7eb",
+                    "1px solid var(--fe-border)",
                   borderRadius:
                     "16px",
                 }}
@@ -1872,7 +1924,7 @@ export default function MainPage() {
                   justifyContent:
                     "center",
                   color:
-                    "#9ca3af",
+                    "var(--fe-subtle)",
                 }}
               >
                 상담 기록을 불러오는 중입니다...
@@ -1889,7 +1941,7 @@ export default function MainPage() {
                   justifyContent:
                     "center",
                   color:
-                    "#9ca3af",
+                    "var(--fe-subtle)",
                 }}
               >
                 상담 기록을 불러오지 못했습니다.
@@ -1898,9 +1950,9 @@ export default function MainPage() {
               <div
                 style={{
                   backgroundColor:
-                    "#f9fafb",
+                    "var(--fe-surface-2)",
                   border:
-                    "1px solid #e5e7eb",
+                    "1px solid var(--fe-border)",
                   borderRadius:
                     "16px",
                   padding:
@@ -1931,7 +1983,7 @@ export default function MainPage() {
                       paddingRight:
                         "12px",
                       borderRight:
-                        "1px solid #e5e7eb",
+                        "1px solid var(--fe-border)",
                     }}
                   >
                     {EMOTION_LABELS.map(
@@ -1961,7 +2013,7 @@ export default function MainPage() {
                             fontSize:
                               "12px",
                             color:
-                              "#6b7280",
+                              "var(--fe-muted)",
                             fontWeight:
                               600,
                           }}
@@ -1982,7 +2034,7 @@ export default function MainPage() {
                             }}
                           >
                             {
-                              emotionLabel(emotion)
+                              emotion.label
                             }
                           </span>
                         </span>
@@ -2024,7 +2076,7 @@ export default function MainPage() {
                               100
                             }%`,
                             borderTop:
-                              "1px dashed #e5e7eb",
+                              "1px dashed var(--fe-border)",
                           }}
                         />
                       )
@@ -2054,7 +2106,7 @@ export default function MainPage() {
                               width:
                                 "1px",
                               backgroundColor:
-                                "#f0f0f0",
+                                "var(--fe-border)",
                             }}
                           />
                         )
@@ -2174,11 +2226,11 @@ export default function MainPage() {
                               "12px",
                             padding: 0,
                             border:
-                              "2px solid #ffffff",
+                              "2px solid var(--fe-surface)",
                             borderRadius:
                               "50%",
                             backgroundColor:
-                              "#0D9488",
+                              "var(--fe-accent)",
                             boxShadow:
                               "0 1px 4px rgba(0,0,0,0.15)",
                             cursor:
@@ -2262,7 +2314,7 @@ export default function MainPage() {
                               fontSize:
                                 "11px",
                               color:
-                                "#6b7280",
+                                "var(--fe-muted)",
                               fontWeight:
                                 600,
                               whiteSpace:
@@ -2298,7 +2350,7 @@ export default function MainPage() {
                       textAlign:
                         "center",
                       color:
-                        "#9ca3af",
+                        "var(--fe-subtle)",
                       fontSize:
                         "13px",
                     }}
@@ -2319,10 +2371,10 @@ export default function MainPage() {
               display: "flex",
               flexDirection: "column",
               gap: "20px",
-              border: "1px solid #e5e7eb",
+              border: "1px solid var(--fe-border)",
               borderRadius: "20px",
               padding: "24px",
-              backgroundColor: "#ffffff",
+              backgroundColor: "var(--fe-surface)",
               boxSizing: "border-box",
             }}
           >
@@ -2341,7 +2393,7 @@ export default function MainPage() {
                   gap: "8px",
                   fontSize: "16px",
                   fontWeight: 700,
-                  color: "#111827",
+                  color: "var(--fe-text)",
                 }}
               >
                 <span>
@@ -2360,14 +2412,17 @@ export default function MainPage() {
                     "12px 0 0",
                   fontSize: "13px",
                   lineHeight: 1.7,
-                  color: "#6b7280",
+                  color: "var(--fe-muted)",
                 }}
               >
                 {!selectedDate
                   ? "캘린더에서 날짜를 선택해주세요."
-                  : weeklyDominantDisplayLabel
-                  ? `이번 주는 '${weeklyDominantDisplayLabel}' 감정이 가장 많이 나타났어요.`
-                  : "이번 주에는 아직 상담 기록이 없어요."}
+                  : weeklyDominantLabel === null
+                  ? "이번 주에는 아직 상담 기록이 없어요."
+                  : weeklySummaryLoading
+                  ? "감정 흐름을 분석하는 중입니다..."
+                  : weeklySummaryText ||
+                    `이번 주는 '${weeklyDominantLabel}' 감정이 가장 많이 나타났어요.`}
               </p>
             </section>
 
@@ -2377,7 +2432,7 @@ export default function MainPage() {
               style={{
                 minWidth: 0,
                 paddingTop: "20px",
-                borderTop: "1px solid #f0f0f0",
+                borderTop: "1px solid var(--fe-border)",
               }}
             >
               <h3
@@ -2388,7 +2443,7 @@ export default function MainPage() {
                   gap: "8px",
                   fontSize: "16px",
                   fontWeight: 700,
-                  color: "#111827",
+                  color: "var(--fe-text)",
                 }}
               >
                 <span>🎵</span>
@@ -2405,18 +2460,29 @@ export default function MainPage() {
                     style={{
                       margin: 0,
                       fontSize: "13px",
-                      color: "#6b7280",
+                      color: "var(--fe-muted)",
                       lineHeight: 1.7,
                     }}
                   >
                     캘린더에서 날짜를 선택해주세요.
+                  </p>
+                ) : !weeklyDominantLabel ? (
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: "13px",
+                      color: "var(--fe-muted)",
+                      lineHeight: 1.7,
+                    }}
+                  >
+                    추천을 받으려면 이번 주 상담 기록이 필요해요.
                   </p>
                 ) : weeklyMusicLoading ? (
                   <p
                     style={{
                       margin: 0,
                       fontSize: "13px",
-                      color: "#6b7280",
+                      color: "var(--fe-muted)",
                     }}
                   >
                     추천 음악을 불러오는 중입니다...
@@ -2426,7 +2492,7 @@ export default function MainPage() {
                     style={{
                       margin: 0,
                       fontSize: "13px",
-                      color: "#6b7280",
+                      color: "var(--fe-muted)",
                     }}
                   >
                     추천 음악을 불러오지 못했습니다.
@@ -2436,13 +2502,11 @@ export default function MainPage() {
                     style={{
                       margin: 0,
                       fontSize: "13px",
-                      color: "#6b7280",
+                      color: "var(--fe-muted)",
                       lineHeight: 1.7,
                     }}
                   >
-                    {weeklyDominantDisplayLabel
-                      ? `'${weeklyDominantDisplayLabel}' 감정에 등록된 추천 음악이 아직 없어요.`
-                      : "추천을 받으려면 이번 주 상담 기록이 필요해요."}
+                    {`'${weeklyDominantLabel}' 감정에 등록된 추천 음악이 아직 없어요.`}
                   </p>
                 ) : (
                   <div
@@ -2534,7 +2598,7 @@ export default function MainPage() {
                                 fontWeight:
                                   700,
                                 color:
-                                  "#111827",
+                                  "var(--fe-text)",
                                 overflow:
                                   "hidden",
                                 textOverflow:
@@ -2558,19 +2622,22 @@ export default function MainPage() {
         </div>
 
         <style>{`
-          @media (max-width: 900px) {
-            .dashboard-main {
-              padding: 24px 16px 56px !important;
-            }
-
+          /* 2단 배치 시 캘린더가 너무 좁아지는 구간부터 1단으로 전환 */
+          @media (max-width: 1100px) {
             .dashboard-grid {
               grid-template-columns: 1fr !important;
             }
           }
 
+          @media (max-width: 900px) {
+            .dashboard-main {
+              padding: 16px 0 56px !important;
+            }
+          }
+
           @media (max-width: 520px) {
             .dashboard-main {
-              padding: 16px 12px 40px !important;
+              padding: 8px 0 40px !important;
             }
 
             .dashboard-main section {
@@ -2582,7 +2649,7 @@ export default function MainPage() {
             }
           }
         `}</style>
-      </main>
+      </div>
     );
   }
 
@@ -2593,7 +2660,7 @@ export default function MainPage() {
   ======================================================= */
 
   return (
-    <main
+    <div
       className="landing-main"
       style={{
         width: "100vw",
@@ -2624,8 +2691,8 @@ export default function MainPage() {
           style={{
             position: "relative",
             width: "100vw",
-            height:
-              "max(250px, calc(56.25vw - 350px))",
+            // 영상 높이(16:9) + 아래쪽 여백만큼만 확보 (잘리지 않게)
+            height: "calc(56.25vw + 30px)",
             overflow: "hidden",
           }}
         >
@@ -2641,9 +2708,7 @@ export default function MainPage() {
               width: "100vw",
               height: "auto",
               left: 0,
-              top: "calc(50% - 20px)",
-              transform:
-                "translateY(-50%)",
+              top: 0,
               display: "block",
             }}
           />
@@ -2655,14 +2720,12 @@ export default function MainPage() {
             style={{
               position: "absolute",
               left: "4%",
-              top: "70%",
-              transform:
-                "translateY(-50%)",
+              bottom: "calc(30px + 6%)",
               zIndex: 10,
-              color: "#000000",
-              fontSize: "130px",
+              color: "var(--fe-text)",
+              fontSize: "clamp(34px, 9vw, 130px)",
               fontWeight: 900,
-              letterSpacing: "-8px",
+              letterSpacing: "-0.06em",
               lineHeight: 1.15,
               whiteSpace:
                 "nowrap",
@@ -2699,7 +2762,7 @@ export default function MainPage() {
           height: "500px",
           marginBottom: "80px",
           backgroundColor:
-            "#f5f5f5",
+            "var(--fe-surface-2)",
           overflow: "hidden",
           userSelect:
             "none",
@@ -2843,7 +2906,7 @@ export default function MainPage() {
                     left: "calc(50% + 16px)",
                     top: "calc(50% + 130px)",
                     transform: "translateY(-50%)",
-                    color: "#111827",
+                    color: "var(--fe-text)",
                   }}
                 >
                   <p
@@ -2851,7 +2914,7 @@ export default function MainPage() {
                       margin: "0 0 15px",
                       fontSize: "32px",
                       fontWeight: 700,
-                      color: "#0D9488",
+                      color: "var(--fe-accent)",
                       letterSpacing: "0.5px",
                     }}
                   >
@@ -2881,7 +2944,7 @@ export default function MainPage() {
                       margin: "3px 0 0",
                       fontSize: "16px",
                       lineHeight: 1.6,
-                      color: "#4b5563",
+                      color: "var(--fe-text-2)",
                     }}
                   >
                     {(slideDirection === 1
@@ -2895,7 +2958,7 @@ export default function MainPage() {
                       margin: "1px 0 0",
                       fontSize: "16px",
                       lineHeight: 1.6,
-                      color: "#4b5563",
+                      color: "var(--fe-text-2)",
                     }}
                   >
                     {(slideDirection === 1
@@ -2967,7 +3030,7 @@ export default function MainPage() {
                     left: "calc(50% + 16px)",
                     top: "calc(50% + 130px)",
                     transform: "translateY(-50%)",
-                    color: "#111827",
+                    color: "var(--fe-text)",
                   }}
                 >
                   <p
@@ -2975,7 +3038,7 @@ export default function MainPage() {
                       margin: "0 0 15px",
                       fontSize: "32px",
                       fontWeight: 700,
-                      color: "#0D9488",
+                      color: "var(--fe-accent)",
                       letterSpacing: "0.5px",
                     }}
                   >
@@ -3005,7 +3068,7 @@ export default function MainPage() {
                       margin: "3px 0 0",
                       fontSize: "16px",
                       lineHeight: 1.6,
-                      color: "#4b5563",
+                      color: "var(--fe-text-2)",
                     }}
                   >
                     {(slideDirection === 1
@@ -3019,7 +3082,7 @@ export default function MainPage() {
                       margin: "3px 0 0",
                       fontSize: "16px",
                       lineHeight: 1.6,
-                      color: "#4b5563",
+                      color: "var(--fe-text-2)",
                     }}
                   >
                     {(slideDirection === 1
@@ -3061,11 +3124,11 @@ export default function MainPage() {
             borderRadius:
               "50%",
             border:
-              "1px solid #dddddd",
+              "1px solid var(--fe-faint)",
             backgroundColor:
-              "#ffffff",
+              "var(--fe-surface)",
             color:
-              "#333333",
+              "var(--fe-text)",
             padding: 0,
             cursor:
               "pointer",
@@ -3112,11 +3175,11 @@ export default function MainPage() {
             borderRadius:
               "50%",
             border:
-              "1px solid #dddddd",
+              "1px solid var(--fe-faint)",
             backgroundColor:
-              "#ffffff",
+              "var(--fe-surface)",
             color:
-              "#333333",
+              "var(--fe-text)",
             padding: 0,
             cursor:
               "pointer",
@@ -3187,8 +3250,8 @@ export default function MainPage() {
                   backgroundColor:
                     currentSlide ===
                     index
-                      ? "#0D9488"
-                      : "#cfcfcf",
+                      ? "var(--fe-accent)"
+                      : "var(--fe-faint)",
                   cursor:
                     "pointer",
                 }}
@@ -3198,16 +3261,14 @@ export default function MainPage() {
         </div>
       </section>
       <style>{`
+        /* 다크모드: 흰 배경 영상을 반전해서 어두운 배경에 맞춤 */
+        @media (prefers-color-scheme: dark) {
+          .landing-hero-media > video {
+            filter: invert(0.92);
+          }
+        }
+
         @media (max-width: 900px) {
-          .landing-hero-media {
-            height: max(300px, 46vw) !important;
-          }
-
-          .landing-hero-copy {
-            font-size: clamp(48px, 8vw, 88px) !important;
-            letter-spacing: -5px !important;
-          }
-
           .landing-hero-spacer {
             height: 100px !important;
           }
@@ -3248,28 +3309,6 @@ export default function MainPage() {
         @media (max-width: 640px) {
           .landing-hero {
             margin-top: 12px !important;
-          }
-
-          .landing-hero-media {
-            height: 280px !important;
-          }
-
-          .landing-hero-media > video {
-            width: auto !important;
-            min-width: 100% !important;
-            height: 100% !important;
-            left: 50% !important;
-            top: 50% !important;
-            transform: translate(-50%, -50%) !important;
-            object-fit: cover;
-          }
-
-          .landing-hero-copy {
-            left: 6% !important;
-            top: 68% !important;
-            font-size: 42px !important;
-            letter-spacing: -3px !important;
-            line-height: 1.1 !important;
           }
 
           .landing-hero-spacer {
@@ -3324,20 +3363,12 @@ export default function MainPage() {
             line-height: 1.5 !important;
           }
 
+          /* 모바일은 스와이프 + 인디케이터로 이동 (화살표가 문구를 가림) */
           .landing-slider-arrow {
-            width: 36px !important;
-            height: 36px !important;
-          }
-
-          .landing-slider-arrow-left {
-            left: 12px !important;
-          }
-
-          .landing-slider-arrow-right {
-            right: 12px !important;
+            display: none !important;
           }
         }
       `}</style>
-    </main>
+    </div>
   );
 }

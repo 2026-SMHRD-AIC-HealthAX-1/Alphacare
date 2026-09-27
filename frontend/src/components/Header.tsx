@@ -3,25 +3,24 @@ import logo from "../assets/Feely_Logo_2.png";
 import { useState, useEffect, useRef } from "react";
 import { logout } from "../API/auth";
 import { clearAuthCookies } from "../API/axios";
+import { getMyRole } from "../API/admin";
 import Cookies from "js-cookie";
 
 export default function Header() {
-  // 로그인 상태 및 사용자 ID 관리
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
-  const [userId, setUserId] = useState<string>("");
+  // 로그인 상태 및 사용자 ID (쿠키 기준)
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => Cookies.get("isLoggedIn") === "true");
+  const [userId, setUserId] = useState<string>(() => Cookies.get("userId") || "");
+
+  // 관리자 여부 (관리자 페이지 버튼 노출용)
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    getMyRole().then((role) => setIsAdmin(role === "ADMIN")).catch(() => setIsAdmin(false));
+  }, [isLoggedIn]);
 
   // 사용자 이름 드롭다운 메뉴(회원정보수정, 마일리지샵) 표시 여부
   const [menuOpen, setMenuOpen] = useState<boolean>(false);
   const menuRef = useRef<HTMLDivElement>(null);
-
-  // 마운트 시 쿠키 확인
-  useEffect(() => {
-    const authStatus = Cookies.get("isLoggedIn") === "true";
-    const savedUserId = Cookies.get("userId") || "";
-
-    setIsLoggedIn(authStatus);
-    setUserId(savedUserId);
-  }, []);
 
   // 드롭다운 메뉴 바깥을 클릭하면 닫기
   useEffect(() => {
@@ -40,7 +39,7 @@ export default function Header() {
     try {
       await logout();
 
-      } catch (error) {
+      } catch {
         console.error("로그아웃 오류 발생")
     } finally {
       clearAuthCookies();
@@ -84,6 +83,13 @@ export default function Header() {
             상담하기
           </Link>
 
+          {/* 관리자 페이지 (관리자 계정만 노출) */}
+          {isAdmin && (
+            <Link to="/Admin" className="hover:underline">
+              관리자 페이지
+            </Link>
+          )}
+
           {isLoggedIn ? (
             <>
               {/* 세로 구분선 */}
@@ -100,7 +106,7 @@ export default function Header() {
               {/* 세로 구분선 */}
               <span className="text-gray-300 font-light select-none">|</span>
 
-              {/* 회원 이름: 마우스를 올리거나 클릭하면 회원정보수정/마일리지샵 메뉴가 나타남 */}
+              {/* 회원 이름: 호버/클릭 시 회원정보수정, 마일리지샵 메뉴 표시 */}
               <div
                 ref={menuRef}
                 className="relative"

@@ -33,12 +33,17 @@ public record MemberDto(
 
     // 비밀번호 찾기 응답 생성
     public static MemberDto findPasswordResult(boolean success, String temporaryPassword, String message) {
-        return new MemberDto(null, temporaryPassword, null, null, null, false, false, false, message, null);
+        return new MemberDto(null, temporaryPassword, null, null, null, success, false, false, message, null);
     }
 
     // 회원정보 수정 결과 응답 생성
     public static MemberDto updateResult(boolean success, String message) {
-        return new MemberDto(null, null, null, null, null, false, false, false, message, null);
+        return new MemberDto(null, null, null, null, null, success, false, false, message, null);
+    }
+
+    // 마일리지 조회 응답 생성
+    public static MemberDto mileageResult(Integer mileage, String message) {
+        return new MemberDto(null, null, null, null, null, false, false, false, message, mileage);
     }
 
     // 로그인 결과 응답 생성

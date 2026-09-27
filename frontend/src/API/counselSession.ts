@@ -1,12 +1,9 @@
-// FastAPI 상담 세션 생명주기(시작 / 프레임 전송 / 종료) 관련 API
-// 백엔드(Spring) 저장은 이제 프론트가 로그인 세션 쿠키를 직접 들고 하므로,
-// FastAPI에는 요약/감정평균 계산 용도로만 사용함 (counsel.ts의 saveCounselRecord 참고)
+// FastAPI 상담 세션 API (시작 / 감정 샘플 / 종료)
 import axios from "axios";
 
 const FASTAPI_BASE_URL = import.meta.env.VITE_FASTAPI_BASE_URL;
 
-// FastAPI가 계산해서 돌려주는 상담 요약 결과 - 이 값을 그대로
-// counsel.ts의 saveCounselRecord에 넘겨서 백엔드에 저장함
+// FastAPI 상담 요약 결과
 export interface CounselSummaryResult {
   counselDate: string;                   // 상담 시작 시각 (YYYY-MM-DD HH:mm:ss)
   summary: string;                       // 상담 요약
@@ -14,15 +11,12 @@ export interface CounselSummaryResult {
   status: "COMPLETED" | "ABORTED";
 }
 
-// 상담이 시작됐을 때(카메라 사용 여부 선택 직후) 한 번 호출 - FastAPI에 시작 시각만 기록해둠
+// 상담 시작 시각 기록
 export const startCounselSession = async (sessionId: string): Promise<void> => {
   await axios.post(`${FASTAPI_BASE_URL}/counsel/start`, { sessionId });
 };
 
-// 상담 시작 시점의 "오늘의 기분" 텍스트(+ 있으면 표정 점수)를 넘겨서
-// 첫 감정 점수(6개 카테고리, 합 1)를 계산해옴. 텍스트 0.6 : 표정 0.4 가중합이며,
-// faceScores를 안 넘기면(카메라 미사용) 텍스트 100%로 처리됨.
-// 반환값은 그대로 sendEmotionSample로 넘겨서 상담 중 감정 평균의 첫 샘플로 사용함
+// 오늘의 기분 텍스트(+표정 점수)로 첫 감정 점수 계산
 export const getInitialEmotion = async (
   sessionId: string,
   moodText: string,
@@ -35,8 +29,7 @@ export const getInitialEmotion = async (
   return response.data.emotionScores;
 };
 
-// 상담 중 주기적으로 감정분석 점수(scores)를 FastAPI 세션 데이터에 누적 전달함
-// (평균 계산 및 상담 종료 처리는 FastAPI가 상담 종료 시점에 직접 담당함)
+// 상담 중 감정 점수 샘플 전달
 export const sendEmotionSample = async (
   sessionId: string,
   scores: Record<string, number>
@@ -44,8 +37,7 @@ export const sendEmotionSample = async (
   await axios.post(`${FASTAPI_BASE_URL}/counsel/emotion-sample`, { sessionId, scores });
 };
 
-// 상담 종료 버튼을 눌렀을 때 호출 - FastAPI가 요약/감정평균을 계산해서 돌려줌
-// (실제 백엔드 저장은 이 결과를 받은 프론트가 counsel.ts의 saveCounselRecord로 따로 수행함)
+// 상담 종료: 요약/감정 평균 계산 결과 받기
 export const finishCounselSession = async (
   sessionId: string,
   status: "COMPLETED" | "ABORTED" = "COMPLETED"
@@ -57,21 +49,22 @@ export const finishCounselSession = async (
   return response.data;
 };
 
-// 이번 주 AI 종합 요약 조회 (WeeklyReport.tsx에서 사용)
-// FastAPI가 (회원번호, 주 시작일) 기준으로 캐시해둠 - 이번 주 상담 개수가 안 바뀌었으면
-// 캐시된 값을 그대로 돌려주고, 기록이 늘어난 경우에만 Claude를 다시 호출함
-export const getWeeklyAiSummary = async (
-  memberNo: number,
-  weekStart: string,
-  summaries: string[]
+// 주간 요약 생성 요청 항목 (상담 순서대로 하나씩)
+export interface WeeklySummaryItem {
+  summary: string; // 상담 요약
+  emotion: string;  // 그 상담의 대표 감정
+}
+
+// 이번 주 상담 내용 + 감정 흐름을 짧은 문단으로 요약 (저장은 백엔드가 담당, 여기선 텍스트 생성만 함)
+export const generateWeeklySummary = async (
+  items: WeeklySummaryItem[]
 ): Promise<string> => {
   const response = await axios.post<{ summary: string }>(
     `${FASTAPI_BASE_URL}/counsel/weekly-summary`,
-    { memberNo, weekStart, summaries }
+    { items }
   );
   return response.data.summary;
 };
 
-// 상담 종료 버튼을 누르지 않고 페이지를 이탈했을 때(sendBeacon) 호출 -
-// 백엔드 저장은 하지 않고, FastAPI 메모리에 쌓인 세션 데이터만 정리함
+// 페이지 이탈 시 세션 정리용 sendBeacon 주소
 export const COUNSEL_ABORT_BEACON_URL = `${FASTAPI_BASE_URL}/counsel/abort`;

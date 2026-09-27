@@ -14,7 +14,7 @@ import {
   MemberMileageResponse
 } from "./user";
 
-// 아이디 중복확인 API (GET /api/member/checkid?id=xxx)
+// 아이디 중복확인
 export const checkDuplicateId = async (id: string): Promise<boolean> => {
   const response = await api.get<CheckDupResponse>(`/api/member/checkid`, {
     params: { id }
@@ -52,7 +52,7 @@ export const logout = async () : Promise<void> => {
   await api.post("/api/member/logout");
 };
 
-// 회원정보 수정 (비밀번호, 전화번호 - 값이 있는 필드만 서버에서 반영)
+// 회원정보 수정 (입력된 값만 반영)
 export const updateMember = async (
   updateData: UpdateMemberRequest
 ): Promise<UpdateMemberResponse> => {
@@ -60,8 +60,22 @@ export const updateMember = async (
   return response.data;
 };
 
-// 보유 마일리지 조회 (세션 로그인 기준, 마일리지샵 등에서 사용)
+// 보유 마일리지 조회
 export const getMemberMileage = async (): Promise<MemberMileageResponse> => {
   const response = await api.get<MemberMileageResponse>("/api/member/mileage");
+  return response.data;
+};
+
+// 마일리지 적립/사용 내역
+export interface MileageHistoryItem {
+  type: "EARN" | "USE";
+  amount: number;
+  reason: string;
+  createdAt: string;
+}
+
+// 마일리지 적립/사용 내역 조회
+export const getMileageHistory = async (): Promise<MileageHistoryItem[]> => {
+  const response = await api.get<MileageHistoryItem[]>("/api/member/mileage/history");
   return response.data;
 };

@@ -1,5 +1,4 @@
-// 브라우저 Web Speech API(SpeechRecognition) 최소 타입 선언
-// 표준 TS DOM 라이브러리에는 아직 정식 포함되어 있지 않아서(실험적 API) 직접 선언함
+// Web Speech API(SpeechRecognition) 타입 선언
 
 interface SpeechRecognitionResultItem {
   transcript: string;
