@@ -1,5 +1,6 @@
 package com.Feely.service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -9,8 +10,10 @@ import com.Feely.common.MemberResponse;
 import com.Feely.common.MileageProductResponse;
 import com.Feely.dto.MileageProductDto;
 import com.Feely.entity.MemberEntity;
+import com.Feely.entity.MileageHistoryEntity;
 import com.Feely.entity.MileageProductEntity;
 import com.Feely.repository.MemberRepository;
+import com.Feely.repository.MileageHistoryRepository;
 import com.Feely.repository.MileageProductRepository;
 
 import jakarta.transaction.Transactional;
@@ -20,11 +23,14 @@ public class MileageProductService {
 
     private final MileageProductRepository mileageProductRepository;
     private final MemberRepository memberRepository;
+    private final MileageHistoryRepository mileageHistoryRepository;
 
     // 생성자 주입
-    public MileageProductService(MileageProductRepository mileageProductRepository, MemberRepository memberRepository) {
+    public MileageProductService(MileageProductRepository mileageProductRepository, MemberRepository memberRepository,
+            MileageHistoryRepository mileageHistoryRepository) {
         this.mileageProductRepository = mileageProductRepository;
         this.memberRepository = memberRepository;
+        this.mileageHistoryRepository = mileageHistoryRepository;
     }
 
     // 상품 전체 조회
@@ -41,8 +47,6 @@ public class MileageProductService {
                     MileageProductResponse.Message.PRODUCT_LIST_SUCCESS,
                     true
                 )).toList();
-                
-        // return MileageProductDto.listResult(true, MileageProductResponse.Message.PRODUCT_LIST_SUCCESS);
     }
 
     // 상품 단일 조회
@@ -74,8 +78,8 @@ public class MileageProductService {
                 MileageProductResponse.Message.PRODUCT_REGISTRATION_SUCCESS, true);
     }
 
-    // 상품 수정
-    public MileageProductDto updateProduct(Long id, MileageProductEntity request) {
+    // 상품 수정 (요청에 없는 값은 기존값 유지)
+    public MileageProductDto updateProduct(Long id, MileageProductDto request) {
         Optional<MileageProductEntity> existing = mileageProductRepository.findById(id);
         if (existing.isEmpty()) {
             return MileageProductDto.updateResult(false, MileageProductResponse.Message.PRODUCT_NOT_FOUND);
@@ -83,14 +87,17 @@ public class MileageProductService {
 
         MileageProductEntity product = existing.get();
 
-        if (request.getProdName() != null && !request.getProdName().isBlank()) {
-            product.setProdName(request.getProdName());
+        if (!isBlank(request.prodName())) {
+            product.setProdName(request.prodName());
         }
-        if (request.getProdInventory() >= 0) {
-            product.setProdInventory(request.getProdInventory());
+        if (request.prodInventory() != null && request.prodInventory() >= 0) {
+            product.setProdInventory(request.prodInventory());
         }
-        if (request.getProdPrice() >= 0) {
-            product.setProdPrice(request.getProdPrice());
+        if (request.prodPrice() != null && request.prodPrice() >= 0) {
+            product.setProdPrice(request.prodPrice());
+        }
+        if (request.prodImage() != null && request.prodImage().length > 0) {
+            product.setProdImage(request.prodImage());
         }
 
         MileageProductEntity updated = mileageProductRepository.save(product);
@@ -106,11 +113,11 @@ public class MileageProductService {
     @Transactional 
     public MileageProductDto exchangeProduct(Long prodNo, Long memberNo){
 
-        // 1. 상품 번호로 상품 조회
-        MileageProductEntity product = mileageProductRepository.findById(prodNo).orElseThrow(() -> new IllegalArgumentException(MileageProductResponse.Message.PRODUCT_NOT_FOUND));
+        // 1. 상품 번호로 상품 조회 (동시 교환 요청 시 재고가 음수가 되지 않도록 행 잠금)
+        MileageProductEntity product = mileageProductRepository.findByIdForUpdate(prodNo).orElseThrow(() -> new IllegalArgumentException(MileageProductResponse.Message.PRODUCT_NOT_FOUND));
 
-        // 2. 회원 번호로 회원 조회
-        MemberEntity member = memberRepository.findById(memberNo).orElseThrow(() -> new IllegalArgumentException(MemberResponse.Message.MEMBER_NOT_FOUND));
+        // 2. 회원 번호로 회원 조회 (동시 교환 요청 시 마일리지가 중복 차감되지 않도록 행 잠금)
+        MemberEntity member = memberRepository.findByIdForUpdate(memberNo).orElseThrow(() -> new IllegalArgumentException(MemberResponse.Message.MEMBER_NOT_FOUND));
 
         // 3. 상품 재고 확인
         if (product.getProdInventory() <= 0){
@@ -131,6 +138,10 @@ public class MileageProductService {
         // DB 저장
         memberRepository.save(member);
         mileageProductRepository.save(product);
+
+        // 7. 마일리지 사용 내역 기록
+        mileageHistoryRepository.save(new MileageHistoryEntity(
+                null, member, "USE", -product.getProdPrice(), product.getProdName(), LocalDateTime.now()));
 
         return MileageProductDto.exchangeResult(true, MileageProductResponse.Message.PRODUCT_EXCHANGE_SUCCESS, member.getMileage());
     }

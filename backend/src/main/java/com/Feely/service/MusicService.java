@@ -71,7 +71,7 @@ public class MusicService {
                     .orElse(null);
 
             if (music == null) {
-                throw new IllegalArgumentException(MusicResponse.Message.MUSIC_ALREADY_EXISTS);
+                throw new IllegalArgumentException(MusicResponse.Message.MUSIC_NOT_FOUND);
             }
 
             music.setTitle(title.trim());
@@ -85,6 +85,23 @@ public class MusicService {
             }
             throw new IllegalStateException(MusicResponse.Message.MUSIC_UPDATE_FAIL, e);
         }
+    }
+
+    // 전체 추천 음악 목록 조회 (관리자 화면용)
+    public List<MusicDto> getAllMusic() {
+        return musicRepository.findAll()
+                .stream()
+                .map(MusicDto::from)
+                .collect(Collectors.toList());
+    }
+
+    // 추천 음악 삭제
+    public boolean deleteMusic(Long musicNo) {
+        if (!musicRepository.existsById(musicNo)) {
+            throw new IllegalArgumentException(MusicResponse.Message.MUSIC_NOT_FOUND);
+        }
+        musicRepository.deleteById(musicNo);
+        return true;
     }
 
     private boolean isBlank(String value) {

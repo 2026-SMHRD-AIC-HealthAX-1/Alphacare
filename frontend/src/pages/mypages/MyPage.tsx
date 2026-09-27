@@ -2,13 +2,13 @@ import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Mshop from "./Mshop";
 import { updateMember, logout } from "../../API/auth";
-import { clearAuthCookies } from "../../API/axios";
+import { clearAuthCookies, ApiError } from "../../API/axios";
 import { isValidPassword, isValidPhone, sanitizePhoneInput } from "../../utils/validation";
 
 export default function MyPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  // 헤더의 사용자 이름 드롭다운 메뉴에서 전달되는 tab 값으로 화면을 분기 (profile: 회원정보수정, Mshop: 마일리지샵)
+  // 탭 분기 (profile: 회원정보수정, Mshop: 마일리지샵)
   const activeTab = searchParams.get("tab") === "Mshop" ? "Mshop" : "profile";
 
   const [password, setPassword] = useState("");
@@ -16,7 +16,7 @@ export default function MyPage() {
   const [phone, setPhone] = useState("");
   const [updating, setUpdating] = useState(false);
 
-  // 회원정보 수정 제출: 비밀번호/전화번호 중 입력된 값만 서버로 전송
+  // 회원정보 수정 (입력된 값만 전송)
   const handleUpdateMember = async () => {
     if (!password && !phone) {
       alert("수정할 내용을 입력해주세요.");
@@ -46,10 +46,7 @@ export default function MyPage() {
       });
       alert(result.message ?? "회원정보가 수정되었습니다. 보안을 위해 다시 로그인해주세요.");
 
-      // 회원정보 수정에 성공하면 보안을 위해 로그아웃시키고 로그인 페이지로 이동
-      // (window.location.href로 하드 이동하면 vite/Router의 base인 "/Feely"가 안 붙어서
-      //  라우팅이 안 됐음 - signup페이지(postSignup)처럼 react-router의 navigate를 사용해야
-      //  base 설정과 상관없이 항상 올바르게 이동함)
+      // 수정 성공 시 로그아웃 후 로그인 페이지로 이동
       try {
         await logout();
       } catch (logoutError) {
@@ -58,8 +55,9 @@ export default function MyPage() {
         clearAuthCookies();
         navigate("/Login");
       }
-    } catch (error: any) {
-      // 401(세션 만료)은 axios 인터셉터가 알림 + 메인페이지 이동을 공통으로 처리함
+    } catch (e) {
+      const error = e as ApiError;
+      // 401은 axios 인터셉터에서 처리
       if (error?.response?.status !== 401) {
         alert(error?.response?.data?.message ?? "회원정보 수정 중 오류가 발생했습니다.");
       }
@@ -89,8 +87,8 @@ export default function MyPage() {
             >
 
               {/* 비밀번호 */}
-              <div className="grid grid-cols-[130px_1fr] items-start gap-4">
-                <label className="pt-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
+              <div className="grid grid-cols-1 sm:grid-cols-[130px_1fr] items-start gap-4">
+                <label className="sm:pt-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
                   비밀번호
                 </label>
 
@@ -99,7 +97,7 @@ export default function MyPage() {
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-50 h-11 px-4 border border-gray-300 rounded-lg text-sm outline-none focus:border-[#1F6170]"
+                    className="w-full sm:w-50 h-11 px-4 border border-gray-300 dark:border-gray-600 bg-transparent rounded-lg text-sm outline-none focus:border-[#1F6170]"
                   />
 
                   <p className="text-[12px] text-gray-400 mt-2">
@@ -110,7 +108,7 @@ export default function MyPage() {
 
 
               {/* 비밀번호 확인 */}
-              <div className="grid grid-cols-[130px_1fr] items-center gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-[130px_1fr] items-center gap-4">
                 <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                   비밀번호 확인
                 </label>
@@ -119,14 +117,14 @@ export default function MyPage() {
                   type="password"
                   value={passwordConfirm}
                   onChange={(e) => setPasswordConfirm(e.target.value)}
-                  className="w-50 h-11 px-4 border border-gray-300 rounded-lg text-sm outline-none focus:border-[#1F6170]"
+                  className="w-full sm:w-50 h-11 px-4 border border-gray-300 dark:border-gray-600 bg-transparent rounded-lg text-sm outline-none focus:border-[#1F6170]"
                 />
               </div>
 
 
               {/* 핸드폰번호 */}
-              <div className="grid grid-cols-[130px_1fr] items-start gap-4">
-                <label className="pt-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
+              <div className="grid grid-cols-1 sm:grid-cols-[130px_1fr] items-start gap-4">
+                <label className="sm:pt-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
                   핸드폰번호
                 </label>
 
@@ -139,7 +137,7 @@ export default function MyPage() {
                     maxLength={11}
                     onChange={(e) => setPhone(sanitizePhoneInput(e.target.value))}
                     placeholder="`-`을 제외한 전화번호를 입력해주세요"
-                    className="w-50 h-11 px-4 border border-gray-300 rounded-lg text-[13px] outline-none focus:border-[#1F6170]"
+                    className="w-full sm:w-50 h-11 px-4 border border-gray-300 dark:border-gray-600 bg-transparent rounded-lg text-[13px] outline-none focus:border-[#1F6170]"
                   />
 
                   <p className="text-[12px] text-gray-400 mt-2">

@@ -13,6 +13,11 @@ import com.Feely.entity.MemberEntity;
 @Repository
 public interface MemberRepository extends JpaRepository<MemberEntity, Long> {
 
+	// 마일리지 차감 시 경쟁상태(동시 요청으로 중복 차감되는 것) 방지용 - 트랜잭션 종료까지 해당 행을 잠금
+	@org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+	@Query("select m from MemberEntity m where m.memberNo = :memberNo")
+	Optional<MemberEntity> findByIdForUpdate(@Param("memberNo") Long memberNo);
+
 	// 회원가입 전에 같은 아이디가 이미 등록되어 있는지 확인
 	@Query("select count(m) > 0 from MemberEntity m where m.id = :id")
 	boolean existsByMemberId(@Param("id") String id);

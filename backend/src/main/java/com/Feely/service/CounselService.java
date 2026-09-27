@@ -2,6 +2,7 @@ package com.Feely.service;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -13,27 +14,33 @@ import com.Feely.common.CounselResponse;
 import com.Feely.common.MemberResponse;
 import com.Feely.dto.CounselRequestDTO;
 import com.Feely.dto.CounselResponseDTO;
+import com.Feely.dto.WeeklySummaryDto;
 import com.Feely.entity.CounselEntity;
 import com.Feely.entity.MemberEntity;
+import com.Feely.entity.WeeklySummaryEntity;
 import com.Feely.repository.CounselRepository;
 import com.Feely.repository.MemberRepository;
+import com.Feely.repository.WeeklySummaryRepository;
 
 @Service
 public class CounselService {
     private final CounselRepository counselRepository;
     private final MemberRepository memberRepository;
+    private final WeeklySummaryRepository weeklySummaryRepository;
 
     public CounselService(
             CounselRepository counselRepository,
-            MemberRepository memberRepository) {
+            MemberRepository memberRepository,
+            WeeklySummaryRepository weeklySummaryRepository) {
 
         this.counselRepository = counselRepository;
         this.memberRepository = memberRepository;
+        this.weeklySummaryRepository = weeklySummaryRepository;
 
     }
 
-    // 프론트에서 넘어온 값을 상담DB에 저장하는 메소드
-    public void saveCounsel(CounselRequestDTO dto,
+    // 프론트에서 넘어온 값을 상담DB에 저장하는 메소드 (이미 저장된 상담이면 저장하지 않고 false 반환)
+    public boolean saveCounsel(CounselRequestDTO dto,
                             Long memberNo,
                             MultipartFile startImage,
                             MultipartFile endImage) {
@@ -42,6 +49,11 @@ public class CounselService {
         MemberEntity member = memberRepository
                 .findById(memberNo)
                 .orElseThrow(() -> new IllegalArgumentException(MemberResponse.Message.MEMBER_INFO_NOT_FOUND));
+
+        // 같은 상담(회원 + 상담시작시각)이 이미 저장돼 있으면 재저장하지 않음
+        if (counselRepository.existsByMember_MemberNoAndCounselDttm(memberNo, dto.getCounselDate())) {
+            return false;
+        }
 
         // 감정 점수 6개 들어왔는지 검증
         Map<String, Double> emotionScore = dto.getEmotionScores();
@@ -65,7 +77,7 @@ public class CounselService {
         entity.setE05Rate(BigDecimal.valueOf(emotionScore.get("e05")));
         entity.setE06Rate(BigDecimal.valueOf(emotionScore.get("e06")));
 
-        // 카메라를 안 쓴 상담은 startImage/endImage가 아예 안 올 수 있음(null) - 이 경우 이미지 없이 저장함
+        // 이미지가 있을 때만 저장 (카메라 미사용 상담은 이미지 없음)
         try {
             if (startImage != null && !startImage.isEmpty()) {
                 entity.setStartImage(startImage.getBytes());
@@ -78,7 +90,7 @@ public class CounselService {
         }
 
         counselRepository.save(entity);
-
+        return true;
     }
 
     // DB에 저장된 값을 회원번호로 조회하여 프론트엔드로 넘기는 메소드
@@ -113,6 +125,32 @@ public class CounselService {
         }
 
         return responseList;
+    }
+
+    // 저장된 주간 감정 요약 조회 (상담 개수가 그대로일 때만 반환, 없거나 개수가 달라졌으면 null)
+    public WeeklySummaryDto getWeeklySummary(Long memberNo, LocalDate weekStart, int currentCounselCount) {
+        return weeklySummaryRepository.findByMember_MemberNoAndWeekStart(memberNo, weekStart)
+                .filter(entity -> entity.getCounselCount() == currentCounselCount)
+                .map(entity -> new WeeklySummaryDto(weekStart.toString(), entity.getSummary(), entity.getCounselCount()))
+                .orElse(null);
+    }
+
+    // 주간 감정 요약 저장 (같은 주 기록이 있으면 갱신)
+    public void saveWeeklySummary(Long memberNo, LocalDate weekStart, String summary, int counselCount) {
+        MemberEntity member = memberRepository
+                .findById(memberNo)
+                .orElseThrow(() -> new IllegalArgumentException(MemberResponse.Message.MEMBER_INFO_NOT_FOUND));
+
+        WeeklySummaryEntity entity = weeklySummaryRepository
+                .findByMember_MemberNoAndWeekStart(memberNo, weekStart)
+                .orElseGet(WeeklySummaryEntity::new);
+
+        entity.setMember(member);
+        entity.setWeekStart(weekStart);
+        entity.setSummary(summary);
+        entity.setCounselCount(counselCount);
+
+        weeklySummaryRepository.save(entity);
     }
 
 }

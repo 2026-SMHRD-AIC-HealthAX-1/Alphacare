@@ -22,8 +22,8 @@ public class CounselRequestDTO {
     private String summary;
     private String emotionCategory;
 
-    // 감정 카테고리별 평균 점수 ( key : e01 ~ e06 , value : 0.0 ~ 100.0 )
-    // e01: 중립, e02: 기쁨, e03: 슬픔, e04: 분노, e05: 당황, e06: 불안
+    // 감정 카테고리별 평균 점수 ( key : e01 ~ e06 , value : 0.0 ~ 1.0 )
+    // e01: 중립, e02: 기쁨, e03: 슬픔, e04: 화남, e05: 우울, e06: 불안
     private Map<String, Double> emotionScores;
     
     

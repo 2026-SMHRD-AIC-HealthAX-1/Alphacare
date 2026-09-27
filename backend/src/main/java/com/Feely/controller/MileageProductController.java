@@ -16,8 +16,8 @@ import com.Feely.common.MileageProductResponse;
 import com.Feely.dto.MileageProductDto;
 import com.Feely.dto.MemberSessionDto;
 import com.Feely.entity.MileageProductEntity;
+import com.Feely.repository.MemberRepository;
 import com.Feely.service.MileageProductService;
-import com.Feely.util.MileageCryptoUtil;
 
 import jakarta.servlet.http.HttpSession;
 
@@ -26,9 +26,11 @@ import jakarta.servlet.http.HttpSession;
 public class MileageProductController {
 
     private final MileageProductService mileageProductService;
+    private final MemberRepository memberRepository;
 
-    public MileageProductController(MileageProductService mileageProductService) {
+    public MileageProductController(MileageProductService mileageProductService, MemberRepository memberRepository) {
         this.mileageProductService = mileageProductService;
+        this.memberRepository = memberRepository;
     }
 
     // 상품 전체 목록 조회
@@ -58,7 +60,12 @@ public class MileageProductController {
 
     // 상품 등록
     @PostMapping("/products")
-    public ResponseEntity<MileageProductDto> createProduct(@RequestBody MileageProductEntity request) {
+    public ResponseEntity<MileageProductDto> createProduct(@RequestBody MileageProductEntity request, HttpSession session) {
+
+        // 관리자 권한 검사
+        if (!isAdmin(session)) {
+            return ResponseEntity.status(403).build();
+        }
 
         // 상품명 유효성 검사
         if (request == null || isBlank(request.getProdName())) {
@@ -90,7 +97,12 @@ public class MileageProductController {
     // 상품 수정
     @PutMapping("/products/{id}")
     public ResponseEntity<MileageProductDto> updateProduct(@PathVariable Long id,
-            @RequestBody MileageProductEntity request) {
+            @RequestBody MileageProductDto request, HttpSession session) {
+
+        // 관리자 권한 검사
+        if (!isAdmin(session)) {
+            return ResponseEntity.status(403).build();
+        }
 
         // 상품 정보가 null인 경우 400 Bad Request 응답
         if (request == null) {
@@ -110,17 +122,12 @@ public class MileageProductController {
         return ResponseEntity.ok(result);
     }
 
-    // 상품 교환 
+    // 상품 교환 (재고/마일리지 부족 시 400 + 사유 메시지)
     @GetMapping("/products/exchange/{prodNo}")
     public ResponseEntity<MileageProductDto> exchangeProduct(@PathVariable Long prodNo, HttpSession session) {
-        
-        // 회원 정보 가져오기
-        // MileageProductDto result;
 
         // 세션에서 회원 정보 가져오기
         MemberSessionDto member = (MemberSessionDto) session.getAttribute("member");
-
-        // Object memberNoObj = session.getAttribute("memberNo");
 
         // 로그인 정보 없을 시
         if(member == null) {
@@ -128,20 +135,20 @@ public class MileageProductController {
                                  .body(MileageProductDto.exchangeResult(false, MemberResponse.Message.NEED_LOGIN, null));
         }
 
-        Long memberNo = member.getMemberNo();
-
-        // 상품 교환
-        MileageProductDto result = mileageProductService.exchangeProduct(prodNo, memberNo);
-
-        // 교환 후 변경된 마일리지로 갱신
-        String encryptedMileage = MileageCryptoUtil.encrypt(result.mileage());
-        session.setAttribute("memberMileage", encryptedMileage);
-
-        return ResponseEntity.ok(result);
+        try {
+            return ResponseEntity.ok(mileageProductService.exchangeProduct(prodNo, member.getMemberNo()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                                 .body(MileageProductDto.exchangeResult(false, e.getMessage(), null));
+        }
     }
     
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private boolean isAdmin(HttpSession session) {
+        return com.Feely.common.AdminGuard.isAdmin(session, memberRepository);
     }
 }

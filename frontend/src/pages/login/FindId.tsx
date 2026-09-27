@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ApiError } from "../../API/axios";
 import { findID } from "../../API/auth";
 import { useNavigate } from "react-router-dom";
 
@@ -10,7 +11,7 @@ export default function FindId() {
   const [tel, setTel] = useState("");
   const [loading, setLoading] = useState(false);
 
-  //아이디 찾기 요청
+  // 아이디 찾기 요청
   const handleFindId = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !tel.trim()) {
@@ -31,12 +32,13 @@ export default function FindId() {
       } else {
         alert("일치하는 회원 정보가 없습니다.");
       }
-    } catch (error: any) {
+    } catch (e) {
+      const error = e as ApiError;
       if (error?.response?.status === 404) {
         // 매칭 실패
         alert(error.response.data?.message || "일치하는 회원 정보가 없습니다.");
       } else {
-        // 그 외 (네트워크 끊김, 500 서버 에러 등)
+        // 그 외 오류
         alert("아이디 찾기 도중 오류가 발생했습니다.");
       }
     } finally {
@@ -44,7 +46,7 @@ export default function FindId() {
     }
   };
 
-  //휴대폰 번호: 숫자만, 11자리 제한
+  // 휴대폰 번호: 숫자만, 11자리 제한
   const handleTelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const onlyDigits = e.target.value.replace(/[^0-9]/g, "").slice(0, 11);
     setTel(onlyDigits);

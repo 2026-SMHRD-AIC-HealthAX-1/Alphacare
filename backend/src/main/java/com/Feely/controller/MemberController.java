@@ -11,7 +11,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.Feely.common.MemberResponse;
 import com.Feely.dto.MemberDto;
+import com.Feely.dto.MemberSessionDto;
+import com.Feely.dto.MileageHistoryDto;
 import com.Feely.service.MemberService;
+
+import java.util.List;
 
 import jakarta.servlet.http.HttpSession;
 
@@ -161,6 +165,27 @@ public class MemberController{
 
         // 마지막 반환은 성공 응답으로 정리
         return ResponseEntity.ok(result);
+    }
+
+    // 보유 마일리지 조회 (세션 회원 기준)
+    @GetMapping("/member/mileage")
+    public ResponseEntity<MemberDto> getMileage(HttpSession session) {
+        MemberSessionDto member = (MemberSessionDto) session.getAttribute("member");
+        if (member == null) {
+            return ResponseEntity.status(401)
+                    .body(MemberDto.mileageResult(null, MemberResponse.Message.NEED_LOGIN));
+        }
+        return ResponseEntity.ok(memberService.getMileage(member.getMemberNo()));
+    }
+
+    // 마일리지 적립/사용 내역 조회 (세션 회원 기준)
+    @GetMapping("/member/mileage/history")
+    public ResponseEntity<List<MileageHistoryDto>> getMileageHistory(HttpSession session) {
+        MemberSessionDto member = (MemberSessionDto) session.getAttribute("member");
+        if (member == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(memberService.getMileageHistory(member.getMemberNo()));
     }
 
     private boolean isBlank(String value) {

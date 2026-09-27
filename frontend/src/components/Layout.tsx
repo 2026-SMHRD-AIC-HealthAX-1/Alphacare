@@ -4,7 +4,7 @@ import Header from "./Header";
 import Footer from "./Footer";
 
 export default function Layout() {
-  // 다크모드 버튼을 제거한 경우, OS 시스템 설정(다크모드 여부)을 자동 감지하여 적용
+  // OS 다크모드 설정 자동 적용
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     const handleThemeChange = (e: MediaQueryListEvent | MediaQueryList) => {
@@ -22,12 +22,12 @@ export default function Layout() {
   }, []);
 
   return (
-    // 1. 전체 배경색 및 기본 글자색을 최상위에서 일괄 지정
-    <div className="min-h-screen flex flex-col bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
+    // 전체 배경색/글자색 지정
+    <div className="min-h-screen flex flex-col overflow-x-clip bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
       {/* Header */}
       <Header />
 
-      {/* 2. 모든 페이지에 일관되게 적용되는 반응형 메인 영역 */}
+      {/* 페이지 메인 영역 */}
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <Outlet />
       </main>
