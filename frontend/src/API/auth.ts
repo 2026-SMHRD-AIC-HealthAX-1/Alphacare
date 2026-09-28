@@ -96,11 +96,10 @@ export const kakaoLogin = async (code: string): Promise<KakaoLoginResponse> => {
   return response.data;
 };
 
-// 카카오 최초 가입 시 추가정보(전화번호) 입력 후 가입 완료
+// 카카오 최초 가입 완료 (전화번호 없이 바로 가입)
 export const kakaoSignup = async (data: {
   kakaoId: string;
   nickname: string | null;
-  phone: string;
 }): Promise<KakaoLoginResponse> => {
   const response = await api.post<KakaoLoginResponse>("/api/member/kakao/signup", data);
   return response.data;

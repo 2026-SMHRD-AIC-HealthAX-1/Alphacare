@@ -42,6 +42,18 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-json</artifactId>
+		</dependency>
+		<!-- Spring Boot 4 기본 Jackson 3(tools.jackson.databind)와 별개로,
+			 KakaoAuthService가 쓰는 구버전 com.fasterxml.jackson.databind API를
+			 그대로 쓰기 위해 Jackson 2 jackson-databind를 버전 고정해서 추가함 -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+			<version>2.19.2</version>
+		</dependency>
 
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

@@ -419,7 +419,11 @@ export default function CounselPage() {
 
     try {
       if (!summaryRef.current) {
-        summaryRef.current = await finishCounselSession(chatSessionIdRef.current, "COMPLETED");
+        summaryRef.current = await finishCounselSession(
+          chatSessionIdRef.current,
+          "COMPLETED",
+          Cookies.get("userId")
+        );
       }
       const result = await saveCounselRecord(summaryRef.current, startImageRef.current, endImage);
       if (!result) return;
