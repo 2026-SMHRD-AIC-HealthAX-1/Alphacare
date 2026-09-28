@@ -121,6 +121,7 @@ session_neutral_samples: dict = {}
 session_neutral_baselines: dict = {}
 session_neutral_start_times: dict = {}
 
+
 def _get_session_landmarker(session_id: str):
     """세션 전용 FaceLandmarker를 가져오거나, 처음 요청이면 새로 만듦"""
     if session_id not in session_landmarkers:
@@ -164,18 +165,11 @@ def extract_landmark_feature(face_image, session_id: str):
     session_last_timestamp[session_id] = timestamp_ms
 
     result = landmarker.detect_for_video(mp_image, timestamp_ms)
-
-    # MediaPipe 얼굴 랜드마크 확인
     if not result.face_landmarks:
-        print("[확인] MediaPipe 얼굴 감지 실패")
         return None
-
-    print("[확인] MediaPipe 얼굴 감지 성공")
-    print("[확인] 랜드마크 개수 =", len(result.face_landmarks[0]))
 
     landmarks = result.face_landmarks[0]
     feature = []
-
     for landmark in landmarks:
         feature.extend([landmark.x, landmark.y, landmark.z])
 
@@ -486,77 +480,27 @@ TEXT_EMOTION_SYSTEM_PROMPT = (
 
 
 def _classify_text_emotion(text: str) -> dict:
-    """사용자 텍스트를 6감정 점수로 변환"""
+    """오늘의 기분 텍스트를 Claude로 6개 감정 점수(합 1)로 변환함.
+    빈 텍스트거나 분류 실패/JSON 파싱 실패 시에는 중립(e01=1.0)으로 안전하게 폴백함"""
+    fallback = {key: (1.0 if key == "e01" else 0.0) for key in EMOTION_KEYS}
 
-    # 감정분석에 실패했을 때 사용할 기본값
-    # e01 = 중립 100%
-    fallback = {
-        key: (1.0 if key == "e01" else 0.0)
-        for key in EMOTION_KEYS
-    }
-
-    # 입력된 글이 없으면 중립 100% 반환
     if not text or not text.strip():
         return fallback
 
     try:
-        # AI에게 사용자의 글을 6감정으로 분석 요청
         raw_reply = call_feely(
             TEXT_EMOTION_SYSTEM_PROMPT,
             [{"role": "user", "content": text}],
             max_tokens=200,
         )
-
-        print("[확인] 텍스트 감정분석 AI 원본 응답 =", raw_reply)
-
-        # AI 응답에서 JSON 시작과 끝 위치 찾기
-        json_start = raw_reply.find("{")
-        json_end = raw_reply.rfind("}")
-
-        # JSON 형태를 찾지 못하면 실패 처리
-        if json_start == -1 or json_end == -1 or json_start > json_end:
-            raise ValueError("AI 응답에서 JSON 형식을 찾을 수 없습니다.")
-
-        # JSON 부분만 잘라내기
-        json_text = raw_reply[json_start:json_end + 1]
-
-        # JSON 문자열을 파이썬 딕셔너리로 변환
-        parsed = json.loads(json_text)
-
-        # 6감정 값 가져오기
-        scores = {
-            key: max(
-                0.0,
-                float(parsed.get(key, 0.0))
-            )
-            for key in EMOTION_KEYS
-        }
-
-        # 6감정 전체 합 계산
+        parsed = json.loads(raw_reply)
+        scores = {key: max(0.0, float(parsed.get(key, 0.0))) for key in EMOTION_KEYS}
         total = sum(scores.values())
-
-        # 정상적인 감정 값이 하나도 없으면 기본값 사용
         if total <= 0:
-            print("[확인] 텍스트 감정 값이 없어 중립 100% 사용")
             return fallback
-
-        # 6감정 합계를 정확히 1.0으로 맞추기
-        normalized_scores = {
-            key: value / total
-            for key, value in scores.items()
-        }
-
-        print("[확인] 텍스트 6감정 scores =", normalized_scores)
-        print(
-            "[확인] 텍스트 6감정 확률 합계 =",
-            sum(normalized_scores.values())
-        )
-
-        return normalized_scores
-
+        return {key: value / total for key, value in scores.items()}
     except Exception as err:
-        print("[확인] 텍스트 감정 분류 실패 =", err)
-        print("[확인] 중립 100% 기본값 사용")
+        print(f"텍스트 감정 분류 실패: {err}")
         return fallback
 
 
@@ -597,6 +541,12 @@ WEEKLY_SUMMARY_SYSTEM_PROMPT = (
 # 엔드포인트
 # ============================================================
 
+@app.get("/test")
+def test_api():
+    # 상담 화면의 서버 상태 표시등(초록/빨강)이 접속 확인용으로 호출함
+    return {"message": "Feely AI 서버가 정상적으로 실행 중입니다!"}
+
+
 @app.post("/emotion", response_model=EmotionResponse)
 def emotion_api(data: EmotionRequest):
 
@@ -608,11 +558,6 @@ def emotion_api(data: EmotionRequest):
 
     # 상담 중 5초마다 카메라 얼굴 정보를 받아 분석
     face_image = decode_base64_image(data.image)
-    
-    # 확인용: 프론트에서 받은 실제 웹캠 이미지 저장
-    if face_image is not None:
-        cv2.imwrite("received_face_test.jpg", face_image)
-        print("[확인] received_face_test.jpg 저장 완료")
 
     # 얼굴 랜드마크 추출 및 위치/크기 보정
     feature = extract_landmark_feature(face_image, data.sessionId)
@@ -766,172 +711,55 @@ def counsel_start(data: CounselStartRequest):
 
 @app.post("/counsel/initial-emotion", response_model=InitialEmotionResponse)
 def counsel_initial_emotion(data: InitialEmotionRequest):
-
-    # 텍스트를 6감정으로 분석
     text_scores = _classify_text_emotion(data.moodText)
 
-    # ------------------------------------------------------------
-    # ⑬단계 : 현재 상담 세션에 텍스트 6감정 저장
-    # ------------------------------------------------------------
-    session_data = counsel_sessions.setdefault(
-        data.sessionId,
-        {
-            "startTime": datetime.now(KST),
-            "emotionSamples": [],
-        },
-    )
-
-    session_data["textScores"] = text_scores
-    print("[추적] initial-emotion sessionId =", data.sessionId)
-    print("[추적] 현재 counsel_sessions =", list(counsel_sessions.keys()))
-
-    print("[확인] 상담 세션에 저장된 텍스트 6감정 =", session_data["textScores"])
-
-    # 얼굴 점수가 없으면 우선 텍스트 결과만 사용
     if not data.faceScores:
-        print("[확인] 얼굴 점수 없음 → 텍스트 감정만 사용")
         return InitialEmotionResponse(emotionScores=text_scores)
 
-    # 얼굴 점수가 이미 있으면 기존 방식대로 60:40 결합
-    print("[확인] 결합 전 텍스트 6감정 =", text_scores)
-    print("[확인] 결합 전 얼굴 6감정 =", data.faceScores)
-
     combined = {
-        key: text_scores[key] * 0.6
-        + data.faceScores.get(key, 0.0) * 0.4
+        key: text_scores[key] * 0.6 + data.faceScores.get(key, 0.0) * 0.4
         for key in EMOTION_KEYS
     }
-
-    print("[확인] 텍스트60% + 얼굴40% 최종 6감정 =", combined)
-    print("[확인] 결합 후 확률 합계 =", sum(combined.values()))
-
     return InitialEmotionResponse(emotionScores=combined)
 
 
 @app.post("/counsel/emotion-sample")
 def counsel_emotion_sample(data: EmotionSampleRequest):
-
     session_data = counsel_sessions.setdefault(
         data.sessionId,
         {"startTime": datetime.now(KST), "emotionSamples": []},
     )
-
-    # ⑬단계 : 상담 시작 때 저장한 텍스트 6감정 가져오기
-    text_scores = session_data.get("textScores")
-    print("[추적] emotion-sample sessionId =", data.sessionId)
-    print("[추적] 현재 counsel_sessions =", list(counsel_sessions.keys()))
-    print("[추적] 현재 session_data keys =", list(session_data.keys()))
-
-    # 텍스트 감정이 저장되어 있으면
-    # 텍스트 60% + 얼굴 40%로 결합
-    if text_scores:
-        combined_scores = {
-            key: text_scores.get(key, 0.0) * 0.6
-            + data.scores.get(key, 0.0) * 0.4
-            for key in EMOTION_KEYS
-        }
-
-        session_data["emotionSamples"].append(combined_scores)
-
-        print("[확인] 결합 전 텍스트 6감정 =", text_scores)
-        print("[확인] 결합 전 얼굴 6감정 =", data.scores)
-        print("[확인] 텍스트60% + 얼굴40% 최종 6감정 =", combined_scores)
-        print("[확인] 결합 후 확률 합계 =", sum(combined_scores.values()))
-
-    # 텍스트 감정이 없으면 기존처럼 얼굴 점수만 저장
-    else:
-        session_data["emotionSamples"].append(data.scores)
-        print("[확인] 텍스트 점수 없음 → 얼굴 감정만 저장")
-
-    print("[확인] 현재 누적된 감정 샘플 개수 =", len(session_data["emotionSamples"]))
-
+    session_data["emotionSamples"].append(data.scores)
     return {"ok": True}
 
 
 @app.post("/counsel/finish", response_model=CounselSummaryResponse)
 def counsel_finish(data: CounselFinishRequest):
-
-    # 상담 데이터 가져온 뒤 삭제
     session_data = counsel_sessions.pop(
         data.sessionId,
         {"startTime": datetime.now(KST), "emotionSamples": []},
     )
-
-    # 채팅 데이터 가져온 뒤 삭제
+    # 챗봇 대화 이력도 여기서 같이 정리함 (예전엔 abort 때만 지워져서 정상 종료 시 계속 쌓이는 누수가 있었음)
     chat_session = chat_sessions.pop(data.sessionId, None)
-
-    # 상담 요약 생성
-    final_summary = _summarize_session(chat_session)
-
-    # 상담 중 누적된 6감정의 최종 평균 계산
-    final_emotion_scores = _average_emotion_scores(
-        session_data["emotionSamples"]
-    )
-
-    # ------------------------------------------------------------
-    # 최종 상담 결과 터미널 출력
-    # ------------------------------------------------------------
-
-    print()
-    print("========== 최종 상담 결과 ==========")
-
-    print()
-    print("[상담 요약]")
-    print(final_summary)
-
-    print()
-    print("[최종 감정 평균]")
-
-    emotion_names = {
-        "e01": "중립",
-        "e02": "기쁨",
-        "e03": "슬픔",
-        "e04": "분노",
-        "e05": "당황",
-        "e06": "불안",
-    }
-
-    for key in EMOTION_KEYS:
-        score = final_emotion_scores.get(key, 0.0)
-        print(f"{emotion_names[key]} : {score * 100:.2f}%")
-
-    print()
-    print(
-        f"합계 : "
-        f"{sum(final_emotion_scores.values()) * 100:.2f}%"
-    )
-
-    print()
-    print("===================================")
 
     # 개인 중립 데이터 삭제
     session_neutral_samples.pop(data.sessionId, None)
     session_neutral_baselines.pop(data.sessionId, None)
     session_neutral_start_times.pop(data.sessionId, None)
 
-    # MediaPipe 랜드마커 정리
     release_session_landmarker(data.sessionId)
 
-    print("[확인] 상담 정상 종료 세션 정리 완료 =", data.sessionId)
-
-    # 계산한 최종 결과를 기존처럼 Front에 반환
     return CounselSummaryResponse(
-        counselDate=session_data["startTime"].strftime(
-            "%Y-%m-%d %H:%M:%S"
-        ),
-        summary=final_summary,
-        emotionScores=final_emotion_scores,
+        counselDate=session_data["startTime"].strftime("%Y-%m-%d %H:%M:%S"),
+        summary=_summarize_session(chat_session),
+        emotionScores=_average_emotion_scores(session_data["emotionSamples"]),
         status=data.status,
     )
 
 
 @app.post("/counsel/abort")
 def counsel_abort(data: CounselAbortRequest):
-
-    # 상담 데이터 삭제
     counsel_sessions.pop(data.sessionId, None)
-
-    # 채팅 데이터 삭제
     chat_sessions.pop(data.sessionId, None)
 
     # 개인 중립 데이터 삭제
@@ -939,11 +767,7 @@ def counsel_abort(data: CounselAbortRequest):
     session_neutral_baselines.pop(data.sessionId, None)
     session_neutral_start_times.pop(data.sessionId, None)
 
-    # MediaPipe 랜드마커 정리
     release_session_landmarker(data.sessionId)
-
-    print("[확인] 상담 중단 세션 정리 완료 =", data.sessionId)
-
     return {"ok": True}
 
 
