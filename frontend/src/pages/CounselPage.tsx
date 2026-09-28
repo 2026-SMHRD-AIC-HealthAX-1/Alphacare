@@ -798,7 +798,7 @@ export default function CounselPage() {
 
                   {!isInitialModalOpen && (
                     <>
-                      <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white px-2.5 py-1 rounded-lg text-xs flex items-center gap-1.5">
+                      <div className="absolute top-3 left-3 z-20 bg-black/60 backdrop-blur-sm text-white px-2.5 py-1 rounded-lg text-xs flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
                         {latestEmotion ? (
                           <>

@@ -511,9 +511,11 @@ def _summary_system_prompt(user_name: str) -> str:
     who, particle = (f"{user_name}님", "이") if user_name else ("사용자", "가")
     return (
         "너는 방금 끝난 심리상담 대화를 기록용으로 요약하는 도우미야. "
-        f"{who}{particle} 이번 상담에서 어떤 이야기를 했고 어떤 감정을 느꼈는지, "
-        "상담사가 어떻게 반응했는지를 한국어 존댓말로 담백하게 요약해. "
-        "반드시 2~3문장, 줄바꿈 없이 한 문단으로만 작성하고 절대 그 이상 길게 쓰지 마. "
+        f"{who}{particle} 무엇 때문에 상담을 받았고 결론적으로 어떤 감정 상태였는지, "
+        "핵심만 한국어 존댓말로 요약해. "
+        "대화 흐름이나 상담사의 반응을 하나하나 풀어 쓰지 말고, "
+        "전체 내용을 한눈에 파악할 수 있는 수준으로 최대한 간결하게 압축해. "
+        "반드시 2문장 이내, 줄바꿈 없이 한 문단으로만 작성하고 절대 그 이상 길게 쓰지 마. "
         "진단이나 평가하는 표현은 쓰지 말고, 실제 대화 내용을 근거로만 작성해."
     )
 
@@ -527,8 +529,8 @@ def _summarize_session(session, user_name: str = "") -> str:
     try:
         return call_feely(
             _summary_system_prompt(user_name),
-            session.history + [{"role": "user", "content": "지금까지 상담 내용을 2~3문장으로 요약해줘."}],
-            max_tokens=160,
+            session.history + [{"role": "user", "content": "지금까지 상담 내용을 핵심만 2문장 이내로 간결하게 요약해줘."}],
+            max_tokens=250,
         )
     except Exception as err:
         print(f"상담 요약 생성 실패: {err}")
@@ -675,7 +677,7 @@ def emotion_api(data: EmotionRequest):
                 print("[확인] neutral_10f =", neutral_10f)
 
     # 개인 중립 기준이 아직 만들어지지 않았으면
-    # 얼굴 감정분석을 기다림
+    # 얼굴 감정분석을 기다림 (raw 기반 예측은 델타 전용으로 학습된 모델과 표준화 기준이 달라 부정확함)
     if data.sessionId not in session_neutral_baselines:
         return EmotionResponse(scores=None)
 
