@@ -1239,6 +1239,7 @@ export default function MainPage() {
                                 position:
                                   "absolute",
                                 top: "8px",
+                                lineHeight: 1,
                                 opacity:
                                   isSelected
                                     ? 0.85
@@ -1258,6 +1259,10 @@ export default function MainPage() {
                                   "16px",
                                 fontWeight:
                                   700,
+                                position:
+                                  "absolute",
+                                top: "26px",
+                                lineHeight: 1,
                               }}
                             >
                               {
