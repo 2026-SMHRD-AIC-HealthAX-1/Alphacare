@@ -21,7 +21,7 @@ import test1 from "../assets/test5.mp4";
 import face from "../assets/mainface.png";
 import chat from "../assets/chat.png";
 import EmotionCalender from "../assets/EmotionCalender.png";
-import Report from "../assets/Report.png";
+import Chart from "../assets/chart.png";
 
 /* =========================================================
    날짜 함수
@@ -173,9 +173,9 @@ export default function MainPage() {
       description: "상담 내용을 요약하고, 감정의 변화를 기록으로 남겨요.",
     },
     {
-      image: Report,
+      image: Chart,
       alt: "Weekly Emotion Report",
-      imageOffset: "-348px",
+      imageOffset: "-274px",
       label: "주간 리포트",
       title: "한 주의 감정 흐름을 차트로 살펴봐요.",
       descriptionLead: "일주일 동안의 상담 기록을 차트로 확인하세요.",
@@ -2681,7 +2681,7 @@ export default function MainPage() {
         className="landing-hero"
         style={{
           width: "100vw",
-          marginTop: 30,
+          marginTop: 0,
           padding: 0,
           overflow: "hidden",
         }}
@@ -2691,8 +2691,8 @@ export default function MainPage() {
           style={{
             position: "relative",
             width: "100vw",
-            // 영상 높이(16:9) + 아래쪽 여백만큼만 확보 (잘리지 않게)
-            height: "calc(56.25vw + 30px)",
+            // 화면 너비에 반응하는 영상 높이 + 아래쪽 여백
+            height: "calc(45vw + 30px)",
             overflow: "hidden",
           }}
         >
@@ -2720,7 +2720,7 @@ export default function MainPage() {
             style={{
               position: "absolute",
               left: "4%",
-              bottom: "calc(30px + 6%)",
+              bottom: "calc(90px + 6%)",
               zIndex: 10,
               color: "var(--fe-text)",
               fontSize: "clamp(34px, 9vw, 130px)",
@@ -3308,7 +3308,7 @@ export default function MainPage() {
 
         @media (max-width: 640px) {
           .landing-hero {
-            margin-top: 12px !important;
+            margin-top: 0 !important;
           }
 
           .landing-hero-spacer {

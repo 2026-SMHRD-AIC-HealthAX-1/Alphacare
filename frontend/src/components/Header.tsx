@@ -85,9 +85,12 @@ export default function Header() {
 
           {/* 관리자 페이지 (관리자 계정만 노출) */}
           {isAdmin && (
-            <Link to="/Admin" className="hover:underline">
-              관리자 페이지
-            </Link>
+            <>
+              <span className="text-gray-300 font-light select-none">|</span>
+              <Link to="/Admin" className="hover:underline">
+                관리자 페이지
+              </Link>
+            </>
           )}
 
           {isLoggedIn ? (
