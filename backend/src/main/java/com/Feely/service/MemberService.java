@@ -4,6 +4,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import com.Feely.common.MemberResponse;
+import com.Feely.dto.KakaoLoginResponse;
+import com.Feely.dto.KakaoSignupRequest;
 import com.Feely.dto.MemberDto;
 import com.Feely.dto.MileageHistoryDto;
 import com.Feely.dto.MemberSessionDto;
@@ -27,12 +29,14 @@ public class MemberService {
     private final MemberRepository memberRepository;
     private final CounselRepository counselRepository;
     private final MileageHistoryRepository mileageHistoryRepository;
+    private final KakaoAuthService kakaoAuthService;
 
     public MemberService(MemberRepository memberRepository, CounselRepository counselRepository,
-            MileageHistoryRepository mileageHistoryRepository) {
+            MileageHistoryRepository mileageHistoryRepository, KakaoAuthService kakaoAuthService) {
         this.memberRepository = memberRepository;
         this.counselRepository = counselRepository;
         this.mileageHistoryRepository = mileageHistoryRepository;
+        this.kakaoAuthService = kakaoAuthService;
     }
 
     // 회원가입
@@ -81,7 +85,67 @@ public class MemberService {
             return MemberDto.loginResult(false, MemberResponse.Message.LOGIN_FAIL,null);
         }
 
-        MemberSessionDto sessionMember = new MemberSessionDto(
+        session.setAttribute("member", toSessionDto(member));
+        return MemberDto.loginResult(true, MemberResponse.Message.LOGIN_SUCCESS, member.getMileage());
+    }
+
+    // 카카오 로그인: 인가코드로 카카오 사용자 정보를 조회한 뒤, 기존 회원이면 로그인, 아니면 추가정보 입력 요청
+    public KakaoLoginResponse kakaoLogin(String code, HttpSession session) {
+        KakaoAuthService.KakaoUserInfo userInfo = kakaoAuthService.getUserInfo(code);
+        if (userInfo == null) {
+            return new KakaoLoginResponse("ERROR", null, null, false, null, MemberResponse.Message.KAKAO_AUTH_FAILED);
+        }
+
+        MemberEntity member = memberRepository.findMemberBySns(userInfo.kakaoId()).orElse(null);
+        if (member == null) {
+            return new KakaoLoginResponse("NEED_SIGNUP", userInfo.kakaoId(), userInfo.nickname(), false, null,
+                    MemberResponse.Message.KAKAO_NEED_SIGNUP);
+        }
+
+        session.setAttribute("member", toSessionDto(member));
+        return new KakaoLoginResponse("LOGIN", userInfo.kakaoId(), member.getName(), true, member.getMileage(),
+                MemberResponse.Message.LOGIN_SUCCESS);
+    }
+
+    // 카카오 최초 가입: 추가 입력받은 전화번호로 회원을 생성하고 바로 로그인 처리
+    public KakaoLoginResponse kakaoSignup(KakaoSignupRequest request, HttpSession session) {
+        if (isBlank(request.kakaoId()) || isBlank(request.phone())) {
+            return new KakaoLoginResponse("ERROR", request.kakaoId(), request.nickname(), false, null,
+                    MemberResponse.Message.REQUIRED_MEMBER_INFO);
+        }
+
+        // 이미 연동된 카카오 계정이면 새로 만들지 않고 바로 로그인 처리 (중복 클릭 대비)
+        MemberEntity existing = memberRepository.findMemberBySns(request.kakaoId()).orElse(null);
+        if (existing != null) {
+            session.setAttribute("member", toSessionDto(existing));
+            return new KakaoLoginResponse("LOGIN", request.kakaoId(), existing.getName(), true, existing.getMileage(),
+                    MemberResponse.Message.LOGIN_SUCCESS);
+        }
+
+        String phone = request.phone().trim();
+        if (memberRepository.existsByPhone(phone)) {
+            return new KakaoLoginResponse("ERROR", request.kakaoId(), request.nickname(), false, null,
+                    MemberResponse.Message.DUPLICATE_PHONE);
+        }
+
+        MemberEntity member = new MemberEntity();
+        member.setId("kakao_" + request.kakaoId());
+        member.setPw(PasswordUtil.sha256(PasswordUtil.generateRandomPassword()));
+        member.setName(isBlank(request.nickname()) ? "카카오회원" : request.nickname().trim());
+        member.setPhone(phone);
+        member.setSns(request.kakaoId());
+        member.setRole("USER");
+        member.setMileage(0);
+
+        memberRepository.save(member);
+        session.setAttribute("member", toSessionDto(member));
+        return new KakaoLoginResponse("LOGIN", request.kakaoId(), member.getName(), true, member.getMileage(),
+                MemberResponse.Message.SIGNUP_SUCCESS);
+    }
+
+    // 회원 엔티티 -> 세션에 저장할 DTO 변환 (로그인/카카오로그인/카카오가입 공용)
+    private MemberSessionDto toSessionDto(MemberEntity member) {
+        return new MemberSessionDto(
                 member.getMemberNo(),
                 member.getId(),
                 member.getName(),
@@ -90,9 +154,6 @@ public class MemberService {
                 member.getRole(),
                 member.getMileage()
         );
-
-        session.setAttribute("member", sessionMember);
-        return MemberDto.loginResult(true, MemberResponse.Message.LOGIN_SUCCESS, member.getMileage());
     }
 
     // 중복 확인
@@ -179,17 +240,7 @@ public class MemberService {
 
         memberRepository.save(member);
 
-        MemberSessionDto updatedSessionMember = new MemberSessionDto(
-                member.getMemberNo(),
-                member.getId(),
-                member.getName(),
-                member.getPhone(),
-                member.getSns(),
-                member.getRole(),
-                member.getMileage()
-        );
-
-        session.setAttribute("member", updatedSessionMember);
+        session.setAttribute("member", toSessionDto(member));
 
         return MemberDto.updateResult(true, MemberResponse.Message.UPDATE_SUCCESS);
     }

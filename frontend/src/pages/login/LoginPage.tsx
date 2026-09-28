@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useState } from "react";
 import { loginUser } from "../../API/auth";
 import { setAuthCookies, ApiError } from "../../API/axios";
+import { getKakaoAuthUrl } from "../../utils/kakao";
 
 export default function LoginPage() {
   const [userId, setUserId] = useState("");
@@ -101,6 +102,7 @@ export default function LoginPage() {
               </div>
               <button
                 type="button"
+                onClick={() => { window.location.href = getKakaoAuthUrl(); }}
                 className="w-64 h-11 flex items-center justify-center bg-[#F7E600] text-black font-bold text-base sm:text-lg rounded-lg shadow-sm hover:brightness-90 transition-all"
               >
                 카카오톡 로그인

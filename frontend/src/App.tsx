@@ -7,6 +7,7 @@ import MainPage from './pages/MainPage';
 import CounselPage from './pages/CounselPage';
 import LoginPage from './pages/login/LoginPage';
 import SignupPage from './pages/login/SignupPage';
+import KakaoCallback from './pages/login/KakaoCallback';
 import MyPage from './pages/mypages/MyPage';
 import RequireAuth from './components/RequireAuth';
 import RequireAdmin from './components/RequireAdmin';
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="/" element={<MainPage />} />
         <Route path="/Counsel" element={<CounselPage />} />
         <Route path="/Login" element={<LoginPage />} />
+        <Route path="/Login/kakao/callback" element={<KakaoCallback />} />
         <Route path="/SignUp" element={<SignupPage />} />
         <Route path="/MyPage" element={<RequireAuth><MyPage /></RequireAuth>} />
         <Route path="/FindId" element={<FindId />} />

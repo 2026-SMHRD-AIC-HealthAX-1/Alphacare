@@ -6,20 +6,6 @@ import { getAllMusic, createMusic, updateMusic, deleteMusic, MusicRecommendation
 import { EMOTION_LABELS } from '../utils/emotion';
 import { ApiError } from '../API/axios';
 
-// --- 타입 정의 ---
-interface Member {
-  userSeq: number;
-  userId: string;
-  userName: string;
-  userTel: string;
-  attendanceCount: number;
-  totalCounselCount: number;
-  isHighRisk: boolean;
-  status: 'ACTIVE' | 'BLOCKED' | 'DELETED';
-}
-
-
-
 // 서버 에러 응답의 message를 꺼내거나 기본 문구 반환
 const getErrorMessage = (e: unknown): string => {
   const err = e as ApiError;
@@ -34,18 +20,8 @@ const parseNonNegativeInt = (value: string): number | null => {
 };
 
 export const AdminPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'members' | 'music' | 'products' | 'attendance'>('members');
+  const [activeTab, setActiveTab] = useState<'members' | 'music' | 'products'>('members');
   const [searchTerm, setSearchTerm] = useState('');
-
-  // 출석률 계산 기준일 (월 30일 기준)
-  const TOTAL_MONTH_DAYS = 30;
-
-  // 샘플 데이터
-  const [members] = useState<Member[]>([
-    { userSeq: 1, userId: 'user01', userName: '김철수', userTel: '010-1234-5678', attendanceCount: 15, totalCounselCount: 8, isHighRisk: true, status: 'ACTIVE' },
-    { userSeq: 2, userId: 'user02', userName: '이영희', userTel: '010-8765-4321', attendanceCount: 22, totalCounselCount: 12, isHighRisk: false, status: 'ACTIVE' },
-    { userSeq: 3, userId: 'user03', userName: '박민수', userTel: '010-5555-6666', attendanceCount: 3, totalCounselCount: 1, isHighRisk: false, status: 'BLOCKED' },
-  ]);
 
   // 추천 음악 목록 (실제 DB 조회)
   const [musicList, setMusicList] = useState<MusicRecommendation[]>([]);
@@ -181,11 +157,6 @@ export const AdminPage: React.FC = () => {
     }
   };
 
-  // 회원 필터링 (출석률 모니터링 탭에서 사용)
-  const filteredMembers = members.filter((m) =>
-    m.userId.includes(searchTerm) || m.userName.includes(searchTerm) || m.userTel.includes(searchTerm)
-  );
-
   // 실제 회원 필터링 (회원관리 탭에서 사용)
   const filteredRealMembers = realMembers.filter((m) =>
     m.id.includes(searchTerm) || m.name.includes(searchTerm) || m.phone.includes(searchTerm)
@@ -243,15 +214,6 @@ export const AdminPage: React.FC = () => {
                 }`}
             >
               마일리지 상품 관리
-            </button>
-            <button
-              onClick={() => setActiveTab('attendance')}
-              className={`pb-4 px-1 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'attendance'
-                ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                }`}
-            >
-              회원 출석률 모니터링
             </button>
           </nav>
         </div>
@@ -499,72 +461,6 @@ export const AdminPage: React.FC = () => {
                 ))}
               </tbody>
             </table>
-            </div>
-          )}
-
-          {/* TAB 3: 회원 출석률 모니터링 */}
-          {activeTab === 'attendance' && (
-            <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pb-2">
-                <input
-                  type="text"
-                  placeholder="회원 검색 (아이디, 이름)..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full sm:w-80 px-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-                <span className="text-xs text-gray-500 dark:text-gray-400">기준 일수: 월 {TOTAL_MONTH_DAYS}일</span>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-sm">
-                  <thead>
-                    <tr className="bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-b">
-                      <th className="p-3">회원번호</th>
-                      <th className="p-3">아이디</th>
-                      <th className="p-3">이름</th>
-                      <th className="p-3 text-center">출석일수</th>
-                      <th className="p-3 text-center">월 출석률</th>
-                      <th className="p-3">출석 달성도</th>
-                      <th className="p-3 text-center">출석 상태</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {filteredMembers.map((member) => {
-                      const rate = Math.round((member.attendanceCount / TOTAL_MONTH_DAYS) * 100);
-                      return (
-                        <tr key={member.userSeq} className="hover:bg-gray-50 dark:hover:bg-gray-900">
-                          <td className="p-3">{member.userSeq}</td>
-                          <td className="p-3 font-medium">{member.userId}</td>
-                          <td className="p-3">{member.userName}</td>
-                          <td className="p-3 text-center">{member.attendanceCount} / {TOTAL_MONTH_DAYS}일</td>
-                          <td className="p-3 text-center font-bold text-indigo-600">{rate}%</td>
-                          <td className="p-3 w-48">
-                            <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
-                              <div
-                                className={`h-2 rounded-full ${rate >= 70 ? 'bg-indigo-600' : rate >= 40 ? 'bg-amber-500' : 'bg-red-500'
-                                  }`}
-                                style={{ width: `${Math.min(rate, 100)}%` }}
-                              ></div>
-                            </div>
-                          </td>
-                          <td className="p-3 text-center">
-                            {rate < 40 ? (
-                              <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded">
-                                X
-                              </span>
-                            ) : (
-                              <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">
-                                O
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
             </div>
           )}
 

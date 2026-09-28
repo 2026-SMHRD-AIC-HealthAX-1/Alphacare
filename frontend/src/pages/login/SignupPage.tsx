@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { checkDuplicateId, signupUser } from "../../API/auth";
 import { isValidPassword, isValidPhone, sanitizePhoneInput } from "../../utils/validation";
+import { getKakaoAuthUrl } from "../../utils/kakao";
 
 export default function SignupPage() {
 
@@ -225,6 +226,7 @@ export default function SignupPage() {
               </button>
               <button
                 type="button"
+                onClick={() => { window.location.href = getKakaoAuthUrl(); }}
                 className="w-64 py-3 bg-[#F7E600] text-black font-bold text-base sm:text-lg rounded-lg shadow-sm hover:brightness-90 transition-all"
               >
                 카카오톡 회원가입

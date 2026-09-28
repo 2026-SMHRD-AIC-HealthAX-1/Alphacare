@@ -38,4 +38,8 @@ public interface MemberRepository extends JpaRepository<MemberEntity, Long> {
 	@Query("select m from MemberEntity m where m.id = :id")
 	Optional<MemberEntity> findMemberById(@Param("id") String id);
 
+	// 카카오 로그인 시 카카오ID(SNS 컬럼)로 회원 정보를 조회
+	@Query("select m from MemberEntity m where m.sns = :sns")
+	Optional<MemberEntity> findMemberBySns(@Param("sns") String sns);
+
 }

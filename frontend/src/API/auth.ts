@@ -79,3 +79,29 @@ export const getMileageHistory = async (): Promise<MileageHistoryItem[]> => {
   const response = await api.get<MileageHistoryItem[]>("/api/member/mileage/history");
   return response.data;
 };
+
+// 카카오 로그인/가입 결과 응답
+export interface KakaoLoginResponse {
+  status: "LOGIN" | "NEED_SIGNUP" | "ERROR";
+  kakaoId: string | null;
+  nickname: string | null;
+  loginFlag: boolean;
+  mileage?: number | null;
+  message?: string;
+}
+
+// 카카오 인가코드로 로그인 시도 (기존 회원이면 로그인, 신규면 추가정보 입력 필요 응답)
+export const kakaoLogin = async (code: string): Promise<KakaoLoginResponse> => {
+  const response = await api.post<KakaoLoginResponse>("/api/member/kakao/login", { code });
+  return response.data;
+};
+
+// 카카오 최초 가입 시 추가정보(전화번호) 입력 후 가입 완료
+export const kakaoSignup = async (data: {
+  kakaoId: string;
+  nickname: string | null;
+  phone: string;
+}): Promise<KakaoLoginResponse> => {
+  const response = await api.post<KakaoLoginResponse>("/api/member/kakao/signup", data);
+  return response.data;
+};

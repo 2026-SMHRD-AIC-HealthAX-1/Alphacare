@@ -10,12 +10,15 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.Feely.common.MemberResponse;
+import com.Feely.dto.KakaoLoginResponse;
+import com.Feely.dto.KakaoSignupRequest;
 import com.Feely.dto.MemberDto;
 import com.Feely.dto.MemberSessionDto;
 import com.Feely.dto.MileageHistoryDto;
 import com.Feely.service.MemberService;
 
 import java.util.List;
+import java.util.Map;
 
 import jakarta.servlet.http.HttpSession;
 
@@ -186,6 +189,23 @@ public class MemberController{
             return ResponseEntity.status(401).build();
         }
         return ResponseEntity.ok(memberService.getMileageHistory(member.getMemberNo()));
+    }
+
+    // 카카오 로그인: 인가코드를 받아 로그인 처리 (기존 회원이면 로그인, 신규면 추가정보 입력 필요 응답)
+    @PostMapping("/member/kakao/login")
+    public ResponseEntity<KakaoLoginResponse> kakaoLogin(@RequestBody Map<String, String> body, HttpSession session) {
+        String code = body.get("code");
+        if (isBlank(code)) {
+            return ResponseEntity.badRequest()
+                    .body(new KakaoLoginResponse("ERROR", null, null, false, null, MemberResponse.Message.REQUIRED_MEMBER_INFO));
+        }
+        return ResponseEntity.ok(memberService.kakaoLogin(code, session));
+    }
+
+    // 카카오 최초 가입: 추가 입력받은 전화번호로 회원가입 후 바로 로그인 처리
+    @PostMapping("/member/kakao/signup")
+    public ResponseEntity<KakaoLoginResponse> kakaoSignup(@RequestBody KakaoSignupRequest request, HttpSession session) {
+        return ResponseEntity.ok(memberService.kakaoSignup(request, session));
     }
 
     private boolean isBlank(String value) {

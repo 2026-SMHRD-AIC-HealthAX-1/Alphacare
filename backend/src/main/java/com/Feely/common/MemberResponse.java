@@ -26,6 +26,8 @@ public final class MemberResponse {
         public static final String LOGOUT_SUCCESS = "로그아웃되었습니다.";
         public static final String MEMBER_NOT_ENOUGH_MILEAGE = "마일리지가 부족합니다.";
         public static final String MILEAGE_SUCCESS = "마일리지 조회 성공";
+        public static final String KAKAO_AUTH_FAILED = "카카오 인증에 실패했습니다.";
+        public static final String KAKAO_NEED_SIGNUP = "추가 정보 입력이 필요합니다.";
     }
 
     public enum ErrorCode {
