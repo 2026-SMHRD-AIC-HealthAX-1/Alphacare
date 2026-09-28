@@ -60,7 +60,7 @@ app.add_middleware(
 # 감정분석 - PyTorch 모델 + MediaPipe 얼굴 랜드마크
 # ============================================================
 
-# e01=중립, e02=기쁨, e03=슬픔, e04=분노, e05=당황, e06=불안 (프론트/상담 로직과 동일한 순서)
+# e01=중립, e02=기쁨, e03=슬픔, e04=화남, e05=우울, e06=불안 (프론트/상담 로직과 동일한 순서)
 EMOTION_KEYS = ["e01", "e02", "e03", "e04", "e05", "e06"]
 
 
@@ -393,17 +393,17 @@ chat_sessions: dict = {}
 # 상담 시작~종료까지 쌓아둘 데이터 (시작 시각, 프레임별 감정분석 결과)
 counsel_sessions: dict = {}
 
-# 주간 AI 요약 캐시 - 캐시 키는 (회원번호, 주 시작일), 값은 {count, summary}
-weekly_summary_cache: dict = {}
-
 # 한국 표준시(KST, UTC+9) - DST가 없는 나라라 고정 오프셋으로 충분함
 KST = timezone(timedelta(hours=9))
 
 
+class WeeklySummaryItem(BaseModel):
+    summary: str  # 상담 한 건의 요약
+    emotion: str  # 그 상담의 대표 감정
+
+
 class WeeklySummaryRequest(BaseModel):
-    memberNo: int
-    weekStart: str
-    summaries: list
+    items: list[WeeklySummaryItem]  # 이번 주 상담 순서대로 나열
 
 
 class WeeklySummaryResponse(BaseModel):
@@ -478,10 +478,10 @@ def _average_emotion_scores(samples: list) -> dict:
 
 TEXT_EMOTION_SYSTEM_PROMPT = (
     "너는 사용자가 입력한 오늘의 기분/일상 텍스트를 읽고 감정을 분류하는 도우미야. "
-    "중립, 기쁨, 슬픔, 분노, 당황, 불안 6개 감정 각각의 비중을 0~1 사이 값으로 추정해서 합이 1이 되게 해. "
+    "중립, 기쁨, 슬픔, 화남, 우울, 불안 6개 감정 각각의 비중을 0~1 사이 값으로 추정해서 합이 1이 되게 해. "
     "다른 설명 없이 아래 형식의 JSON만 출력해: "
     '{"e01": 0.0, "e02": 0.0, "e03": 0.0, "e04": 0.0, "e05": 0.0, "e06": 0.0} '
-    "(e01=중립, e02=기쁨, e03=슬픔, e04=분노, e05=당황, e06=불안)"
+    "(e01=중립, e02=기쁨, e03=슬픔, e04=화남, e05=우울, e06=불안)"
 )
 
 
@@ -586,10 +586,10 @@ def _summarize_session(session) -> str:
 
 
 WEEKLY_SUMMARY_SYSTEM_PROMPT = (
-    "너는 여러 번의 심리상담 세션 요약을 모아서 한 주간의 상담 경향을 정리하는 도우미야. "
-    "아래는 이번 주에 진행된 상담들의 개별 요약이야. 이 내용을 종합해서 "
-    "이번 주 전체적으로 어떤 이야기와 감정 흐름이 있었는지 2~3문장의 한국어 존댓말로 담백하게 요약해. "
-    "진단하거나 평가하는 표현은 쓰지 말고, 실제 내용에 근거해서만 작성해."
+    "너는 한 주간 진행된 여러 심리상담 세션을 짧게 정리하는 도우미야. "
+    "아래는 이번 주 상담 순서대로 나열한 (상담 요약, 그날의 대표 감정) 목록이야. "
+    "이번 주에 어떤 이야기가 있었는지 아주 간략하게 언급하면서, 감정이 어떻게 변화했는지도 "
+    "함께 담아 2~3문장의 한국어 존댓말로 담백하게 요약해. 진단하거나 평가하는 표현은 쓰지 마."
 )
 
 
@@ -949,26 +949,20 @@ def counsel_abort(data: CounselAbortRequest):
 
 @app.post("/counsel/weekly-summary", response_model=WeeklySummaryResponse)
 def counsel_weekly_summary(data: WeeklySummaryRequest):
-    valid_summaries = [s for s in data.summaries if s and s.strip()]
+    # 저장/캐시는 백엔드(Spring) DB가 담당하므로 여기서는 텍스트 생성만 함
+    lines = [f"- ({item.emotion}) {item.summary}" for item in data.items if item.summary and item.summary.strip()]
 
-    if not valid_summaries:
+    if not lines:
         return WeeklySummaryResponse(summary="")
-
-    cache_key = (data.memberNo, data.weekStart)
-    cached = weekly_summary_cache.get(cache_key)
-
-    if cached is not None and cached["count"] == len(valid_summaries):
-        return WeeklySummaryResponse(summary=cached["summary"])
 
     try:
         summary_text = call_feely(
             WEEKLY_SUMMARY_SYSTEM_PROMPT,
-            [{"role": "user", "content": "\n\n".join(f"- {s}" for s in valid_summaries)}],
-            max_tokens=400,
+            [{"role": "user", "content": "\n".join(lines)}],
+            max_tokens=220,
         )
     except Exception as err:
-        print(f"주간 상담 요약 생성 실패: {err}")
+        print(f"주간 요약 생성 실패: {err}")
         return WeeklySummaryResponse(summary="")
 
-    weekly_summary_cache[cache_key] = {"count": len(valid_summaries), "summary": summary_text}
     return WeeklySummaryResponse(summary=summary_text)

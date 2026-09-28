@@ -5,16 +5,19 @@ import org.springframework.stereotype.Service;
 
 import com.Feely.common.MemberResponse;
 import com.Feely.dto.MemberDto;
+import com.Feely.dto.MileageHistoryDto;
 import com.Feely.dto.MemberSessionDto;
 import com.Feely.entity.MemberEntity;
+import com.Feely.entity.MileageHistoryEntity;
 import com.Feely.repository.MemberRepository;
-import com.Feely.util.MileageCryptoUtil;
+import com.Feely.repository.MileageHistoryRepository;
 import com.Feely.util.PasswordUtil;
 
 import com.Feely.repository.CounselRepository;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import jakarta.servlet.http.HttpSession;
 
@@ -23,10 +26,13 @@ public class MemberService {
 
     private final MemberRepository memberRepository;
     private final CounselRepository counselRepository;
+    private final MileageHistoryRepository mileageHistoryRepository;
 
-    public MemberService(MemberRepository memberRepository, CounselRepository counselRepository) {
+    public MemberService(MemberRepository memberRepository, CounselRepository counselRepository,
+            MileageHistoryRepository mileageHistoryRepository) {
         this.memberRepository = memberRepository;
         this.counselRepository = counselRepository;
+        this.mileageHistoryRepository = mileageHistoryRepository;
     }
 
     // 회원가입
@@ -85,9 +91,7 @@ public class MemberService {
                 member.getMileage()
         );
 
-        String encryptedMileage = MileageCryptoUtil.encrypt(member.getMileage());
         session.setAttribute("member", sessionMember);
-        session.setAttribute("memberMileage", encryptedMileage);
         return MemberDto.loginResult(true, MemberResponse.Message.LOGIN_SUCCESS, member.getMileage());
     }
 
@@ -106,7 +110,8 @@ public class MemberService {
                 .map(MemberEntity::getId)
                 .orElse(null);
 
-        return MemberDto.FindIdResult(memberId, MemberResponse.Message.FIND_ID_SUCCESS);
+        String message = memberId != null ? MemberResponse.Message.FIND_ID_SUCCESS : MemberResponse.Message.MEMBER_NOT_FOUND;
+        return MemberDto.FindIdResult(memberId, message);
     }
 
     // 비밀번호 찾기
@@ -184,9 +189,7 @@ public class MemberService {
                 member.getMileage()
         );
 
-        String encryptedMileage = MileageCryptoUtil.encrypt(member.getMileage());
         session.setAttribute("member", updatedSessionMember);
-        session.setAttribute("memberMileage", encryptedMileage);
 
         return MemberDto.updateResult(true, MemberResponse.Message.UPDATE_SUCCESS);
     }
@@ -197,6 +200,13 @@ public class MemberService {
 
     private String blankToNull(String value) {
         return isBlank(value) ? null : value.trim();
+    }
+
+    // 보유 마일리지 조회
+    public MemberDto getMileage(Long memberNo) {
+        return memberRepository.findById(memberNo)
+                .map(member -> MemberDto.mileageResult(member.getMileage(), MemberResponse.Message.MILEAGE_SUCCESS))
+                .orElseGet(() -> MemberDto.mileageResult(null, MemberResponse.Message.MEMBER_INFO_NOT_FOUND));
     }
 
     // 마일리지 누적
@@ -227,7 +237,19 @@ public class MemberService {
 
             memberRepository.save(member);
 
+            // 마일리지 적립 내역 기록
+            mileageHistoryRepository.save(new MileageHistoryEntity(
+                    null, member, "EARN", 1000, "오늘 첫 상담 적립", LocalDateTime.now()));
+
             System.out.println("1000 마일리지 지급 완료");
         }
+    }
+
+    // 마일리지 적립/사용 내역 조회 (최신순)
+    public List<MileageHistoryDto> getMileageHistory(Long memberNo) {
+        return mileageHistoryRepository.findByMember_MemberNoOrderByCreatedAtDesc(memberNo)
+                .stream()
+                .map(MileageHistoryDto::from)
+                .toList();
     }
 }

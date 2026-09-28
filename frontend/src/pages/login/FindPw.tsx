@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ApiError } from "../../API/axios";
 import { findPW } from "../../API/auth";
 
 export default function FindPw() {
@@ -8,13 +9,13 @@ export default function FindPw() {
   const [loading, setLoading] = useState(false);
   const [tempPw, setTempPw] = useState<string | null>(null); // 발급받은 임시 비밀번호
 
-  //휴대폰 번호: 숫자만, 11자리 제한
+  // 휴대폰 번호: 숫자만, 11자리 제한
   const handleTelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const onlyDigits = e.target.value.replace(/[^0-9]/g, "").slice(0, 11);
     setTel(onlyDigits);
   };
 
-  //비밀번호 찾기 요청
+  // 비밀번호 찾기 요청
   const handleFindPw = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id.trim() || !tel.trim()) {
@@ -30,11 +31,12 @@ export default function FindPw() {
     try {
       const result = await findPW({ id, tel });
       if (result?.pw) {
-        setTempPw(result.pw); // alert 대신 복사 가능한 모달로 표시
+        setTempPw(result.pw); // 임시 비밀번호 모달 표시
       } else {
         alert("일치하는 회원 정보가 없습니다.");
       }
-    } catch (error: any) {
+    } catch (e) {
+      const error = e as ApiError;
       if (error?.response?.status === 404) {
         alert(error.response.data?.message || "일치하는 회원 정보가 없습니다.");
       } else {
@@ -45,7 +47,7 @@ export default function FindPw() {
     }
   };
 
-  //임시 비밀번호 복사
+  // 임시 비밀번호 복사
   const handleCopy = async () => {
     if (!tempPw) return;
     try {

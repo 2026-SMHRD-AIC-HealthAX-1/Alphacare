@@ -7,8 +7,10 @@ import {
   finishCounselSession,
   getInitialEmotion,
   COUNSEL_ABORT_BEACON_URL,
+  CounselSummaryResult,
 } from "../API/counselSession";
 import { saveCounselRecord } from "../API/counsel";
+import { EMOTION_LABELS } from "../utils/emotion";
 import { useNavigate } from "react-router-dom";
 import Cookies from "js-cookie";
 import FeelyLogo2 from "../assets/Feely_Logo_2.png";
@@ -21,7 +23,7 @@ const BREATH_PHASES: { label: string; scale: string }[] = [
   { label: "잠시 멈추세요", scale: "scale-75" },
 ];
 
-// 빠른 답변 칩 목록 - text가 있으면 채팅 메시지로 바로 전송, action이 있으면 별도 동작(호흡 가이드 열기)을 함
+// 빠른 답변 칩 (text: 메시지 전송, action: 호흡 가이드 열기)
 const QUICK_REPLIES: { label: string; text?: string; action?: "breathing" }[] = [
   { label: "🌫️ 감정 표현이 어려워요", text: "지금 기분을 뭐라고 표현해야 할지 모르겠어요" },
   { label: "💬 그냥 들어주세요", text: "조언 말고 그냥 들어주세요" },
@@ -31,6 +33,29 @@ const QUICK_REPLIES: { label: string; text?: string; action?: "breathing" }[] = 
   { label: "🌿 호흡 가이드 시작하기", action: "breathing" },
   { label: "🕊️ 오늘은 여기까지", text: "오늘은 여기까지 하고 싶어요" },
 ];
+
+// 감정 코드(e01~e06) -> 한글 라벨
+const EMOTION_LABEL_BY_CODE: Record<string, string> = Object.fromEntries(
+  EMOTION_LABELS.map((item) => [String(item.key).replace("Rate", ""), item.label])
+);
+
+// 상담 세션 ID 생성 (randomUUID 미지원 환경은 대체값 사용)
+const createSessionId = () =>
+  typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+// 카메라 없이 상담 시작 (시작 시각 기록 + 오늘의 기분 텍스트로 첫 감정 계산)
+const startCounselWithoutCamera = (sessionId: string, moodText: string) => {
+  startCounselSession(sessionId).catch((err) => {
+    console.warn("상담 시작 기록 실패:", err);
+  });
+  getInitialEmotion(sessionId, moodText)
+    .then((scores) => sendEmotionSample(sessionId, scores))
+    .catch((err) => {
+      console.debug("첫 감정 계산 실패:", err);
+    });
+};
 
 interface Message {
   id: number;
@@ -43,61 +68,52 @@ interface Message {
 export default function CounselPage() {
   const navigate = useNavigate();
 
-  // 카메라는 사용자가 모달에서 직접 켜기를 선택하기 전까지는 꺼진 상태로 시작함
+  // 카메라 켜짐 여부 (모달에서 선택 전까지 꺼짐)
   const [isCamOn, setIsCamOn] = useState(false);
   const [isMicOn, setIsMicOn] = useState(false);
   const [inputText, setInputText] = useState("");
 
-  // 초기 기분 입력 모달 상태 (mood: 기분 입력 단계, camera: 카메라 사용 여부 확인 단계)
+  // 초기 모달 단계 (mood: 기분 입력, camera: 카메라 사용 선택)
   const [isInitialModalOpen, setIsInitialModalOpen] = useState(true);
   const [preCounselStep, setPreCounselStep] = useState<"mood" | "camera">("mood");
   const [initialMoodText, setInitialMoodText] = useState("");
 
 
-  // 카메라 연결 실패 사유 (권한 거부 / 카메라 없음 / 다른 프로그램에서 사용 중 등) - 있으면 화면에 안내 문구로 표시
+  // 카메라 연결 실패 안내 문구
   const [cameraError, setCameraError] = useState<string | null>(null);
-  // 연결 가능한 카메라 목록과 사용자가 선택한 카메라 (노트북 내장캠 + 외장 웹캠 등 여러 대인 경우 선택용)
+  // 카메라 목록 / 선택한 카메라
   const [cameraDevices, setCameraDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
-  // 내 얼굴 화면 숨김 여부 - 카메라 자체는 계속 켜둔 채로(분석/전송 계속) 화면에만 안 보이게 함
+  // 내 얼굴 화면 숨김 여부 (분석은 계속 진행)
   const [isSelfViewHidden, setIsSelfViewHidden] = useState(false);
 
-  // 상담 중 실시간으로 표시할 주요 감정 (카메라 주기 분석 결과)
+  // 실시간 주요 감정 표시값
   const [latestEmotion, setLatestEmotion] = useState<{ label: string; percent: number } | null>(null);
-  // FastAPI 챗봇 서버 연결 상태 - Feely AI 상담사 옆 표시등에 사용 (녹색: 연결됨, 빨간색: 연결 안됨)
+  // 챗봇 서버 연결 상태 (표시등)
   const [isServerOnline, setIsServerOnline] = useState(true);
-  // 호흡 가이드 모달 열림 여부 / 현재 몇 번째 단계인지 (BREATH_PHASES 인덱스)
+  // 호흡 가이드 모달 열림 여부 / 현재 단계
   const [isBreathingGuideOpen, setIsBreathingGuideOpen] = useState(false);
   const [breathPhaseIndex, setBreathPhaseIndex] = useState(0);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
-  // 채팅 목록 스크롤 컨테이너 자신 - 새 메시지가 오면 이 컨테이너의 스크롤만 맨 아래로 내림
-  // (scrollIntoView를 쓰면 상위 페이지까지 같이 스크롤돼서 좌측 카메라 영역이 화면 밖으로 밀려나는 문제가 있었음)
+  // 채팅 목록 스크롤 컨테이너
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
-  // 마이크 음성인식(SpeechRecognition) 인스턴스 보관용
+  // 음성인식 인스턴스
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const isNormalExit = useRef(false);
-  // 시작 이미지는 영상이 처음 준비됐을 때 한 번만 자동 캡처하기 위한 가드
-  const hasCapturedStartRef = useRef(false);
-  // 상담 시작 시점 캡처 이미지 - 상담 종료 시 백엔드로 함께 보내기 위해 프론트에서 직접 들고 있음
+  // 상담 시작 처리 여부 (중복 시작 방지)
+  const counselStartedRef = useRef(false);
+  // 상담 종료 요약 결과 (저장 재시도 시 재사용)
+  const summaryRef = useRef<CounselSummaryResult | null>(null);
+  // 상담 종료 처리 중 여부 (중복 저장 방지)
+  const isFinishingRef = useRef(false);
+  // 상담 시작 시점 캡처 이미지
   const startImageRef = useRef<string | null>(null);
-  // FastAPI 챗봇 서버에 상담 1회당 하나씩 발급하는 대화 식별자 (대화 히스토리 구분용)
-  const chatSessionIdRef = useRef<string>(crypto.randomUUID());
+  // 상담 세션 ID (챗봇 대화/감정 샘플 구분)
+  const chatSessionIdRef = useRef<string>(createSessionId());
 
-  // 감정 카테고리 코드 -> 한글 라벨 (CounselEntity의 e01~e06 컬럼과 동일한 분류)
-  const EMOTION_LABELS: Record<string, string> = {
-    e01: "중립",
-    e02: "기쁨",
-    e03: "슬픔",
-    e04: "분노",
-    e05: "당황",
-    e06: "불안",
-  };
-
-  // 1. 웹캠 미디어 스트림 제어
-  // PC/노트북 내장캠, 외장 USB 웹캠, 모바일 전면카메라를 모두 고려해서
-  // 우선 전면 카메라(facingMode: user)로 요청하고, 지원 안 하는 기기/카메라면 기본 옵션으로 재시도함
+  // 1. 웹캠 연결 (전면 카메라 우선, 실패 시 기본 옵션으로 재시도)
   useEffect(() => {
     let stream: MediaStream | null = null;
     let cancelled = false;
@@ -106,7 +122,7 @@ export default function CounselPage() {
       s?.getTracks().forEach((track) => track.stop());
     };
 
-    // 브라우저가 돌려주는 에러 종류별로 사용자에게 원인을 알려주기 위한 메시지 변환
+    // 카메라 오류 종류별 안내 문구
     const describeError = (err: unknown): string => {
       if (err instanceof DOMException) {
         if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
@@ -126,20 +142,20 @@ export default function CounselPage() {
       setCameraError(null);
 
       if (!navigator.mediaDevices?.getUserMedia) {
-        // http(비보안 접속) 환경이거나 구형 브라우저인 경우 getUserMedia 자체가 없음
+        // getUserMedia 미지원 환경 (비보안 접속, 구형 브라우저)
         setCameraError("이 브라우저/접속 환경에서는 카메라를 사용할 수 없습니다. (HTTPS 접속이 필요할 수 있습니다)");
         return;
       }
 
       try {
         if (selectedCameraId) {
-          // 사용자가 드롭다운에서 직접 선택한 카메라로 연결
+          // 선택한 카메라로 연결
           stream = await navigator.mediaDevices.getUserMedia({
             video: { deviceId: { exact: selectedCameraId } },
             audio: false,
           });
         } else {
-          // 1차: 전면 카메라 우선 요청 (노트북/모바일 모두 얼굴을 비추는 카메라)
+          // 1차: 전면 카메라 요청
           stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: { ideal: "user" } },
             audio: false,
@@ -147,7 +163,7 @@ export default function CounselPage() {
         }
       } catch {
         try {
-          // 2차: 지정한 카메라/facingMode 제약을 지원 안 하는 경우 기본 옵션으로 재시도
+          // 2차: 기본 옵션으로 재시도
           stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
         } catch (err) {
           if (cancelled) return;
@@ -167,14 +183,14 @@ export default function CounselPage() {
         videoRef.current.srcObject = stream;
       }
 
-      // 카메라 권한을 허용한 뒤에야 장치 이름(label)까지 정상적으로 조회되므로 연결 성공 이후에 목록을 갱신함
+      // 연결 성공 후 카메라 목록 갱신
       try {
         const devices = await navigator.mediaDevices.enumerateDevices();
         if (!cancelled) {
           setCameraDevices(devices.filter((d) => d.kind === "videoinput"));
         }
       } catch {
-        // 목록 조회 실패해도 영상 송출 자체엔 지장 없으니 무시함
+        // 목록 조회 실패는 무시
       }
     };
 
@@ -188,7 +204,7 @@ export default function CounselPage() {
     };
   }, [isCamOn, selectedCameraId]);
 
-  // FastAPI 챗봇 서버 상태를 주기적으로 확인해서 표시등에 반영함 (상담 시작 전부터 계속 체크)
+  // 챗봇 서버 상태 5초마다 확인
   useEffect(() => {
     let cancelled = false;
 
@@ -207,7 +223,7 @@ export default function CounselPage() {
     };
   }, []);
 
-  // 호흡 가이드가 열려있는 동안 4초마다 다음 단계(들이쉬기/멈추기/내쉬기/멈추기)로 넘어감
+  // 호흡 가이드 단계 4초마다 전환
   useEffect(() => {
     if (!isBreathingGuideOpen) return;
 
@@ -218,7 +234,7 @@ export default function CounselPage() {
     return () => window.clearInterval(intervalId);
   }, [isBreathingGuideOpen]);
 
-  // 2. 마이크 음성인식 제어 (브라우저 자체 Web Speech API 사용, 별도 백엔드 불필요)
+  // 2. 마이크 음성인식 (Web Speech API)
   useEffect(() => {
     if (!isMicOn) {
       recognitionRef.current?.stop();
@@ -227,18 +243,14 @@ export default function CounselPage() {
     }
 
     const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognitionCtor) {
-      alert("이 브라우저는 음성 인식을 지원하지 않습니다. Chrome에서 사용해주세요.");
-      setIsMicOn(false);
-      return;
-    }
+    if (!SpeechRecognitionCtor) return;
 
     const recognition = new SpeechRecognitionCtor();
     recognition.lang = "ko-KR";
     recognition.continuous = true;
     recognition.interimResults = true;
 
-    // 인식된 음성을 텍스트로 바꿔서 입력창에 실시간 반영
+    // 인식된 음성을 입력창에 반영
     recognition.onresult = (event) => {
       let transcript = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -247,7 +259,7 @@ export default function CounselPage() {
       setInputText(transcript);
     };
 
-    // 침묵 등으로 브라우저가 인식을 자체 종료하는 경우 버튼 상태도 같이 꺼줌
+    // 인식 종료 시 마이크 버튼 끄기
     recognition.onerror = () => {
       setIsMicOn(false);
     };
@@ -263,8 +275,7 @@ export default function CounselPage() {
     };
   }, [isMicOn]);
 
-  // 3. 프레임 캡처 함수 (상담 시작 시각 계산은 이제 FastAPI가 /counsel/start를 받는 시점에 직접 처리함)
-  // 현재 비디오 프레임을 캡처해서 base64(JPEG) 문자열로 반환 (카메라가 꺼져있으면 null)
+  // 3. 현재 비디오 프레임을 base64(JPEG)로 캡처 (카메라 꺼짐 시 null)
   const captureFrame = (): string | null => {
     const video = videoRef.current;
     if (!video || video.videoWidth === 0 || video.videoHeight === 0) return null;
@@ -276,13 +287,15 @@ export default function CounselPage() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
 
+    // 미리보기와 같은 방향으로 좌우반전
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     return canvas.toDataURL("image/jpeg", 0.8);
   };
 
 
-  // 4. 카메라로 잡히는 화면을 주기적으로 감정분석(/emotion) 서버에 전송
-  // 상담 모달이 열려있는 동안(카메라 사용 여부를 아직 안 정했을 때)은 보내지 않음
+  // 4. 5초마다 웹캠 프레임 감정분석 후 감정 샘플 전달 (모달 열려있을 땐 중지)
   useEffect(() => {
     if (!isCamOn || isInitialModalOpen) return;
 
@@ -294,7 +307,6 @@ export default function CounselPage() {
         .then((result) => {
           if (!result.scores) return;
 
-          // 평균 계산은 FastAPI가 상담 종료 시점에 하므로, 여기서는 결과를 그대로 넘겨주기만 함
           sendEmotionSample(chatSessionIdRef.current, result.scores).catch((err) => {
             console.debug("감정 샘플 전달 실패:", err);
           });
@@ -303,13 +315,13 @@ export default function CounselPage() {
           if (topEntry) {
             const [code, value] = topEntry;
             setLatestEmotion({
-              label: EMOTION_LABELS[code] ?? code,
+              label: EMOTION_LABEL_BY_CODE[code] ?? code,
               percent: Math.round(value * 100),
             });
           }
         })
         .catch((err) => {
-          // 팀원 쪽 /emotion이 아직 스텁이거나 서버가 꺼져있으면 여기로 옴 - 상담 진행은 막지 않음
+          // 감정분석 서버 오류는 상담 진행에 영향 없음
           console.debug("감정분석 서버 응답 없음:", err);
         });
     }, 5000);
@@ -317,7 +329,7 @@ export default function CounselPage() {
     return () => window.clearInterval(intervalId);
   }, [isCamOn, isInitialModalOpen]);
 
-  // 5. 이탈 감지 및 sendBeacon 전송
+  // 5. 이탈 경고 및 이탈 시 FastAPI 세션 정리
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (!isNormalExit.current) {
@@ -328,8 +340,7 @@ export default function CounselPage() {
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "hidden" && !isNormalExit.current) {
-        // 상담 종료 버튼을 안 누르고 이탈한 경우 - 백엔드 저장은 하지 않고
-        // FastAPI에 쌓인 세션 데이터(대화 이력, 감정 샘플)만 정리해서 메모리 누수를 막음
+        // 종료 버튼 없이 이탈 시 FastAPI 세션 데이터 정리
         const payload = { sessionId: chatSessionIdRef.current };
         const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
         navigator.sendBeacon(COUNSEL_ABORT_BEACON_URL, blob);
@@ -345,7 +356,7 @@ export default function CounselPage() {
     };
   }, []);
 
-  // 6. 초기 기분 제출 -> 카메라 사용 여부 확인 단계로 이동
+  // 6. 초기 기분 제출 후 카메라 선택 단계로 이동
   const handleMoodSubmit = () => {
     if (!initialMoodText.trim()) {
       alert("오늘의 기분이나 일상을 간단히 입력해주세요!");
@@ -355,25 +366,13 @@ export default function CounselPage() {
     setPreCounselStep("camera");
   };
 
-  // 카메라 사용 여부 선택 후 상담 시작
-  // 카메라를 안 쓰는 경우 표정 점수가 없으므로 텍스트(오늘의 기분) 100%로 첫 감정을 계산함
-  // (카메라를 쓰는 경우의 첫 감정 계산은 아래 video의 onLoadedData에서 표정 점수와 함께 처리함)
+  // 카메라 사용 여부 선택 후 상담 시작 (카메라 사용 시 첫 감정은 onLoadedData에서 계산)
   const handleCameraChoice = (useCamera: boolean) => {
     setIsCamOn(useCamera);
 
     if (!useCamera) {
-      // 카메라를 안 쓰면 시작 이미지를 캡처할 onLoadedData가 아예 안 불리므로 여기서 바로 상담 시작을 알림
-      // (이 경우 startImageRef가 비어있게 되고, 백엔드는 시작 이미지가 필수라 상담 종료 시 저장이 실패함)
-      startCounselSession(chatSessionIdRef.current).catch((err) => {
-        console.warn("상담 시작 기록 실패:", err);
-      });
-
-      // 표정 점수 없이(텍스트 100%) 첫 감정을 계산해서 감정 평균의 첫 샘플로 반영함
-      getInitialEmotion(chatSessionIdRef.current, initialMoodText)
-        .then((scores) => sendEmotionSample(chatSessionIdRef.current, scores))
-        .catch((err) => {
-          console.debug("첫 감정 계산 실패:", err);
-        });
+      counselStartedRef.current = true;
+      startCounselWithoutCamera(chatSessionIdRef.current, initialMoodText);
     }
 
     // 첫 대화로 등록
@@ -383,15 +382,29 @@ export default function CounselPage() {
     setIsInitialModalOpen(false);
   };
 
-  // 7. 상담 종료 핸들러
-  // FastAPI에서 요약/감정평균만 계산받고, 백엔드(/api/counsel) 저장은 로그인 세션 쿠키를 든 프론트가 직접 수행함
+  // 카메라 연결 실패 시 카메라 없이 상담 시작
+  useEffect(() => {
+    if (!cameraError || isInitialModalOpen || counselStartedRef.current) return;
+    counselStartedRef.current = true;
+    startCounselWithoutCamera(chatSessionIdRef.current, initialMoodText);
+  }, [cameraError, isInitialModalOpen, initialMoodText]);
+
+  // 마이크 켜기/끄기 (음성인식 미지원 브라우저는 안내)
+  const toggleMic = () => {
+    if (!isMicOn && !(window.SpeechRecognition || window.webkitSpeechRecognition)) {
+      alert("이 브라우저는 음성 인식을 지원하지 않습니다. Chrome에서 사용해주세요.");
+      return;
+    }
+    setIsMicOn(!isMicOn);
+  };
+
+  // 7. 상담 종료: 요약 계산 후 회원이면 DB 저장 (비회원은 저장 없이 메인 이동)
   const handleFinishCounseling = async () => {
+    if (isFinishingRef.current) return;
     if (!window.confirm("상담을 종료하시겠습니까?")) return;
 
     isNormalExit.current = true;
 
-    // 로그인하지 않은 사용자는 회원 기준으로 DB에 저장할 수 없으므로,
-    // 백엔드(/api/counsel) 저장 요청은 아예 보내지 않고 FastAPI 세션 정리만 한 뒤 메인으로 이동함
     const isLoggedIn = Cookies.get("isLoggedIn") === "true";
     if (!isLoggedIn) {
       finishCounselSession(chatSessionIdRef.current, "ABORTED").catch((err) => {
@@ -402,31 +415,34 @@ export default function CounselPage() {
     }
 
     const endImage = captureFrame();
+    isFinishingRef.current = true;
 
     try {
-      const summary = await finishCounselSession(chatSessionIdRef.current, "COMPLETED");
-      const result = await saveCounselRecord(summary, startImageRef.current, endImage);
+      if (!summaryRef.current) {
+        summaryRef.current = await finishCounselSession(chatSessionIdRef.current, "COMPLETED");
+      }
+      const result = await saveCounselRecord(summaryRef.current, startImageRef.current, endImage);
+      if (!result) return;
 
       if (result.counselFlag) {
         alert("상담이 정상적으로 종료되었습니다.");
-        navigate("/mypage");
+        navigate("/");
       } else {
-        // 이 API는 counselFlag:false 하나로 여러 실패 원인을 구분 없이 알려줘서 원인을 단정할 수 없음
         alert("상담 데이터 저장에 실패했습니다. 잠시 후 다시 시도해주세요.");
       }
     } catch (error) {
       console.error("상담 데이터 전송 실패:", error);
       alert("데이터 전송 중 오류가 발생했습니다.");
+    } finally {
+      isFinishingRef.current = false;
     }
   };
 
-  // 8. 대화 목록 및 메시지 전송 로직
-  // 하드코딩된 AI 첫 인사말 없이 빈 배열로 시작 -> 첫 메시지는 사용자가 입력한 초기 기분(질의응답)이 됨
+  // 8. 대화 목록 및 메시지 전송
   const [messages, setMessages] = useState<Message[]>([]);
 
   useEffect(() => {
-    // scrollIntoView는 상위 스크롤 컨테이너(페이지 전체)까지 같이 끌어올려서 좌측 카메라
-    // 영역이 화면 밖으로 밀려나는 문제가 있어, 채팅 컨테이너 자신의 스크롤 위치만 맨 아래로 옮김
+    // 새 메시지 시 채팅 컨테이너만 맨 아래로 스크롤
     const container = chatContainerRef.current;
     if (container) {
       container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
@@ -449,7 +465,7 @@ export default function CounselPage() {
     setMessages((prev) => [...prev, userMsg]);
     if (!customText) setInputText("");
 
-    // FastAPI 챗봇 서버에 실제 메시지를 보내고 응답을 받아옴
+    // 챗봇 서버에 메시지 전송 후 응답 추가
     try {
       const result = await sendChatMessage({
         sessionId: chatSessionIdRef.current,
@@ -478,7 +494,7 @@ export default function CounselPage() {
   return (
     <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 py-4 space-y-6 relative">
 
-      {/* 초기 기분 입력 / 카메라 사용 확인 모달 팝업 */}
+      {/* 초기 기분 입력 / 카메라 사용 확인 모달 */}
       {isInitialModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
@@ -499,7 +515,7 @@ export default function CounselPage() {
                   value={initialMoodText}
                   onChange={(e) => setInitialMoodText(e.target.value)}
                   onKeyDown={(e) => {
-                    // Enter로 바로 제출, Shift+Enter는 줄바꿈으로 남겨둠
+                    // Enter: 제출, Shift+Enter: 줄바꿈
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
                       handleMoodSubmit();
@@ -551,7 +567,7 @@ export default function CounselPage() {
         </div>
       )}
 
-      {/* 호흡 가이드 모달 - 4초 간격으로 들이쉬기/멈추기/내쉬기/멈추기를 반복 표시함 */}
+      {/* 호흡 가이드 모달 */}
       {isBreathingGuideOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-sm w-full p-6 sm:p-8 shadow-2xl flex flex-col items-center gap-6">
@@ -637,19 +653,17 @@ export default function CounselPage() {
                     muted
                     className="w-full h-full object-cover transform -scale-x-100"
                     onLoadedData={() => {
-                      // 영상이 처음 준비됐을 때 한 번만 시작 이미지로 캡처해서 프론트에 보관하고,
-                      // 그 시점을 상담 시작으로 FastAPI에 알림 (이미지 자체는 상담 종료 시 백엔드로 직접 전송함)
-                      if (!hasCapturedStartRef.current) {
+                      // 첫 프레임을 시작 이미지로 캡처하고 상담 시작 기록
+                      if (!counselStartedRef.current) {
                         const frame = captureFrame();
                         if (frame) {
-                          hasCapturedStartRef.current = true;
+                          counselStartedRef.current = true;
                           startImageRef.current = frame;
                           startCounselSession(chatSessionIdRef.current).catch((err) => {
                             console.warn("상담 시작 기록 실패:", err);
                           });
 
-                          // 시작 이미지로 표정 점수를 구한 뒤, 텍스트(오늘의 기분) 0.6 : 표정 0.4로
-                          // 첫 감정을 계산해서 감정 평균의 첫 샘플로 반영함
+                          // 시작 이미지 표정 점수 + 오늘의 기분 텍스트로 첫 감정 계산
                           sendEmotionFrame({ sessionId: chatSessionIdRef.current, image: frame })
                             .then((result) =>
                               getInitialEmotion(chatSessionIdRef.current, initialMoodText, result.scores)
@@ -678,7 +692,7 @@ export default function CounselPage() {
                     </>
                   )}
 
-                  {/* 내 얼굴 화면 숨기기 - 영상 자체는 계속 흘러서 캡처/분석은 그대로 진행됨 */}
+                  {/* 내 얼굴 화면 숨기기 버튼 */}
                   <button
                     type="button"
                     onClick={() => setIsSelfViewHidden((prev) => !prev)}
@@ -697,7 +711,7 @@ export default function CounselPage() {
                     )}
                   </button>
 
-                  {/* 숨김 상태일 때 영상 위를 덮는 오버레이 - video 자체는 안 건드려서 캡처는 그대로 진행됨 */}
+                  {/* 숨김 상태 오버레이 */}
                   {isSelfViewHidden && (
                     <div className="absolute inset-0 z-10 bg-gray-900/95 flex flex-col items-center justify-center gap-2 text-gray-300">
                       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
@@ -726,7 +740,7 @@ export default function CounselPage() {
                 {isCamOn ? "📷 비디오 ON" : "📷 비디오 OFF"}
               </button>
 
-              {/* 카메라가 여러 대 잡히는 경우(노트북 내장캠 + 외장 웹캠 등) 직접 선택할 수 있게 함 */}
+              {/* 카메라 선택 (여러 대일 때) */}
               {isCamOn && cameraDevices.length > 1 && (
                 <select
                   value={selectedCameraId}
@@ -835,7 +849,7 @@ export default function CounselPage() {
             >
               <button
                 type="button"
-                onClick={() => setIsMicOn(!isMicOn)}
+                onClick={toggleMic}
                 className={`p-2.5 rounded-xl border transition-all shrink-0 flex items-center justify-center ${isMicOn
                     ? "bg-red-500 border-red-500 text-white shadow-sm animate-pulse"
                   : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:text-[#1F6170] hover:border-[#0D9488] hover:bg-gray-50 dark:hover:bg-gray-700"

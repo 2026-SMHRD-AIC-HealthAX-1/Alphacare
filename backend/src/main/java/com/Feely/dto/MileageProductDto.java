@@ -14,10 +14,6 @@ public record MileageProductDto(
 
         @JsonProperty("mileage") Integer mileage
 ) {
-    public static MileageProductDto listResult(boolean success, String message) {
-        return new MileageProductDto(null, null, null, null, null, message, success, null);
-    }
-
     public static MileageProductDto detailResult(Long prodNo, String prodName, Integer prodInventory, Integer prodPrice, byte[] prodImage, String message, boolean success) {
         return new MileageProductDto(prodNo, prodName, prodInventory, prodPrice, prodImage, message, success, null);
     }
