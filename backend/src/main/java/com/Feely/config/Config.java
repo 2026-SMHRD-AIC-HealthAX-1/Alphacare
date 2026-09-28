@@ -12,7 +12,7 @@ public class Config implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
     	//프론트엔드 백엔드 CORS 허용 설정
         registry.addMapping("/api/**")
-                .allowedOrigins("http://localhost:5173", "http://localhost:4000")
+                .allowedOrigins("http://localhost:5173", "http://localhost:4000", "https://2026-smhrd-aic-healthax-1.github.io")
                 .allowedMethods("GET", "POST", "PUT", "DELETE")
                 .allowCredentials(true);
     }
