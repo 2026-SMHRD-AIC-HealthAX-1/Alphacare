@@ -80,12 +80,23 @@ public class KakaoAuthService {
             }
 
             JsonNode json = objectMapper.readTree(response.body());
+            System.out.println("[확인] 카카오 사용자 정보 응답 = " + response.body());
             String kakaoId = json.get("id").asText();
 
+            // properties.nickname(구버전) 또는 kakao_account.profile.nickname(신규 앱은 이쪽만 내려줄 수 있음) 순서로 조회
             String nickname = null;
             JsonNode properties = json.get("properties");
             if (properties != null && properties.has("nickname")) {
                 nickname = properties.get("nickname").asText();
+            }
+            if (nickname == null) {
+                JsonNode kakaoAccount = json.get("kakao_account");
+                if (kakaoAccount != null) {
+                    JsonNode profile = kakaoAccount.get("profile");
+                    if (profile != null && profile.has("nickname")) {
+                        nickname = profile.get("nickname").asText();
+                    }
+                }
             }
 
             return new KakaoUserInfo(kakaoId, nickname);

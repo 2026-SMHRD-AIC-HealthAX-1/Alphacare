@@ -681,7 +681,7 @@ export default function MainPage() {
           return;
         }
 
-        const summary = await generateWeeklySummary(weeklySummaryItems);
+        const summary = await generateWeeklySummary(weeklySummaryItems, Cookies.get("userId"));
         if (!cancelled) setWeeklySummaryText(summary);
 
         if (summary) {

@@ -59,11 +59,10 @@ public class MemberEntity {
     )
     private String name;
     
-    @NonNull 
+    // 카카오 가입자는 전화번호를 안 받으므로 nullable
     @Column (
         name = "PHONE",
-        length = 100,
-        nullable = false
+        length = 100
     )
     private String phone;
 

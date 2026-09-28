@@ -40,11 +40,12 @@ export const sendEmotionSample = async (
 // 상담 종료: 요약/감정 평균 계산 결과 받기
 export const finishCounselSession = async (
   sessionId: string,
-  status: "COMPLETED" | "ABORTED" = "COMPLETED"
+  status: "COMPLETED" | "ABORTED" = "COMPLETED",
+  userName?: string
 ): Promise<CounselSummaryResult> => {
   const response = await axios.post<CounselSummaryResult>(
     `${FASTAPI_BASE_URL}/counsel/finish`,
-    { sessionId, status }
+    { sessionId, status, userName }
   );
   return response.data;
 };
@@ -57,11 +58,12 @@ export interface WeeklySummaryItem {
 
 // 이번 주 상담 내용 + 감정 흐름을 짧은 문단으로 요약 (저장은 백엔드가 담당, 여기선 텍스트 생성만 함)
 export const generateWeeklySummary = async (
-  items: WeeklySummaryItem[]
+  items: WeeklySummaryItem[],
+  userName?: string
 ): Promise<string> => {
   const response = await axios.post<{ summary: string }>(
     `${FASTAPI_BASE_URL}/counsel/weekly-summary`,
-    { items }
+    { items, userName }
   );
   return response.data.summary;
 };

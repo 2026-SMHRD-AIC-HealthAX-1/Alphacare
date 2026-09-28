@@ -398,6 +398,7 @@ class WeeklySummaryItem(BaseModel):
 
 class WeeklySummaryRequest(BaseModel):
     items: list[WeeklySummaryItem]  # 이번 주 상담 순서대로 나열
+    userName: Optional[str] = None  # 요약문에서 "사용자" 대신 부를 이름
 
 
 class WeeklySummaryResponse(BaseModel):
@@ -435,6 +436,7 @@ class EmotionSampleRequest(BaseModel):
 class CounselFinishRequest(BaseModel):
     sessionId: str
     status: str = "COMPLETED"
+    userName: Optional[str] = None  # 요약문에서 "사용자" 대신 부를 이름
 
 
 class CounselAbortRequest(BaseModel):
@@ -504,15 +506,18 @@ def _classify_text_emotion(text: str) -> dict:
         return fallback
 
 
-SUMMARY_SYSTEM_PROMPT = (
-    "너는 방금 끝난 심리상담 대화를 기록용으로 요약하는 도우미야. "
-    "사용자가 이번 상담에서 어떤 이야기를 했고 어떤 감정을 느꼈는지, "
-    "상담사가 어떻게 반응했는지를 3~5문장의 한국어 존댓말로 담백하게 요약해. "
-    "진단이나 평가하는 표현은 쓰지 말고, 실제 대화 내용을 근거로만 작성해."
-)
+def _summary_system_prompt(user_name: str) -> str:
+    # 이름이 있으면 "OOO님이"(받침 있는 '님' 기준 항상 '이'), 없으면 "사용자가"
+    who, particle = (f"{user_name}님", "이") if user_name else ("사용자", "가")
+    return (
+        "너는 방금 끝난 심리상담 대화를 기록용으로 요약하는 도우미야. "
+        f"{who}{particle} 이번 상담에서 어떤 이야기를 했고 어떤 감정을 느꼈는지, "
+        "상담사가 어떻게 반응했는지를 반드시 두세 줄(2~3문장) 이내의 한국어 존댓말로 담백하게 요약해. "
+        "진단이나 평가하는 표현은 쓰지 말고, 실제 대화 내용을 근거로만 작성해."
+    )
 
 
-def _summarize_session(session) -> str:
+def _summarize_session(session, user_name: str = "") -> str:
     """상담 대화 히스토리를 바탕으로 짧은 상담 요약을 생성함.
     대화가 비어있으면 굳이 Claude를 호출하지 않음"""
     if session is None or not session.history:
@@ -520,23 +525,26 @@ def _summarize_session(session) -> str:
 
     try:
         return call_feely(
-            SUMMARY_SYSTEM_PROMPT,
+            _summary_system_prompt(user_name),
             session.history + [{"role": "user", "content": "지금까지 상담 내용을 요약해줘."}],
-            max_tokens=400,
+            max_tokens=250,
         )
     except Exception as err:
         print(f"상담 요약 생성 실패: {err}")
         return ""
 
 
-WEEKLY_SUMMARY_SYSTEM_PROMPT = (
-    "너는 한 주간 진행된 여러 심리상담 세션을 짧게 정리하는 도우미야. "
-    "아래는 이번 주 상담 순서대로 나열한 (상담 요약, 그날의 대표 감정) 목록이야. "
-    "반드시 두세 줄(2~3문장) 이내로, 다음 두 가지만 담아 한국어 존댓말로 담백하게 요약해: "
-    "1) 이번 주에 어떤 일들이 있었는지 핵심만 간단히, "
-    "2) 한 주 동안 감정이 어떻게 변화했는지. "
-    "군더더기 없이 짧게 작성하고, 진단하거나 평가하는 표현은 쓰지 마."
-)
+def _weekly_summary_system_prompt(user_name: str) -> str:
+    who = f"{user_name}님" if user_name else "사용자"
+    return (
+        "너는 한 주간 진행된 여러 심리상담 세션을 짧게 정리하는 도우미야. "
+        "아래는 이번 주 상담 순서대로 나열한 (상담 요약, 그날의 대표 감정) 목록이야. "
+        f"{who}을 지칭할 일이 있으면 '{who}'이라고 불러. "
+        "반드시 두세 줄(2~3문장) 이내로, 다음 두 가지만 담아 한국어 존댓말로 담백하게 요약해: "
+        "1) 이번 주에 어떤 일들이 있었는지 핵심만 간단히, "
+        "2) 한 주 동안 감정이 어떻게 변화했는지. "
+        "군더더기 없이 짧게 작성하고, 진단하거나 평가하는 표현은 쓰지 마."
+    )
 
 
 # ============================================================
@@ -753,7 +761,7 @@ def counsel_finish(data: CounselFinishRequest):
 
     return CounselSummaryResponse(
         counselDate=session_data["startTime"].strftime("%Y-%m-%d %H:%M:%S"),
-        summary=_summarize_session(chat_session),
+        summary=_summarize_session(chat_session, data.userName or ""),
         emotionScores=_average_emotion_scores(session_data["emotionSamples"]),
         status=data.status,
     )
@@ -783,7 +791,7 @@ def counsel_weekly_summary(data: WeeklySummaryRequest):
 
     try:
         summary_text = call_feely(
-            WEEKLY_SUMMARY_SYSTEM_PROMPT,
+            _weekly_summary_system_prompt(data.userName or ""),
             [{"role": "user", "content": "\n".join(lines)}],
             max_tokens=220,
         )

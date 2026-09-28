@@ -124,7 +124,7 @@ export default function SignupPage() {
 
         <form onSubmit={postSignup} className="space-y-4 sm:space-y-6">
           {/* 아이디 입력 */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
             <label className="w-full sm:w-36 text-base sm:text-xl font-medium shrink-0 whitespace-nowrap">
               아이디
             </label>
@@ -134,7 +134,7 @@ export default function SignupPage() {
                 value={userId}
                 onChange={renameCheckId}
                 placeholder="아이디를 입력해주세요"
-                className="w-64  border rounded-md px-3 py-2 text-sm focus:outline-none"
+                className="w-56 border rounded-md px-3 py-1.5 text-sm focus:outline-none"
               />
               <button
                 type="button" onClick={clickCheckDuplicate}
@@ -146,7 +146,7 @@ export default function SignupPage() {
           </div>
 
           {/* 비밀번호 입력 영역 */}
-          <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
             <label className="w-full sm:w-36 text-base sm:text-xl font-medium shrink-0 whitespace-nowrap">
               비밀번호
             </label>
@@ -156,7 +156,7 @@ export default function SignupPage() {
                 value={userPw}
                 onChange={(e) => setuserPw(e.target.value)}
                 placeholder="비밀번호를 입력해주세요"
-                className="w-64 border rounded-md px-3 py-2 text-sm focus:outline-none"
+                className="w-56 border rounded-md px-3 py-1.5 text-sm focus:outline-none"
               />
               <span className="text-xs text-gray-500 dark:text-gray-400 pl-1">
                 영어, 숫자, 특수문자로 구성된 8자리 이상
@@ -165,7 +165,7 @@ export default function SignupPage() {
           </div>
 
           {/* 비밀번호 재확인 */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
             <label className="w-full sm:w-36 text-base sm:text-xl font-medium shrink-0 whitespace-nowrap">
               비밀번호 재확인
             </label>
@@ -175,13 +175,13 @@ export default function SignupPage() {
                 value={pwConfirm}
                 onChange={(e) => setPwConfirm(e.target.value)}
                 placeholder="비밀번호를 다시 입력해주세요."
-                className="w-64 border rounded-md px-3 py-2 text-sm focus:outline-none"
+                className="w-56 border rounded-md px-3 py-1.5 text-sm focus:outline-none"
               />
             </div>
           </div>
 
           {/* 이름 */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
             <label className="w-full sm:w-36 text-base sm:text-xl font-medium shrink-0 whitespace-nowrap">
               이름
             </label>
@@ -191,17 +191,17 @@ export default function SignupPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="이름을 입력해주세요."
-                className="w-64 border rounded-md px-3 py-2 text-sm focus:outline-none"
+                className="w-56 border rounded-md px-3 py-1.5 text-sm focus:outline-none"
               />
             </div>
           </div>
 
           {/* 휴대폰 번호 */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
             <label className="w-full sm:w-36 text-base sm:text-xl font-medium shrink-0 whitespace-nowrap">
               휴대폰 번호
             </label>
-            <div className="flex-1 w-full">
+            <div className="flex-1 flex flex-col gap-1 w-full">
               <input
                 type="tel"
                 inputMode="numeric"
@@ -209,9 +209,12 @@ export default function SignupPage() {
                 value={phone}
                 onChange={checkphone}
                 maxLength={11}
-                placeholder="`-`을 제외한 전화번호를 입력해주세요"
-                className="w-64 border rounded-md px-3 py-2 text-sm focus:outline-none"
+                placeholder="전화번호를 입력해주세요"
+                className="w-56 border rounded-md px-3 py-1.5 text-sm focus:outline-none"
               />
+              <span className="text-xs text-gray-500 dark:text-gray-400 pl-1">
+                `-`을 제외하고 입력해주세요
+              </span>
             </div>
           </div>
 
@@ -226,7 +229,7 @@ export default function SignupPage() {
               </button>
               <button
                 type="button"
-                onClick={() => { window.location.href = getKakaoAuthUrl(); }}
+                onClick={() => { window.location.href = getKakaoAuthUrl("signup"); }}
                 className="w-64 py-3 bg-[#F7E600] text-black font-bold text-base sm:text-lg rounded-lg shadow-sm hover:brightness-90 transition-all"
               >
                 카카오톡 회원가입

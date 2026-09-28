@@ -23,8 +23,10 @@ export default function LoginPage() {
       });
 
       if (res.loginFlag) {
-        setAuthCookies(userId);
-        alert(`${userId}님, 환영합니다!`);
+        // 쿠키에는 아이디가 아니라 실제 이름을 저장 (상담 요약 등에서 이름으로 표시하기 위함)
+        const displayName = res.name || userId;
+        setAuthCookies(displayName);
+        alert(`${displayName}님, 환영합니다!`);
         window.location.href = import.meta.env.BASE_URL;
       } else {
         alert("아이디 또는 비밀번호가 일치하지 않습니다.");
@@ -49,7 +51,7 @@ export default function LoginPage() {
         </h1>
         <form onSubmit={handleLogin} className="space-y-4">
           {/* 아이디 */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
             <label className="w-full sm:w-36 text-base sm:text-xl font-medium shrink-0 whitespace-nowrap">
               아이디
             </label>
@@ -59,12 +61,12 @@ export default function LoginPage() {
                 value={userId}
                 onChange={(e) => setUserId(e.target.value)}
                 placeholder="아이디를 입력해주세요"
-                className="w-64 border rounded-md px-3 py-2 text-sm focus:outline-none"
+                className="w-56 border rounded-md px-3 py-1.5 text-sm focus:outline-none"
               />
             </div>
           </div>
           {/* 비밀번호 */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
             <label className="w-full sm:w-36 text-base sm:text-xl font-medium shrink-0 whitespace-nowrap">
               비밀번호
             </label>
@@ -74,7 +76,7 @@ export default function LoginPage() {
                 value={userPw}
                 onChange={(e) => setUserPw(e.target.value)}
                 placeholder="비밀번호를 입력해주세요"
-                className="w-64 border rounded-md px-3 py-2 text-sm focus:outline-none"
+                className="w-56 border rounded-md px-3 py-1.5 text-sm focus:outline-none"
               />
             </div>
           </div>
@@ -95,7 +97,7 @@ export default function LoginPage() {
                 </Link>
                 <button
                   type="submit"
-                  className="flex-1 h-11 flex items-center justify-center bg-[#0D9488] text-white font-bold text-base sm:text-lg rounded-lg shadow-sm hover:opacity-90 transition-opacity"
+                  className="flex-1 h-11 flex items-center justify-center bg-[#0D9488] text-white font-bold text-[12px] sm:text-[14px] rounded-lg shadow-sm hover:opacity-90 transition-opacity"
                 >
                   로그인
                 </button>

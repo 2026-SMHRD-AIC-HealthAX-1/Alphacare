@@ -19,12 +19,16 @@ import com.Feely.repository.CounselRepository;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 import jakarta.servlet.http.HttpSession;
 
 @Service
 public class MemberService {
+
+    // 첫 상담 여부 판정은 서버 위치와 무관하게 항상 한국 시간(KST) 기준
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     private final MemberRepository memberRepository;
     private final CounselRepository counselRepository;
@@ -107,9 +111,11 @@ public class MemberService {
                 MemberResponse.Message.LOGIN_SUCCESS);
     }
 
-    // 카카오 최초 가입: 추가 입력받은 전화번호로 회원을 생성하고 바로 로그인 처리
+    // 카카오 최초 가입: 전화번호 없이 바로 회원을 생성하고 로그인 처리
+    // (카카오 로그인 전용 계정이라 아이디/비번을 몰라도 되고, 아이디/비번 찾기도 쓸 일이 없음)
     public KakaoLoginResponse kakaoSignup(KakaoSignupRequest request, HttpSession session) {
-        if (isBlank(request.kakaoId()) || isBlank(request.phone())) {
+        System.out.println("[확인] kakaoSignup 요청 = kakaoId:" + request.kakaoId() + ", nickname:" + request.nickname());
+        if (isBlank(request.kakaoId())) {
             return new KakaoLoginResponse("ERROR", request.kakaoId(), request.nickname(), false, null,
                     MemberResponse.Message.REQUIRED_MEMBER_INFO);
         }
@@ -122,17 +128,10 @@ public class MemberService {
                     MemberResponse.Message.LOGIN_SUCCESS);
         }
 
-        String phone = request.phone().trim();
-        if (memberRepository.existsByPhone(phone)) {
-            return new KakaoLoginResponse("ERROR", request.kakaoId(), request.nickname(), false, null,
-                    MemberResponse.Message.DUPLICATE_PHONE);
-        }
-
         MemberEntity member = new MemberEntity();
         member.setId("kakao_" + request.kakaoId());
         member.setPw(PasswordUtil.sha256(PasswordUtil.generateRandomPassword()));
         member.setName(isBlank(request.nickname()) ? "카카오회원" : request.nickname().trim());
-        member.setPhone(phone);
         member.setSns(request.kakaoId());
         member.setRole("USER");
         member.setMileage(0);
@@ -263,8 +262,8 @@ public class MemberService {
     // 마일리지 누적
     public void setMileage(Long memberNo) {
 
-        // 오늘 날짜
-        LocalDate today = LocalDate.now();
+        // 오늘 날짜 (한국 시간 기준)
+        LocalDate today = LocalDate.now(KST);
 
         // 오늘 00:00:00
         LocalDateTime start = today.atStartOfDay();
