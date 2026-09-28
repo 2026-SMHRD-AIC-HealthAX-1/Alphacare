@@ -11,7 +11,7 @@ import {
 } from "../API/counselSession";
 import { saveCounselRecord } from "../API/counsel";
 import { EMOTION_LABELS } from "../utils/emotion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, unstable_usePrompt } from "react-router-dom";
 import Cookies from "js-cookie";
 import FeelyLogo2 from "../assets/Feely_Logo_2.png";
 
@@ -84,6 +84,12 @@ export default function CounselPage() {
   // 카메라 목록 / 선택한 카메라
   const [cameraDevices, setCameraDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
+
+  // 마이크 장치 선택 + 입력 감도(볼륨) 표시용
+  const [micDevices, setMicDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedMicId, setSelectedMicId] = useState<string>("");
+  const [micVolume, setMicVolume] = useState(0);
+  const inputRef = useRef<HTMLInputElement | null>(null);
   // 내 얼굴 화면 숨김 여부 (분석은 계속 진행)
   const [isSelfViewHidden, setIsSelfViewHidden] = useState(false);
 
@@ -250,6 +256,11 @@ export default function CounselPage() {
     recognition.continuous = true;
     recognition.interimResults = true;
 
+    // 사용자가 마이크를 직접 끄거나(cleanup) 진짜 오류가 난 경우에만 true로 바뀜.
+    // 브라우저가 일정 시간마다 세션을 제멋대로 끊는 건 정상 동작이라 이 값이 false로 남아있고,
+    // 그 경우 onend에서 바로 재시작해서 사용자 입장에선 마이크가 계속 켜진 것처럼 보이게 함
+    let stoppedIntentionally = false;
+
     // 인식된 음성을 입력창에 반영
     recognition.onresult = (event) => {
       let transcript = "";
@@ -259,21 +270,112 @@ export default function CounselPage() {
       setInputText(transcript);
     };
 
-    // 인식 종료 시 마이크 버튼 끄기
-    recognition.onerror = () => {
+    // 무음(no-speech)/재시작 중 중단(aborted)은 정상 흐름이라 마이크를 끄지 않음
+    recognition.onerror = (event) => {
+      if (event.error === "no-speech" || event.error === "aborted") return;
+      console.warn("음성 인식 오류:", event.error);
+      stoppedIntentionally = true;
       setIsMicOn(false);
     };
+
     recognition.onend = () => {
-      setIsMicOn(false);
+      if (!stoppedIntentionally) {
+        try {
+          recognition.start();
+        } catch {
+          // 이미 시작 중인 경우 등은 무시
+        }
+      }
     };
 
     recognition.start();
     recognitionRef.current = recognition;
 
     return () => {
+      stoppedIntentionally = true;
       recognition.stop();
     };
   }, [isMicOn]);
+
+  // 2-0. 마이크 사용 중 일정 시간 새로운 음성이 없으면 엔터를 누른 것처럼 자동 전송
+  useEffect(() => {
+    if (!isMicOn || !inputText.trim()) return;
+
+    const timeoutId = window.setTimeout(() => {
+      handleSendMessage();
+      inputRef.current?.focus();
+    }, 3000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [isMicOn, inputText]);
+
+  // 2-1. 마이크 입력 감도(음량) 측정 + 장치 목록 갱신
+  // 주의: SpeechRecognition API 자체는 입력 장치를 지정할 방법이 없어서(OS/브라우저 기본 마이크 고정)
+  // 아래 장치 선택은 이 볼륨 미터에만 적용되고, 실제 음성 인식 입력 장치까지 강제로 바꾸지는 못함
+  useEffect(() => {
+    if (!isMicOn) {
+      setMicVolume(0);
+      return;
+    }
+
+    let cancelled = false;
+    let stream: MediaStream | null = null;
+    let audioContext: AudioContext | null = null;
+    let rafId = 0;
+
+    const start = async () => {
+      if (!navigator.mediaDevices?.getUserMedia) return;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: selectedMicId ? { deviceId: { exact: selectedMicId } } : true,
+        });
+      } catch (err) {
+        console.warn("마이크 볼륨 측정용 연결 실패:", err);
+        return;
+      }
+      if (cancelled) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
+
+      // 마이크 장치 목록 갱신 (권한 허용 후에만 label이 채워짐)
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        if (!cancelled) setMicDevices(devices.filter((d) => d.kind === "audioinput"));
+      } catch {
+        // 목록 조회 실패는 무시
+      }
+
+      audioContext = new AudioContext();
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 512;
+      source.connect(analyser);
+      const data = new Uint8Array(analyser.frequencyBinCount);
+
+      const tick = () => {
+        analyser.getByteTimeDomainData(data);
+        let sumSquares = 0;
+        for (let i = 0; i < data.length; i++) {
+          const normalized = (data[i] - 128) / 128;
+          sumSquares += normalized * normalized;
+        }
+        const rms = Math.sqrt(sumSquares / data.length);
+        setMicVolume(Math.min(100, Math.round(rms * 300)));
+        rafId = requestAnimationFrame(tick);
+      };
+      tick();
+    };
+
+    start();
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(rafId);
+      audioContext?.close();
+      stream?.getTracks().forEach((t) => t.stop());
+    };
+  }, [isMicOn, selectedMicId]);
 
   // 3. 현재 비디오 프레임을 base64(JPEG)로 캡처 (카메라 꺼짐 시 null)
   const captureFrame = (): string | null => {
@@ -355,6 +457,14 @@ export default function CounselPage() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
+
+  // 5-1. 상담 종료 버튼 없이 페이지를 벗어나려는 경우 경고 (헤더 링크 이동, 뒤로가기/앞으로가기 전부 포함)
+  // react-router의 data router 기능이라 App.tsx도 createBrowserRouter로 바꿔놔야 동작함
+  unstable_usePrompt({
+    when: ({ currentLocation, nextLocation }) =>
+      !isNormalExit.current && currentLocation.pathname !== nextLocation.pathname,
+    message: "상담 종료 버튼을 누르지 않을 경우 상담 요약이 정상적으로 저장되지 않을 수 있습니다. 그래도 이동하시겠습니까?",
+  });
 
   // 6. 초기 기분 제출 후 카메라 선택 단계로 이동
   const handleMoodSubmit = () => {
@@ -638,8 +748,8 @@ export default function CounselPage() {
       {/* 2. 메인 컨텐츠 영역 */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-        {/* 좌측: 웹캠 / 실시간 표정 분석 */}
-        <div className="lg:col-span-5 space-y-4">
+        {/* 좌측: 웹캠 / 실시간 표정 분석 - 좌우로 나뉘는 lg 이상에서만 스크롤해도 따라오게 고정 */}
+        <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-[86px] lg:self-start">
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 shadow-sm space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
@@ -659,7 +769,8 @@ export default function CounselPage() {
                     autoPlay
                     playsInline
                     muted
-                    className="w-full h-full object-cover transform -scale-x-100"
+                    // scroll 중 Chrome이 transform 걸린 video를 재합성하지 않아 화면에 고정돼 보이는 버그 방지
+                    className="w-full h-full object-cover transform -scale-x-100 will-change-transform"
                     onLoadedData={() => {
                       // 첫 프레임을 시작 이미지로 캡처하고 상담 시작 기록
                       if (!counselStartedRef.current) {
@@ -852,6 +963,8 @@ export default function CounselPage() {
               onSubmit={(e) => {
                 e.preventDefault();
                 handleSendMessage();
+                // 전송 후에도 커서를 입력창에 유지 (마이크로 계속 말하면서 보낼 때 다시 클릭 안 해도 되게)
+                inputRef.current?.focus();
               }}
               className="flex items-center gap-2"
             >
@@ -879,6 +992,7 @@ export default function CounselPage() {
               </button>
 
               <input
+                ref={inputRef}
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
@@ -896,6 +1010,37 @@ export default function CounselPage() {
                 </svg>
               </button>
             </form>
+
+            {isMicOn && (
+              <div className="flex items-center gap-2 mt-2 px-1">
+                {micDevices.length > 1 && (
+                  <select
+                    value={selectedMicId}
+                    onChange={(e) => setSelectedMicId(e.target.value)}
+                    className="min-w-0 px-2 py-1 rounded-lg text-xs border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                    title="사용할 마이크 선택"
+                  >
+                    <option value="">자동 선택</option>
+                    {micDevices.map((device, idx) => (
+                      <option key={device.deviceId} value={device.deviceId}>
+                        {device.label || `마이크 ${idx + 1}`}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <span className="text-[10px] text-gray-400 shrink-0">입력 감도</span>
+                <div className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-[#0D9488] transition-[width] duration-100"
+                    style={{ width: `${micVolume}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 text-center">
+              음성 인식(마이크 입력)은 Chrome 브라우저에서만 지원됩니다.
+            </p>
           </div>
 
         </div>

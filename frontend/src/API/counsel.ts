@@ -67,8 +67,8 @@ export interface CounselRecord {
   e01Rate: number;          // 중립
   e02Rate: number;          // 기쁨
   e03Rate: number;          // 슬픔
-  e04Rate: number;          // 화남
-  e05Rate: number;          // 우울
+  e04Rate: number;          // 분노
+  e05Rate: number;          // 당황
   e06Rate: number;          // 불안
   counselDttm: string;      // 상담 일시 (YYYY-MM-DD HH:mm:ss)
   startImage: string;       // 상담 시작 시점 이미지 (base64)

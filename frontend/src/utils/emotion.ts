@@ -6,8 +6,8 @@ export const EMOTION_LABELS: { key: keyof CounselRecord; label: string; emoji: s
   { key: "e01Rate", label: "중립", emoji: "😐" },
   { key: "e02Rate", label: "기쁨", emoji: "😃" },
   { key: "e03Rate", label: "슬픔", emoji: "😢" },
-  { key: "e04Rate", label: "화남", emoji: "😡" },
-  { key: "e05Rate", label: "우울", emoji: "😔" },
+  { key: "e04Rate", label: "분노", emoji: "😡" },
+  { key: "e05Rate", label: "당황", emoji: "😳" },
   { key: "e06Rate", label: "불안", emoji: "😰" },
 ];
 
@@ -44,7 +44,7 @@ export const getDominantEmotionIndex = (dayLogs: CounselRecord[]) => {
   return maxIndex;
 };
 
-// 감정 점수(0~1)를 정수 퍼센트로 변환
+// 감정 점수(0~1)를 소수점 둘째 자리까지 있는 퍼센트로 변환 (DB에 저장된 소수점 그대로 보여주기 위함)
 export const formatEmotionPercent = (rate: number | string | null | undefined): number => {
-  return Math.round(Number(rate ?? 0) * 100);
+  return Math.round(Number(rate ?? 0) * 10000) / 100;
 };
