@@ -500,13 +500,15 @@ export default function CounselPage() {
           <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
             {preCounselStep === "mood" ? (
               <>
-                <div className="text-center space-y-2">
-                  <span className="text-4xl">👋</span>
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                <div className="text-center">
+                  <span className="block text-4xl mb-2.5">👋</span>
+                  <h2 className="mb-2 text-xl font-bold text-gray-900 dark:text-white">
                     오늘 하루는 어떠셨나요?
                   </h2>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    상담을 시작하기 전, 오늘 있었던 일이나 지금 느끼는 감정을 편하게 남겨주세요.
+                    상담을 시작하기 전
+                    <br />
+                    오늘 있었던 일이나 지금 느끼는 감정을 편하게 남겨주세요.
                   </p>
                 </div>
 
@@ -522,26 +524,28 @@ export default function CounselPage() {
                     }
                   }}
                   placeholder="예: 오늘 프로젝트 회의가 길어져서 조금 피곤해요..."
-                  className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1F6170] resize-none"
+                  className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-0 focus:border-2 focus:border-[#0D9488] resize-none"
                 />
 
                 <button
                   type="button"
                   onClick={handleMoodSubmit}
-                  className="w-full py-3 bg-[#1F6170] hover:bg-[#184d59] text-white font-medium rounded-xl transition-all shadow-md active:scale-98"
+                  className="w-full py-3 bg-[#0D9488] hover:bg-[#0F766E] text-white font-medium rounded-xl transition-all shadow-md active:scale-98"
                 >
                   다음
                 </button>
               </>
             ) : (
               <>
-                <div className="text-center space-y-2">
-                  <span className="text-4xl">📷</span>
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                <div className="text-center">
+                  <span className="block text-4xl mb-2.5">📷</span>
+                  <h2 className="mb-2 text-xl font-bold text-gray-900 dark:text-white">
                     카메라를 사용하시겠어요?
                   </h2>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    표정을 함께 분석하면 더 정확한 상담이 가능해요. 원치 않으시면 대화만으로도 진행할 수 있어요.
+                    표정을 함께 분석하면 더 정확한 상담이 가능해요.
+                    <br />
+                    원치 않으시면 대화만으로도 진행할 수 있어요.
                   </p>
                 </div>
 
@@ -556,7 +560,7 @@ export default function CounselPage() {
                   <button
                     type="button"
                     onClick={() => handleCameraChoice(true)}
-                    className="flex-1 py-3 bg-[#1F6170] hover:bg-[#184d59] text-white font-medium rounded-xl transition-all shadow-md active:scale-98"
+                    className="flex-1 py-3 bg-[#0D9488] hover:bg-[#0F766E] text-white font-medium rounded-xl transition-all shadow-md active:scale-98"
                   >
                     사용하기
                   </button>
@@ -635,7 +639,7 @@ export default function CounselPage() {
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 shadow-sm space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
-                📷 실시간 얼굴 영상
+                실시간 얼굴 영상
               </span>
             </div>
 
@@ -772,7 +776,7 @@ export default function CounselPage() {
               />
               <div>
                 <h2 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                  Feely AI 상담사
+                  AI 상담사
                 </h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   공감형 대화 및 맞춤 심리 케어
@@ -874,7 +878,7 @@ export default function CounselPage() {
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder={isMicOn ? "음성을 듣고 있습니다..." : "마음속에 있는 생각이나 감정을 자유롭게 적어보세요..."}
+                placeholder={isMicOn ? "음성을 듣고 있습니다..." : "마음속에 있는 생각이나 감정을 자유롭게 적어보세요."}
                 className="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1F6170] focus:border-transparent transition-all"
               />
 
