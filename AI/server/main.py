@@ -49,7 +49,7 @@ app = FastAPI()
 # Feely 프론트엔드(로컬 개발 서버) 요청만 허용
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4000"],
+    allow_origins=["http://localhost:4000", "https://2026-smhrd-aic-healthax-1.github.io"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

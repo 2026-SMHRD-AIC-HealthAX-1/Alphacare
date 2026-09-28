@@ -20,5 +20,5 @@ export default defineConfig({
       port : 4000,
       strictPort : true
   },
-  base : "/Feely"
+  base : "/Alphacare"
 });

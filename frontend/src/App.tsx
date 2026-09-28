@@ -31,7 +31,7 @@ const router = createBrowserRouter(
       <Route path="/Admin" element={<RequireAdmin><Admin /></RequireAdmin>} />
     </Route>
   ),
-  { basename: "/Feely" }
+  { basename: "/Alphacare" }
 );
 
 export default function App() {
