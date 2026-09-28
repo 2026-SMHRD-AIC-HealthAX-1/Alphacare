@@ -116,6 +116,10 @@ print("Feely 감정모델 로드 완료 - 입력 개수:", _checkpoint.get("inpu
 session_landmarkers: dict = {}
 session_last_timestamp: dict = {}
 
+# 세션별 개인 중립 기준 생성용
+session_neutral_samples: dict = {}
+session_neutral_baselines: dict = {}
+session_neutral_start_times: dict = {}
 
 def _get_session_landmarker(session_id: str):
     """세션 전용 FaceLandmarker를 가져오거나, 처음 요청이면 새로 만듦"""
@@ -160,11 +164,18 @@ def extract_landmark_feature(face_image, session_id: str):
     session_last_timestamp[session_id] = timestamp_ms
 
     result = landmarker.detect_for_video(mp_image, timestamp_ms)
+
+    # MediaPipe 얼굴 랜드마크 확인
     if not result.face_landmarks:
+        print("[확인] MediaPipe 얼굴 감지 실패")
         return None
+
+    print("[확인] MediaPipe 얼굴 감지 성공")
+    print("[확인] 랜드마크 개수 =", len(result.face_landmarks[0]))
 
     landmarks = result.face_landmarks[0]
     feature = []
+
     for landmark in landmarks:
         feature.extend([landmark.x, landmark.y, landmark.z])
 
@@ -310,6 +321,47 @@ def predict_emotion_scores(base_feature):
 
     return {key: probabilities[i].item() for i, key in enumerate(EMOTION_KEYS)}
 
+def predict_emotion_from_delta(delta_10f):
+    # Δ10F가 올바른 10개 특징인지 확인
+    if delta_10f is None or delta_10f.shape != (10,):
+        return None
+
+    # 확인 1 : 모델로 전달되는 Δ10F
+    print("[확인] 모델에 전달된 delta_10f =", delta_10f)
+
+    # 학습 때 사용한 평균과 표준편차로 표준화
+    input_tensor = (
+        torch.tensor(delta_10f, dtype=torch.float32) - _feature_mean
+    ) / _feature_std
+
+    # 모델에 넣을 수 있도록 [10] → [1, 10] 형태로 변경
+    input_tensor = input_tensor.unsqueeze(0)
+
+    # 확인 2 : 실제 모델 입력 크기
+    print("[확인] 모델 입력 shape =", input_tensor.shape)
+
+    # 확인 3 : 표준화가 끝난 실제 모델 입력값
+    print("[확인] 표준화된 모델 입력 =", input_tensor)
+
+    # 6감정 모델로 예측
+    with torch.no_grad():
+        logits = emotion_model(input_tensor)
+        probabilities = torch.softmax(logits, dim=1)[0]
+
+    # 6감정 확률을 딕셔너리로 변환
+    scores = {
+        key: probabilities[i].item()
+        for i, key in enumerate(EMOTION_KEYS)
+    }
+
+    # 확인 4 : 모델이 예측한 6감정 확률
+    print("[확인] 얼굴 6감정 scores =", scores)
+
+    # 확인 5 : 6감정 확률의 전체 합
+    print("[확인] 6감정 확률 합계 =", sum(scores.values()))
+
+    return scores
+
 
 def decode_base64_image(data_url: str):
     """프론트가 canvas.toDataURL()로 만든 'data:image/jpeg;base64,...' 문자열을 OpenCV 이미지로 변환"""
@@ -434,27 +486,77 @@ TEXT_EMOTION_SYSTEM_PROMPT = (
 
 
 def _classify_text_emotion(text: str) -> dict:
-    """오늘의 기분 텍스트를 Claude로 6개 감정 점수(합 1)로 변환함.
-    빈 텍스트거나 분류 실패/JSON 파싱 실패 시에는 중립(e01=1.0)으로 안전하게 폴백함"""
-    fallback = {key: (1.0 if key == "e01" else 0.0) for key in EMOTION_KEYS}
+    """사용자 텍스트를 6감정 점수로 변환"""
 
+    # 감정분석에 실패했을 때 사용할 기본값
+    # e01 = 중립 100%
+    fallback = {
+        key: (1.0 if key == "e01" else 0.0)
+        for key in EMOTION_KEYS
+    }
+
+    # 입력된 글이 없으면 중립 100% 반환
     if not text or not text.strip():
         return fallback
 
     try:
+        # AI에게 사용자의 글을 6감정으로 분석 요청
         raw_reply = call_feely(
             TEXT_EMOTION_SYSTEM_PROMPT,
             [{"role": "user", "content": text}],
             max_tokens=200,
         )
-        parsed = json.loads(raw_reply)
-        scores = {key: max(0.0, float(parsed.get(key, 0.0))) for key in EMOTION_KEYS}
+
+        print("[확인] 텍스트 감정분석 AI 원본 응답 =", raw_reply)
+
+        # AI 응답에서 JSON 시작과 끝 위치 찾기
+        json_start = raw_reply.find("{")
+        json_end = raw_reply.rfind("}")
+
+        # JSON 형태를 찾지 못하면 실패 처리
+        if json_start == -1 or json_end == -1 or json_start > json_end:
+            raise ValueError("AI 응답에서 JSON 형식을 찾을 수 없습니다.")
+
+        # JSON 부분만 잘라내기
+        json_text = raw_reply[json_start:json_end + 1]
+
+        # JSON 문자열을 파이썬 딕셔너리로 변환
+        parsed = json.loads(json_text)
+
+        # 6감정 값 가져오기
+        scores = {
+            key: max(
+                0.0,
+                float(parsed.get(key, 0.0))
+            )
+            for key in EMOTION_KEYS
+        }
+
+        # 6감정 전체 합 계산
         total = sum(scores.values())
+
+        # 정상적인 감정 값이 하나도 없으면 기본값 사용
         if total <= 0:
+            print("[확인] 텍스트 감정 값이 없어 중립 100% 사용")
             return fallback
-        return {key: value / total for key, value in scores.items()}
+
+        # 6감정 합계를 정확히 1.0으로 맞추기
+        normalized_scores = {
+            key: value / total
+            for key, value in scores.items()
+        }
+
+        print("[확인] 텍스트 6감정 scores =", normalized_scores)
+        print(
+            "[확인] 텍스트 6감정 확률 합계 =",
+            sum(normalized_scores.values())
+        )
+
+        return normalized_scores
+
     except Exception as err:
-        print(f"텍스트 감정 분류 실패: {err}")
+        print("[확인] 텍스트 감정 분류 실패 =", err)
+        print("[확인] 중립 100% 기본값 사용")
         return fallback
 
 
@@ -495,25 +597,144 @@ WEEKLY_SUMMARY_SYSTEM_PROMPT = (
 # 엔드포인트
 # ============================================================
 
-@app.get("/test")
-def test_api():
-    # 상담 화면의 서버 상태 표시등(초록/빨강)이 접속 확인용으로 호출함
-    return {"message": "Feely AI 서버가 정상적으로 실행 중입니다!"}
-
-
 @app.post("/emotion", response_model=EmotionResponse)
 def emotion_api(data: EmotionRequest):
-    # 상담 중 5초마다 프론트가 웹캠 프레임을 캡처해서 보내는 실제 감정분석 엔드포인트
+
+    # 현재 진행 중인 상담인지 먼저 확인
+    # 이미 끝난 상담이면 5초마다 얼굴 정보가 들어와도 분석하지 않음
+    if data.sessionId not in counsel_sessions:
+        print("[확인] 종료된 상담의 얼굴 분석 요청 무시 =", data.sessionId)
+        return EmotionResponse(scores=None)
+
+    # 상담 중 5초마다 카메라 얼굴 정보를 받아 분석
     face_image = decode_base64_image(data.image)
+    
+    # 확인용: 프론트에서 받은 실제 웹캠 이미지 저장
+    if face_image is not None:
+        cv2.imwrite("received_face_test.jpg", face_image)
+        print("[확인] received_face_test.jpg 저장 완료")
+
+    # 얼굴 랜드마크 추출 및 위치/크기 보정
     feature = extract_landmark_feature(face_image, data.sessionId)
     base_feature = make_ver5_base_feature(feature)
 
     if base_feature is None:
-        # 얼굴을 못 찾은 프레임 - 에러가 아니라 "이번 프레임은 값 없음"으로 처리
-        # (프론트도 scores가 없으면 이번 샘플은 그냥 넘어가도록 이미 짜여 있음)
+        # 얼굴을 못 찾은 프레임은 이번 샘플만 건너뜀
         return EmotionResponse(scores=None)
 
-    scores = predict_emotion_scores(base_feature)
+    # 현재 얼굴의 10개 표정 특징 추출
+    current_10f = make_ver5_expression_feature(base_feature)
+
+    if current_10f is None:
+        return EmotionResponse(scores=None)
+
+    # 상담 시작 후 100초 동안 개인 중립 표정 후보 수집
+    start_time = session_neutral_start_times.get(data.sessionId)
+
+    print("[확인] 현재 sessionId =", data.sessionId)
+    print("[확인] 중립 시작시간 =", start_time)
+
+    if start_time is not None:
+        elapsed_time = time.monotonic() - start_time
+
+        # 상담 시작 후 100초가 지나기 전
+        if elapsed_time < 100:
+            session_neutral_samples.setdefault(
+                data.sessionId,
+                []
+            ).append(
+                current_10f.copy()
+            )
+
+        # 상담 시작 후 100초가 지난 경우
+        else:
+
+            # 이미 개인 중립 기준이 있으면 그대로 사용
+            if data.sessionId in session_neutral_baselines:
+                neutral_10f = session_neutral_baselines[data.sessionId]
+
+            # 아직 개인 중립 기준이 없으면 한 번만 생성
+            else:
+                samples = session_neutral_samples.get(
+                    data.sessionId,
+                    []
+                )
+
+                # 유효한 중립 표정 후보가 최소 10개 필요
+                if len(samples) < 10:
+                    return EmotionResponse(scores=None)
+
+                # 전체 후보의 특징별 중앙값 계산
+                sample_array = np.stack(samples)
+                median_10f = np.median(
+                    sample_array,
+                    axis=0
+                )
+
+                # 각 특징의 변화 폭 계산
+                mad_10f = np.median(
+                    np.abs(sample_array - median_10f),
+                    axis=0
+                )
+
+                # 0으로 나누는 것 방지
+                safe_mad_10f = np.maximum(
+                    mad_10f,
+                    1e-6
+                )
+
+                # 각 후보가 중앙값에서 얼마나 떨어졌는지 계산
+                normalized_diff = (
+                    sample_array - median_10f
+                ) / safe_mad_10f
+
+                distances = np.linalg.norm(
+                    normalized_diff,
+                    axis=1
+                )
+
+                # 중앙값과 가장 가까운 중립 후보 5개 선택
+                nearest_indices = np.argsort(
+                    distances
+                )[:5]
+
+                nearest_5 = sample_array[
+                    nearest_indices
+                ]
+
+                # 선택된 5개의 중앙값을 개인 중립 기준으로 확정
+                neutral_10f = np.median(
+                    nearest_5,
+                    axis=0
+                ).astype(np.float32)
+
+                # 개인 중립 기준 저장
+                session_neutral_baselines[
+                    data.sessionId
+                ] = neutral_10f
+
+                print("[확인] 개인 중립 기준 생성 완료")
+                print("[확인] 전체 중립 후보 개수 =", len(samples))
+                print("[확인] 최종 선택 샘플 개수 =", len(nearest_5))
+                print("[확인] neutral_10f =", neutral_10f)
+
+    # 개인 중립 기준이 아직 만들어지지 않았으면
+    # 얼굴 감정분석을 기다림
+    if data.sessionId not in session_neutral_baselines:
+        return EmotionResponse(scores=None)
+
+    # 현재 얼굴 10개 특징에서 개인 중립 기준을 빼서
+    # 평소 중립 표정과 비교해 얼마나 변했는지 계산
+    neutral_10f = session_neutral_baselines[data.sessionId]
+    delta_10f = current_10f - neutral_10f
+
+    print("[확인] 현재 current_10f =", current_10f)
+    print("[확인] 개인 neutral_10f =", neutral_10f)
+    print("[확인] 계산된 delta_10f =", delta_10f)
+
+    # 중립 표정과의 변화량을 학습된 6감정 모델에 전달
+    scores = predict_emotion_from_delta(delta_10f)
+
     return EmotionResponse(scores=scores)
 
 
@@ -534,56 +755,195 @@ def counsel_start(data: CounselStartRequest):
         "startTime": datetime.now(KST),
         "emotionSamples": [],
     }
+
+    # 개인 중립 기준 수집 시작
+    session_neutral_samples[data.sessionId] = []
+    session_neutral_baselines.pop(data.sessionId, None)
+    session_neutral_start_times[data.sessionId] = time.monotonic()
+
     return {"ok": True}
 
 
 @app.post("/counsel/initial-emotion", response_model=InitialEmotionResponse)
 def counsel_initial_emotion(data: InitialEmotionRequest):
+
+    # 텍스트를 6감정으로 분석
     text_scores = _classify_text_emotion(data.moodText)
 
+    # ------------------------------------------------------------
+    # ⑬단계 : 현재 상담 세션에 텍스트 6감정 저장
+    # ------------------------------------------------------------
+    session_data = counsel_sessions.setdefault(
+        data.sessionId,
+        {
+            "startTime": datetime.now(KST),
+            "emotionSamples": [],
+        },
+    )
+
+    session_data["textScores"] = text_scores
+    print("[추적] initial-emotion sessionId =", data.sessionId)
+    print("[추적] 현재 counsel_sessions =", list(counsel_sessions.keys()))
+
+    print("[확인] 상담 세션에 저장된 텍스트 6감정 =", session_data["textScores"])
+
+    # 얼굴 점수가 없으면 우선 텍스트 결과만 사용
     if not data.faceScores:
+        print("[확인] 얼굴 점수 없음 → 텍스트 감정만 사용")
         return InitialEmotionResponse(emotionScores=text_scores)
 
+    # 얼굴 점수가 이미 있으면 기존 방식대로 60:40 결합
+    print("[확인] 결합 전 텍스트 6감정 =", text_scores)
+    print("[확인] 결합 전 얼굴 6감정 =", data.faceScores)
+
     combined = {
-        key: text_scores[key] * 0.6 + data.faceScores.get(key, 0.0) * 0.4
+        key: text_scores[key] * 0.6
+        + data.faceScores.get(key, 0.0) * 0.4
         for key in EMOTION_KEYS
     }
+
+    print("[확인] 텍스트60% + 얼굴40% 최종 6감정 =", combined)
+    print("[확인] 결합 후 확률 합계 =", sum(combined.values()))
+
     return InitialEmotionResponse(emotionScores=combined)
 
 
 @app.post("/counsel/emotion-sample")
 def counsel_emotion_sample(data: EmotionSampleRequest):
+
     session_data = counsel_sessions.setdefault(
         data.sessionId,
         {"startTime": datetime.now(KST), "emotionSamples": []},
     )
-    session_data["emotionSamples"].append(data.scores)
+
+    # ⑬단계 : 상담 시작 때 저장한 텍스트 6감정 가져오기
+    text_scores = session_data.get("textScores")
+    print("[추적] emotion-sample sessionId =", data.sessionId)
+    print("[추적] 현재 counsel_sessions =", list(counsel_sessions.keys()))
+    print("[추적] 현재 session_data keys =", list(session_data.keys()))
+
+    # 텍스트 감정이 저장되어 있으면
+    # 텍스트 60% + 얼굴 40%로 결합
+    if text_scores:
+        combined_scores = {
+            key: text_scores.get(key, 0.0) * 0.6
+            + data.scores.get(key, 0.0) * 0.4
+            for key in EMOTION_KEYS
+        }
+
+        session_data["emotionSamples"].append(combined_scores)
+
+        print("[확인] 결합 전 텍스트 6감정 =", text_scores)
+        print("[확인] 결합 전 얼굴 6감정 =", data.scores)
+        print("[확인] 텍스트60% + 얼굴40% 최종 6감정 =", combined_scores)
+        print("[확인] 결합 후 확률 합계 =", sum(combined_scores.values()))
+
+    # 텍스트 감정이 없으면 기존처럼 얼굴 점수만 저장
+    else:
+        session_data["emotionSamples"].append(data.scores)
+        print("[확인] 텍스트 점수 없음 → 얼굴 감정만 저장")
+
+    print("[확인] 현재 누적된 감정 샘플 개수 =", len(session_data["emotionSamples"]))
+
     return {"ok": True}
 
 
 @app.post("/counsel/finish", response_model=CounselSummaryResponse)
 def counsel_finish(data: CounselFinishRequest):
+
+    # 상담 데이터 가져온 뒤 삭제
     session_data = counsel_sessions.pop(
         data.sessionId,
         {"startTime": datetime.now(KST), "emotionSamples": []},
     )
-    # 챗봇 대화 이력도 여기서 같이 정리함 (예전엔 abort 때만 지워져서 정상 종료 시 계속 쌓이는 누수가 있었음)
+
+    # 채팅 데이터 가져온 뒤 삭제
     chat_session = chat_sessions.pop(data.sessionId, None)
+
+    # 상담 요약 생성
+    final_summary = _summarize_session(chat_session)
+
+    # 상담 중 누적된 6감정의 최종 평균 계산
+    final_emotion_scores = _average_emotion_scores(
+        session_data["emotionSamples"]
+    )
+
+    # ------------------------------------------------------------
+    # 최종 상담 결과 터미널 출력
+    # ------------------------------------------------------------
+
+    print()
+    print("========== 최종 상담 결과 ==========")
+
+    print()
+    print("[상담 요약]")
+    print(final_summary)
+
+    print()
+    print("[최종 감정 평균]")
+
+    emotion_names = {
+        "e01": "중립",
+        "e02": "기쁨",
+        "e03": "슬픔",
+        "e04": "분노",
+        "e05": "당황",
+        "e06": "불안",
+    }
+
+    for key in EMOTION_KEYS:
+        score = final_emotion_scores.get(key, 0.0)
+        print(f"{emotion_names[key]} : {score * 100:.2f}%")
+
+    print()
+    print(
+        f"합계 : "
+        f"{sum(final_emotion_scores.values()) * 100:.2f}%"
+    )
+
+    print()
+    print("===================================")
+
+    # 개인 중립 데이터 삭제
+    session_neutral_samples.pop(data.sessionId, None)
+    session_neutral_baselines.pop(data.sessionId, None)
+    session_neutral_start_times.pop(data.sessionId, None)
+
+    # MediaPipe 랜드마커 정리
     release_session_landmarker(data.sessionId)
 
+    print("[확인] 상담 정상 종료 세션 정리 완료 =", data.sessionId)
+
+    # 계산한 최종 결과를 기존처럼 Front에 반환
     return CounselSummaryResponse(
-        counselDate=session_data["startTime"].strftime("%Y-%m-%d %H:%M:%S"),
-        summary=_summarize_session(chat_session),
-        emotionScores=_average_emotion_scores(session_data["emotionSamples"]),
+        counselDate=session_data["startTime"].strftime(
+            "%Y-%m-%d %H:%M:%S"
+        ),
+        summary=final_summary,
+        emotionScores=final_emotion_scores,
         status=data.status,
     )
 
 
 @app.post("/counsel/abort")
 def counsel_abort(data: CounselAbortRequest):
+
+    # 상담 데이터 삭제
     counsel_sessions.pop(data.sessionId, None)
+
+    # 채팅 데이터 삭제
     chat_sessions.pop(data.sessionId, None)
+
+    # 개인 중립 데이터 삭제
+    session_neutral_samples.pop(data.sessionId, None)
+    session_neutral_baselines.pop(data.sessionId, None)
+    session_neutral_start_times.pop(data.sessionId, None)
+
+    # MediaPipe 랜드마커 정리
     release_session_landmarker(data.sessionId)
+
+    print("[확인] 상담 중단 세션 정리 완료 =", data.sessionId)
+
     return {"ok": True}
 
 
