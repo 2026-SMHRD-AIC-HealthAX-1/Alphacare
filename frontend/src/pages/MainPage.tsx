@@ -468,6 +468,10 @@ export default function MainPage() {
      주간 차트 상담 데이터
   ======================================================= */
 
+  // 주간 그래프에서만 쓰는 표시 순서 - 중립(원래 EMOTION_LABELS 0번)을 가운데로 옮김
+  // 기쁨, 슬픔, 중립, 분노, 당황, 불안 순 (EMOTION_LABELS 원본 인덱스 기준)
+  const CHART_EMOTION_ORDER = [1, 2, 0, 3, 4, 5];
+
   const chartLogs = useMemo(() => {
     if (chartDateKeys.length === 0) {
       return [];
@@ -535,8 +539,8 @@ export default function MainPage() {
         );
 
         const y =
-          (dominantIndex /
-            (EMOTION_LABELS.length - 1)) *
+          (CHART_EMOTION_ORDER.indexOf(dominantIndex) /
+            (CHART_EMOTION_ORDER.length - 1)) *
           100;
 
         const hh = String(
@@ -1999,8 +2003,10 @@ export default function MainPage() {
                         "1px solid var(--fe-border)",
                     }}
                   >
-                    {EMOTION_LABELS.map(
-                      (emotion, index) => (
+                    {CHART_EMOTION_ORDER.map(
+                      (originalIndex, index) => {
+                        const emotion = EMOTION_LABELS[originalIndex];
+                        return (
                         <span
                           key={
                             emotion.label
@@ -2011,7 +2017,7 @@ export default function MainPage() {
                             left: 0,
                             top: `${
                               (index /
-                                (EMOTION_LABELS.length -
+                                (CHART_EMOTION_ORDER.length -
                                   1)) *
                               100
                             }%`,
@@ -2051,7 +2057,8 @@ export default function MainPage() {
                             }
                           </span>
                         </span>
-                      )
+                        );
+                      }
                     )}
                   </div>
 
