@@ -426,6 +426,7 @@ class EmotionRequest(BaseModel):
     sessionId: str
     image: str  # base64 JPEG (캔버스로 캡처한 웹캠 프레임)
     finalizeNeutral: bool = False  # True면 질의응답(기분 입력)이 끝난 시점 - 중립 기준점을 지금까지 모은 샘플로 확정
+    resetNeutral: bool = False  # True면 카메라를 껐다가 다시 켠 시점 - 기존 중립 기준을 버리고 새로 수집 시작
 
 
 class EmotionResponse(BaseModel):
@@ -573,7 +574,8 @@ def _summary_system_prompt(user_name: str) -> str:
         "대화 흐름이나 상담사의 반응을 하나하나 풀어 쓰지 말고, "
         "전체 내용을 한눈에 파악할 수 있는 수준으로 최대한 간결하게 압축해. "
         "반드시 2문장 이내, 줄바꿈 없이 한 문단으로만 작성하고 절대 그 이상 길게 쓰지 마. "
-        "진단이나 평가하는 표현은 쓰지 말고, 실제 대화 내용을 근거로만 작성해."
+        "진단이나 평가하는 표현은 쓰지 말고, 실제 대화 내용을 근거로만 작성해. "
+        "지금 주어진 이 상담 대화 내용만 근거로 삼고, 다른 날 있었던 상담이나 이전 기록은 언급하거나 추측하지 마."
     )
 
 
@@ -604,7 +606,8 @@ def _weekly_summary_system_prompt(user_name: str) -> str:
         "반드시 두세 줄(2~3문장) 이내로, 다음 두 가지만 담아 한국어 존댓말로 담백하게 요약해: "
         "1) 이번 주에 어떤 일들이 있었는지 핵심만 간단히, "
         "2) 한 주 동안 감정이 어떻게 변화했는지. "
-        "군더더기 없이 짧게 작성하고, 진단하거나 평가하는 표현은 쓰지 마."
+        "군더더기 없이 짧게 작성하고, 진단하거나 평가하는 표현은 쓰지 마. "
+        "아래 목록에 있는 이번 주 상담 내용만 근거로 삼고, 목록에 없는 지난주 이전이나 다른 시점의 상담 내용은 언급하거나 추측하지 마."
     )
 
 
@@ -626,6 +629,12 @@ def emotion_api(data: EmotionRequest):
     if data.sessionId not in counsel_sessions:
         print("[확인] 종료된 상담의 얼굴 분석 요청 무시 =", data.sessionId)
         return EmotionResponse(scores=None)
+
+    # 카메라를 껐다가 다시 켠 시점 - 이전 중립 기준/샘플/스무딩 값을 버리고 새로 수집 시작
+    if data.resetNeutral:
+        session_neutral_baselines.pop(data.sessionId, None)
+        session_neutral_samples[data.sessionId] = []
+        session_emotion_ema.pop(data.sessionId, None)
 
     # 질의응답(기분 입력)이 끝났다는 신호 - 아직 기준점이 없으면 지금까지 모은 샘플로 바로 확정
     # (이번 프레임 자체의 얼굴 인식 성공 여부와 무관하게 확정을 시도함)

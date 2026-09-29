@@ -124,6 +124,10 @@ export default function CounselPage() {
   const startImageRef = useRef<string | null>(null);
   // 상담 세션 ID (챗봇 대화/감정 샘플 구분)
   const chatSessionIdRef = useRef<string>(createSessionId());
+  // 카메라를 껐다가 다시 켰을 때, 다음 프레임에 중립 기준 리셋 신호를 실어 보내야 하는지
+  const pendingNeutralResetRef = useRef(false);
+  // 직전 렌더의 카메라 상태 (꺼짐->켜짐 전환 감지용)
+  const wasCamOnRef = useRef(false);
 
   // 1. 웹캠 연결 (전면 카메라 우선, 실패 시 기본 옵션으로 재시도)
   useEffect(() => {
@@ -417,7 +421,14 @@ export default function CounselPage() {
       if (!frame) return;
 
       emotionRequestPendingRef.current = true;
-      sendEmotionFrame({ sessionId: chatSessionIdRef.current, image: frame })
+      const shouldResetNeutral = pendingNeutralResetRef.current;
+      pendingNeutralResetRef.current = false;
+
+      sendEmotionFrame({
+        sessionId: chatSessionIdRef.current,
+        image: frame,
+        resetNeutral: shouldResetNeutral || undefined,
+      })
         .then((result) => {
           if (!result.scores || isNormalExit.current) return;
 
@@ -445,6 +456,29 @@ export default function CounselPage() {
 
     return () => window.clearInterval(intervalId);
   }, [isCamOn]);
+
+  // 4-1. 상담 시작(모달 종료) 이후 카메라를 껐다가 다시 켰을 때 -
+  // 이전 중립 기준을 버리고 30초간 새로 표정을 모아서 재확정
+  useEffect(() => {
+    const wasOn = wasCamOnRef.current;
+    wasCamOnRef.current = isCamOn;
+
+    // 모달이 아직 떠 있는 동안(최초 카메라 On/Off 선택)은 기존 방식(기분 입력 제출 시 확정) 그대로 둠
+    if (isInitialModalOpen || wasOn || !isCamOn) return;
+
+    pendingNeutralResetRef.current = true;
+
+    const timeoutId = window.setTimeout(() => {
+      const frame = captureFrame();
+      sendEmotionFrame({
+        sessionId: chatSessionIdRef.current,
+        image: frame ?? "",
+        finalizeNeutral: true,
+      }).catch((err) => console.debug("중립 기준 재확정 실패:", err));
+    }, 30000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [isCamOn, isInitialModalOpen]);
 
   // 5. 이탈 경고 및 이탈 시 FastAPI 세션 정리
   useEffect(() => {
