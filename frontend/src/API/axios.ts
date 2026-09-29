@@ -1,5 +1,6 @@
 import axios, { AxiosError } from "axios";
 import Cookies from "js-cookie";
+import { showToastAfterReload } from "../utils/toast";
 
 const URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -35,7 +36,7 @@ export const handleSessionExpired = () => {
   sessionExpiredHandled = true;
 
   clearAuthCookies();
-  alert("세션이 만료되었습니다. 다시 로그인해주세요.");
+  showToastAfterReload("세션이 만료되었습니다. 다시 로그인해주세요.", "error");
   window.location.href = import.meta.env.BASE_URL;
 };
 

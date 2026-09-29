@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ApiError } from "../../API/axios";
 import { findPW } from "../../API/auth";
+import { showToast } from "../../utils/toast";
 
 export default function FindPw() {
 
@@ -19,11 +20,11 @@ export default function FindPw() {
   const handleFindPw = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id.trim() || !tel.trim()) {
-      alert("아이디와 휴대폰 번호를 모두 입력해주세요");
+      showToast("아이디와 휴대폰 번호를 모두 입력해주세요");
       return;
     }
     if (tel.length !== 11) {
-      alert("휴대폰 번호 11자리를 정확히 입력해주세요");
+      showToast("휴대폰 번호 11자리를 정확히 입력해주세요");
       return;
     }
 
@@ -33,14 +34,14 @@ export default function FindPw() {
       if (result?.pw) {
         setTempPw(result.pw); // 임시 비밀번호 모달 표시
       } else {
-        alert("일치하는 회원 정보가 없습니다.");
+        showToast("일치하는 회원 정보가 없습니다.");
       }
     } catch (e) {
       const error = e as ApiError;
       if (error?.response?.status === 404) {
-        alert(error.response.data?.message || "일치하는 회원 정보가 없습니다.");
+        showToast(error.response.data?.message || "일치하는 회원 정보가 없습니다.");
       } else {
-        alert("비밀번호 찾기 도중 오류가 발생했습니다.");
+        showToast("비밀번호 찾기 도중 오류가 발생했습니다.");
       }
     } finally {
       setLoading(false);
@@ -52,9 +53,9 @@ export default function FindPw() {
     if (!tempPw) return;
     try {
       await navigator.clipboard.writeText(tempPw);
-      alert("복사되었습니다.");
+      showToast("복사되었습니다.", "success");
     } catch {
-      alert("복사에 실패했습니다. 직접 드래그해서 복사해주세요.");
+      showToast("복사에 실패했습니다. 직접 드래그해서 복사해주세요.");
     }
   };
 
