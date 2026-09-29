@@ -62,13 +62,13 @@ export default function FindPw() {
   return (
     <div className="min-h-[calc(100vh-80px)] flex flex-col items-center justify-center px-4 py-8 sm:py-12">
       <div className="w-full max-w-md mx-auto space-y-4 sm:space-y-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-center text-[#1F6170] dark:text-teal-400">
+        <h1 className="relative -top-2.5 text-2xl sm:text-3xl font-bold text-center text-[#1F6170] dark:text-teal-400">
           비밀번호 찾기
         </h1>
 
         <form onSubmit={handleFindPw} className="space-y-4 sm:space-y-6">
           {/* 아이디 */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 sm:translate-x-[10px]">
             <label className="w-full sm:w-36 text-base sm:text-xl font-medium shrink-0 whitespace-nowrap">
               아이디
             </label>
@@ -78,13 +78,13 @@ export default function FindPw() {
                 value={id}
                 onChange={(e) => setId(e.target.value)}
                 placeholder="아이디를 입력해주세요"
-                className="w-64 border rounded-md px-3 py-2 text-sm focus:outline-none"
+                className="w-[251px] border rounded-md px-3 py-2 text-sm focus:outline-none"
               />
             </div>
           </div>
 
           {/* 휴대폰 번호 */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 sm:translate-x-[10px]">
             <label className="w-full sm:w-36 text-base sm:text-xl font-medium shrink-0 whitespace-nowrap">
               휴대폰 번호
             </label>
@@ -97,7 +97,7 @@ export default function FindPw() {
                 value={tel}
                 onChange={handleTelChange}
                 placeholder="숫자 11자리 입력 (- 없이)"
-                className="w-64 border rounded-md px-3 py-2 text-sm focus:outline-none"
+                className="w-[251px] border rounded-md px-3 py-2 text-sm focus:outline-none"
               />
             </div>
           </div>
@@ -136,7 +136,7 @@ export default function FindPw() {
               <button
                 type="button"
                 onClick={handleCopy}
-                className="px-3 py-2 text-sm font-bold text-white bg-[#1F6170] rounded-md hover:opacity-90 transition-opacity"
+                className="px-3 py-2 text-sm font-bold text-white bg-[#0D9488] rounded-md hover:opacity-90 transition-opacity"
               >
                 복사
               </button>
@@ -144,7 +144,7 @@ export default function FindPw() {
             <button
               type="button"
               onClick={() => setTempPw(null)}
-              className="w-full h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              className="w-full h-10 flex items-center justify-center bg-[#0D9488] text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
             >
               닫기
             </button>

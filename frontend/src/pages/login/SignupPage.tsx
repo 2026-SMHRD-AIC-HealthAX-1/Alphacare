@@ -119,27 +119,27 @@ export default function SignupPage() {
   return (
     <div className="min-h-[calc(100vh-80px)] flex flex-col items-center justify-center px-4 py-8 sm:py-12">
       <div className="w-full max-w-xl mx-auto space-y-4 sm:space-y-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-center text-[#1F6170] dark:text-teal-400">
+        <h1 className="relative -top-2.5 text-2xl sm:text-3xl font-bold text-center text-[#1F6170] dark:text-teal-400">
           회원가입
         </h1>
 
         <form onSubmit={postSignup} className="space-y-4 sm:space-y-6">
           {/* 아이디 입력 */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-            <label className="w-full sm:w-36 text-base sm:text-xl font-medium shrink-0 whitespace-nowrap">
+          <div className="relative flex flex-col gap-1 sm:gap-2 sm:items-center">
+            <label className="w-full sm:absolute sm:right-[calc(50%+138px)] sm:top-1/2 sm:w-36 sm:-translate-y-1/2 text-base sm:text-xl font-medium shrink-0 whitespace-nowrap">
               아이디
             </label>
-            <div className="flex-1 flex items-center gap-2 w-full">
+            <div className="relative w-full sm:w-56">
               <input
                 type="text"
                 value={userId}
                 onChange={renameCheckId}
-                placeholder="아이디를 입력해주세요"
+                placeholder="아이디를 입력해주세요."
                 className="w-56 border rounded-md px-3 py-1.5 text-sm focus:outline-none"
               />
               <button
                 type="button" onClick={clickCheckDuplicate}
-                className="whitespace-nowrap shrink-0 px-3 sm:px-4 py-2 bg-[#0D9488] text-white text-xs sm:text-sm font-medium rounded-md hover:opacity-90 transition-opacity"
+                className="ml-2 whitespace-nowrap shrink-0 px-3 sm:px-4 py-2 bg-[#0D9488] text-white text-xs sm:text-sm font-medium rounded-md hover:opacity-90 transition-opacity sm:absolute sm:left-full sm:top-0 sm:ml-2"
               >
                 중복확인
               </button>
@@ -147,30 +147,30 @@ export default function SignupPage() {
           </div>
 
           {/* 비밀번호 입력 영역 */}
-          <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
-            <label className="w-full sm:w-36 text-base sm:text-xl font-medium shrink-0 whitespace-nowrap">
+          <div className="relative flex flex-col gap-1 sm:gap-2 sm:items-center">
+            <label className="w-full sm:absolute sm:right-[calc(50%+138px)] sm:top-1.5 sm:w-36 text-base sm:text-xl font-medium shrink-0 whitespace-nowrap">
               비밀번호
             </label>
-            <div className="flex-1 flex flex-col gap-1 w-full">
+            <div className="flex w-full flex-col gap-1 sm:w-56">
               <input
                 type="password"
                 value={userPw}
                 onChange={(e) => setuserPw(e.target.value)}
-                placeholder="비밀번호를 입력해주세요"
+                placeholder="비밀번호를 입력해주세요."
                 className="w-56 border rounded-md px-3 py-1.5 text-sm focus:outline-none"
               />
-              <span className="text-xs text-gray-500 dark:text-gray-400 pl-1">
+              <span className="text-[11.5px] text-gray-500 dark:text-gray-400 pl-1">
                 영어, 숫자, 특수문자로 구성된 8자리 이상
               </span>
             </div>
           </div>
 
           {/* 비밀번호 재확인 */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-            <label className="w-full sm:w-36 text-base sm:text-xl font-medium shrink-0 whitespace-nowrap">
+          <div className="relative flex flex-col gap-1 sm:gap-2 sm:items-center">
+            <label className="w-full sm:absolute sm:right-[calc(50%+138px)] sm:top-1/2 sm:w-36 sm:-translate-y-1/2 text-base sm:text-xl font-medium shrink-0 whitespace-nowrap">
               비밀번호 재확인
             </label>
-            <div className="flex-1 w-full">
+            <div className="w-full sm:w-56">
               <input
                 type="password"
                 value={pwConfirm}
@@ -182,11 +182,11 @@ export default function SignupPage() {
           </div>
 
           {/* 이름 */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-            <label className="w-full sm:w-36 text-base sm:text-xl font-medium shrink-0 whitespace-nowrap">
+          <div className="relative flex flex-col gap-1 sm:gap-2 sm:items-center">
+            <label className="w-full sm:absolute sm:right-[calc(50%+138px)] sm:top-1/2 sm:w-36 sm:-translate-y-1/2 text-base sm:text-xl font-medium shrink-0 whitespace-nowrap">
               이름
             </label>
-            <div className="flex-1 w-full">
+            <div className="w-full sm:w-56">
               <input
                 type="text"
                 value={name}
@@ -198,11 +198,11 @@ export default function SignupPage() {
           </div>
 
           {/* 휴대폰 번호 */}
-          <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
-            <label className="w-full sm:w-36 text-base sm:text-xl font-medium shrink-0 whitespace-nowrap">
+          <div className="relative flex flex-col gap-1 sm:gap-2 sm:items-center">
+            <label className="w-full sm:absolute sm:right-[calc(50%+138px)] sm:top-1.5 sm:w-36 text-base sm:text-xl font-medium shrink-0 whitespace-nowrap">
               휴대폰 번호
             </label>
-            <div className="flex-1 flex flex-col gap-1 w-full">
+            <div className="flex w-full flex-col gap-1 sm:w-56">
               <input
                 type="tel"
                 inputMode="numeric"
@@ -210,10 +210,10 @@ export default function SignupPage() {
                 value={phone}
                 onChange={checkphone}
                 maxLength={11}
-                placeholder="전화번호를 입력해주세요"
+                placeholder="전화번호를 입력해주세요."
                 className="w-56 border rounded-md px-3 py-1.5 text-sm focus:outline-none"
               />
-              <span className="text-xs text-gray-500 dark:text-gray-400 pl-1">
+              <span className="text-[11px] text-gray-500 dark:text-gray-400 pl-1">
                 `-`을 제외하고 입력해주세요
               </span>
             </div>

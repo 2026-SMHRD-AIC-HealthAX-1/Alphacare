@@ -52,42 +52,42 @@ export default function LoginPage() {
         </h1>
         <form onSubmit={handleLogin} className="space-y-4">
           {/* 아이디 */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-            <label className="w-full sm:w-36 text-base sm:text-xl font-medium shrink-0 whitespace-nowrap">
+          <div className="relative flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 sm:h-9">
+            <label className="w-full sm:absolute sm:left-[calc(50%-144px)] sm:top-1/2 sm:w-36 sm:-translate-y-1/2 text-base sm:text-xl font-medium shrink-0 whitespace-nowrap">
               아이디
             </label>
-            <div className="flex-1 flex justify-center">
+            <div className="flex-1 flex justify-center sm:absolute sm:left-[calc(50%+4px)] sm:top-1/2 sm:ml-0 sm:-translate-y-1/2 sm:justify-start">
               <input
                 type="text"
                 value={userId}
                 onChange={(e) => setUserId(e.target.value)}
                 placeholder="아이디를 입력해주세요"
-                className="w-56 border rounded-md px-3 py-1.5 text-sm focus:outline-none"
+                className="w-[219px] border rounded-md px-3 py-1.5 text-sm focus:outline-none"
               />
             </div>
           </div>
           {/* 비밀번호 */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-            <label className="w-full sm:w-36 text-base sm:text-xl font-medium shrink-0 whitespace-nowrap">
+          <div className="relative flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 sm:h-9">
+            <label className="w-full sm:absolute sm:left-[calc(50%-144px)] sm:top-1/2 sm:w-36 sm:-translate-y-1/2 text-base sm:text-xl font-medium shrink-0 whitespace-nowrap">
               비밀번호
             </label>
-            <div className="flex-1 flex justify-center">
+            <div className="flex-1 flex justify-center sm:absolute sm:left-[calc(50%+4px)] sm:top-1/2 sm:ml-0 sm:-translate-y-1/2 sm:justify-start">
               <input
                 type="password"
                 value={userPw}
                 onChange={(e) => setUserPw(e.target.value)}
                 placeholder="비밀번호를 입력해주세요"
-                className="w-56 border rounded-md px-3 py-1.5 text-sm focus:outline-none"
+                className="w-[219px] border rounded-md px-3 py-1.5 text-sm focus:outline-none"
               />
             </div>
           </div>
           {/* 하단 버튼 및 링크 */}
           <div className="flex flex-col items-center gap-3 pt-6 w-full">
             <div className="w-64 flex flex-col gap-3 mx-auto">
-              <div className="flex items-center justify-center text-xs">
-                <Link to="/FindId" className="hover:underline">아이디 찾기</Link>
-                <span className="mx-4 text-gray-300 dark:text-gray-600 font-light select-none">|</span>
-                <Link to="/FindPw" className="hover:underline">비밀번호 찾기</Link>
+              <div className="grid grid-cols-[1fr_auto_1fr] items-center text-xs">
+                <Link to="/FindId" className="justify-self-end pr-4 hover:underline">아이디 찾기</Link>
+                <span className="text-gray-300 dark:text-gray-600 font-light select-none">|</span>
+                <Link to="/FindPw" className="justify-self-start pl-4 hover:underline">비밀번호 찾기</Link>
               </div>
               <div className="flex items-center gap-2 w-full">
                 <Link
@@ -98,7 +98,7 @@ export default function LoginPage() {
                 </Link>
                 <button
                   type="submit"
-                  className="flex-1 h-11 flex items-center justify-center bg-[#0D9488] text-white font-bold text-[12px] sm:text-[14px] rounded-lg shadow-sm hover:opacity-90 transition-opacity"
+                  className="flex-1 h-11 flex items-center justify-center bg-[#0D9488] text-white font-bold text-base sm:text-lg rounded-lg shadow-sm hover:opacity-90 transition-opacity"
                 >
                   로그인
                 </button>

@@ -892,7 +892,8 @@ export default function CounselPage() {
                     : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
                   }`}
               >
-                {isCamOn ? "📷 비디오 ON" : "📷 비디오 OFF"}
+                <span className="relative -top-px leading-none">📷</span>
+                <span>{isCamOn ? "비디오 ON" : "비디오 OFF"}</span>
               </button>
 
               {/* 카메라 선택 (여러 대일 때) */}
@@ -1074,7 +1075,10 @@ export default function CounselPage() {
               </div>
             )}
 
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 text-center">
+            <p
+              className="text-xs text-gray-400 dark:text-gray-500 text-center"
+              style={{ marginTop: "15px" }}
+            >
               음성 인식(마이크 입력)은 Chrome 브라우저에서만 지원됩니다.
             </p>
           </div>

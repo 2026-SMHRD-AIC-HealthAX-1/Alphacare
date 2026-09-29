@@ -56,13 +56,13 @@ export default function FindId() {
   return (
     <div className="min-h-[calc(100vh-80px)] flex flex-col items-center justify-center px-4 py-8 sm:py-12">
       <div className="w-full max-w-md mx-auto space-y-4 sm:space-y-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-center text-[#1F6170] dark:text-teal-400">
+        <h1 className="relative -top-2.5 text-2xl sm:text-3xl font-bold text-center text-[#1F6170] dark:text-teal-400">
           아이디 찾기
         </h1>
 
         <form onSubmit={handleFindId} className="space-y-4 sm:space-y-6">
           {/* 이름 */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 sm:translate-x-[10px]">
             <label className="w-full sm:w-36 text-base sm:text-xl font-medium shrink-0 whitespace-nowrap">
               이름
             </label>
@@ -72,13 +72,13 @@ export default function FindId() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="이름을 입력해주세요"
-                className="w-64 border rounded-md px-3 py-2 text-sm focus:outline-none"
+                className="w-[251px] border rounded-md px-3 py-2 text-sm focus:outline-none"
               />
             </div>
           </div>
 
           {/* 휴대폰 번호 */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 sm:translate-x-[10px]">
             <label className="w-full sm:w-36 text-base sm:text-xl font-medium shrink-0 whitespace-nowrap">
               휴대폰 번호
             </label>
@@ -91,7 +91,7 @@ export default function FindId() {
                 value={tel}
                 onChange={handleTelChange}
                 placeholder="숫자 11자리 입력 (- 없이)"
-                className="w-64 border rounded-md px-3 py-2 text-sm focus:outline-none"
+                className="w-[251px] border rounded-md px-3 py-2 text-sm focus:outline-none"
               />
             </div>
           </div>
