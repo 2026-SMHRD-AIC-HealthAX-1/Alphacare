@@ -283,15 +283,15 @@ public class MemberService {
             // 회원 조회
             MemberEntity member = memberRepository.findById(memberNo).orElseThrow(() -> new IllegalArgumentException(MemberResponse.Message.MEMBER_NOT_FOUND));
 
-            member.setMileage(member.getMileage() + 1000);
+            member.setMileage(member.getMileage() + 200);
 
             memberRepository.save(member);
 
             // 마일리지 적립 내역 기록
             mileageHistoryRepository.save(new MileageHistoryEntity(
-                    null, member, "EARN", 1000, "오늘 첫 상담 적립", LocalDateTime.now()));
+                    null, member, "EARN", 200, "오늘 첫 상담 적립", LocalDateTime.now()));
 
-            System.out.println("1000 마일리지 지급 완료");
+            System.out.println("200 마일리지 지급 완료");
         }
     }
 

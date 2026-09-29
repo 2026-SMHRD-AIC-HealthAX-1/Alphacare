@@ -127,6 +127,32 @@ _landmarker_lock = threading.Lock()
 session_neutral_samples: dict = {}
 session_neutral_baselines: dict = {}
 
+# 세션별 감정 점수 지수이동평균(EMA) - 순간적인 표정 잡음 하나로 점수가 튀는 것 완화
+# ponytail: 고정 alpha. 세션마다 다른 민감도가 필요해지면 요청에서 alpha를 받도록 확장
+_EMOTION_EMA_ALPHA = 0.35
+session_emotion_ema: dict = {}
+
+# 세션별 최신 채팅 텍스트 감정 - 상담 중 메시지를 보낼 때마다 갱신되어
+# 이후 표정 점수와 계속 섞이는 데 쓰임 (초기 가중치와 동일하게 텍스트 0.6 : 표정 0.4)
+_TEXT_EMOTION_WEIGHT = 0.6
+_TEXT_EMOTION_REFRESH_TURNS = 10  # 매 대화 turn마다 분류하면 비용이 커서, 10번에 한 번만 갱신
+session_text_emotion: dict = {}
+session_chat_turn_count: dict = {}
+
+
+def _smooth_emotion_scores(session_id: str, scores: dict) -> dict:
+    """이번 프레임 점수를 이전 EMA와 섞어서 순간적인 표정 변화로 인한 튐을 완화함"""
+    previous = session_emotion_ema.get(session_id)
+    if previous is None:
+        smoothed = dict(scores)
+    else:
+        smoothed = {
+            key: _EMOTION_EMA_ALPHA * scores[key] + (1 - _EMOTION_EMA_ALPHA) * previous.get(key, scores[key])
+            for key in scores
+        }
+    session_emotion_ema[session_id] = smoothed
+    return smoothed
+
 
 def _get_session_landmarker(session_id: str):
     """세션 전용 FaceLandmarker를 가져오거나, 처음 요청이면 새로 만듦"""
@@ -637,6 +663,17 @@ def emotion_api(data: EmotionRequest):
     # 중립 표정과의 변화량을 학습된 6감정 모델에 전달
     scores = predict_emotion_from_delta(delta_10f)
 
+    if scores is not None:
+        scores = _smooth_emotion_scores(data.sessionId, scores)
+
+        # 상담 중 가장 최근 채팅 메시지의 감정이 있으면 표정과 계속 섞음
+        text_scores = session_text_emotion.get(data.sessionId)
+        if text_scores is not None:
+            scores = {
+                key: _TEXT_EMOTION_WEIGHT * text_scores[key] + (1 - _TEXT_EMOTION_WEIGHT) * scores[key]
+                for key in scores
+            }
+
     return EmotionResponse(scores=scores)
 
 
@@ -647,6 +684,12 @@ def chat_api(data: ChatRequest):
 
     session = chat_sessions[data.sessionId]
     reply = session.send(data.message)
+
+    # 대화 10번마다 한 번씩만 사용자 메시지의 감정을 분류해서 갱신 (매번 하면 호출 비용이 커짐)
+    turn_count = session_chat_turn_count.get(data.sessionId, 0) + 1
+    session_chat_turn_count[data.sessionId] = turn_count
+    if turn_count % _TEXT_EMOTION_REFRESH_TURNS == 0:
+        session_text_emotion[data.sessionId] = _classify_text_emotion(data.message)
 
     return ChatResponse(reply=reply)
 
@@ -661,6 +704,9 @@ def counsel_start(data: CounselStartRequest):
     # 개인 중립 기준 수집 시작 (기분 입력이 끝나는 시점에 finalizeNeutral 신호로 확정함)
     session_neutral_samples[data.sessionId] = []
     session_neutral_baselines.pop(data.sessionId, None)
+    session_emotion_ema.pop(data.sessionId, None)
+    session_text_emotion.pop(data.sessionId, None)
+    session_chat_turn_count.pop(data.sessionId, None)
 
     return {"ok": True}
 
@@ -701,6 +747,9 @@ def counsel_finish(data: CounselFinishRequest):
     # 개인 중립 데이터 삭제
     session_neutral_samples.pop(data.sessionId, None)
     session_neutral_baselines.pop(data.sessionId, None)
+    session_emotion_ema.pop(data.sessionId, None)
+    session_text_emotion.pop(data.sessionId, None)
+    session_chat_turn_count.pop(data.sessionId, None)
 
     release_session_landmarker(data.sessionId)
 
@@ -720,6 +769,9 @@ def counsel_abort(data: CounselAbortRequest):
     # 개인 중립 데이터 삭제
     session_neutral_samples.pop(data.sessionId, None)
     session_neutral_baselines.pop(data.sessionId, None)
+    session_emotion_ema.pop(data.sessionId, None)
+    session_text_emotion.pop(data.sessionId, None)
+    session_chat_turn_count.pop(data.sessionId, None)
 
     release_session_landmarker(data.sessionId)
     return {"ok": True}
