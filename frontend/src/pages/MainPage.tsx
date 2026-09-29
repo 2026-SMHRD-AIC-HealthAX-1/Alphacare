@@ -20,7 +20,7 @@ import {
 import test1 from "../assets/test5.mp4";
 import face from "../assets/mainface.png";
 import chat from "../assets/chat.png";
-import EmotionCalender from "../assets/EmotionCalender.png";
+import CounselSummaryPreview from "../assets/counsel-summary-photo-preview.png";
 import Chart from "../assets/chart.png";
 
 /* =========================================================
@@ -164,9 +164,10 @@ export default function MainPage() {
       description: "Feely AI 상담사가 당신의 마음을 듣고 함께 정리해 드려요.",
     },
     {
-      image: EmotionCalender,
+      image: CounselSummaryPreview,
       alt: "Emotion Calendar",
-      imageOffset: "-327px",
+      imageOffset: "-210px",
+      imageBorder: true,
       label: "상담 기록",
       title: "오늘의 마음을 한눈에 정리해요.",
       descriptionLead: "상담이 끝난 뒤 오늘의 이야기를 요약해 드려요.",
@@ -2875,7 +2876,14 @@ export default function MainPage() {
               }}
             >
               <img
-                className="landing-slide-image"
+                className={`landing-slide-image ${
+                  (slideDirection === 1
+                    ? baseSlides[currentSlide]
+                    : baseSlides[targetSlide]
+                  ).imageBorder
+                    ? "landing-slide-image--framed"
+                    : ""
+                }`}
                 src={
                   slideDirection ===
                   1
@@ -2999,7 +3007,14 @@ export default function MainPage() {
               }}
             >
               <img
-                className="landing-slide-image"
+                className={`landing-slide-image ${
+                  (slideDirection === 1
+                    ? baseSlides[targetSlide]
+                    : baseSlides[currentSlide]
+                  ).imageBorder
+                    ? "landing-slide-image--framed"
+                    : ""
+                }`}
                 src={
                   slideDirection ===
                   1
@@ -3140,7 +3155,7 @@ export default function MainPage() {
             backgroundColor:
               "var(--fe-surface)",
             color:
-              "var(--fe-text)",
+              "#6b7280",
             padding: 0,
             cursor:
               "pointer",
@@ -3148,15 +3163,19 @@ export default function MainPage() {
               "0 4px 12px rgba(0,0,0,0.15)",
           }}
         >
-          <span
-            style={{
-              fontSize: "18px",
-              lineHeight: 1,
-              transform: "translateY(-1px)",
-            }}
+          <svg
+            aria-hidden="true"
+            width="19"
+            height="19"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
           >
-            ‹
-          </span>
+            <path d="m15 18-6-6 6-6" />
+          </svg>
         </button>
 
         {/* 오른쪽 화살표 */}
@@ -3191,7 +3210,7 @@ export default function MainPage() {
             backgroundColor:
               "var(--fe-surface)",
             color:
-              "var(--fe-text)",
+              "#6b7280",
             padding: 0,
             cursor:
               "pointer",
@@ -3199,15 +3218,19 @@ export default function MainPage() {
               "0 4px 12px rgba(0,0,0,0.15)",
           }}
         >
-          <span
-            style={{
-              fontSize: "18px",
-              lineHeight: 1,
-              transform: "translateY(-1px)",
-            }}
+          <svg
+            aria-hidden="true"
+            width="19"
+            height="19"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
           >
-            ›
-          </span>
+            <path d="m9 18 6-6-6-6" />
+          </svg>
         </button>
 
         {/* 인디케이터 */}
@@ -3273,6 +3296,12 @@ export default function MainPage() {
         </div>
       </section>
       <style>{`
+        /* 사진(스크린샷) 슬라이드는 일러스트와 구분되도록 얇은 테두리 표시 */
+        .landing-slide-image--framed {
+          border: 1px solid var(--fe-faint);
+          border-radius: 12px;
+        }
+
         /* 다크모드: 흰 배경 영상을 반전해서 어두운 배경에 맞춤 */
         @media (prefers-color-scheme: dark) {
           .landing-hero-media > video {
