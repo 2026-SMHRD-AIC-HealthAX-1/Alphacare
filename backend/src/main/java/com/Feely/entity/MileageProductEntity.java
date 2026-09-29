@@ -1,5 +1,6 @@
 package com.Feely.entity;
 
+import java.time.LocalDate;
 
 import jakarta.annotation.Nonnull;
 import jakarta.persistence.Column;

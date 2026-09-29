@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node -e \"require('fs').copyFileSync('dist/index.html', 'dist/404.html')\"",
+    "build": "vite build",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist -r https://github.com/2026-SMHRD-AIC-HealthAX-1/Alphacare.git"
   },

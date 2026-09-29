@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react'
 import { ApiError } from "../../API/axios";
-import { showToast } from "../../utils/toast";
 import { getMileageProducts, MileageProduct, exchangeMileageProduct } from "../../API/mileage";
 import { getMemberMileage, getMileageHistory, MileageHistoryItem } from "../../API/auth";
 import naverpay_5000 from "../../assets/naverpay_5000.png";
@@ -775,7 +774,7 @@ export default function Mshop() {
                                                                         endDate > maxDate
                                                                     ) {
 
-                                                                        showToast(
+                                                                        alert(
                                                                             "상담 기간은 최대 3개월까지 선택할 수 있습니다."
                                                                         );
 
@@ -887,7 +886,7 @@ export default function Mshop() {
                                                 (!diaryStartDate || !diaryEndDate)
                                             ) {
 
-                                                showToast(
+                                                alert(
                                                     "상담 기간을 선택해주세요."
                                                 );
 

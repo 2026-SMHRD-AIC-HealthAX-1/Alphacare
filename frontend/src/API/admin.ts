@@ -5,7 +5,7 @@ export interface AdminMember {
   memberNo: number;
   id: string;
   name: string;
-  phone: string | null; // 카카오 가입자는 전화번호 없음
+  phone: string;
   role: string;
   mileage: number;
 }

@@ -1,0 +1,10 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="feelyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#aa3bff" />
+      <stop offset="100%" stop-color="#ff65a3" />
+    </linearGradient>
+  </defs>
+  <circle cx="50" cy="50" r="48" fill="url(#feelyGrad)" />
+  <path d="M50 68 C35 55 25 45 25 35 C25 27 31 22 38 22 C43 22 47 25 50 29 C53 25 57 22 62 22 C69 22 75 27 75 35 C75 45 65 55 50 68 Z" fill="#ffffff" />
+</svg>

@@ -67,7 +67,7 @@ public class MemberController{
         // 1) 로그인 필수 입력값 검증
         if (isBlank(request.id()) || isBlank(request.password())) {
             return ResponseEntity.badRequest()
-                    .body(MemberDto.loginResult(false, MemberResponse.Message.LOGIN_REQUIRED_INPUT, null, null));
+                    .body(MemberDto.loginResult(false, MemberResponse.Message.LOGIN_REQUIRED_INPUT, null));
         }
 
         // 2) 검증 통과 후 로그인 서비스 호출

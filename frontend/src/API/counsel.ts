@@ -77,8 +77,7 @@ export interface CounselRecord {
 
 // 로그인 회원의 상담 기록 전체 조회
 export const getCounselData = async (): Promise<CounselRecord[]> => {
-  // 상담마다 시작/종료 이미지가 함께 내려와 응답이 커질 수 있어서 기본 5초보다 넉넉하게 기다림
-  const response = await api.get("/api/counsel", { timeout: 20000 });
+  const response = await api.get("/api/counsel");
   return response.data;
 };
 

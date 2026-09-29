@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { checkDuplicateId, signupUser } from "../../API/auth";
 import { isValidPassword, isValidPhone, sanitizePhoneInput } from "../../utils/validation";
 import { getKakaoAuthUrl } from "../../utils/kakao";
-import { showToast } from "../../utils/toast";
 
 export default function SignupPage() {
 
@@ -29,7 +28,7 @@ export default function SignupPage() {
   const clickCheckDuplicate = async () => {
     // 아이디 공백 체크
     if (!userId.trim()) {
-      showToast("아이디를 입력해주세요");
+      alert("아이디를 입력해주세요");
       return
     }
 
@@ -38,16 +37,16 @@ export default function SignupPage() {
       const isDuplicate = await checkDuplicateId(userId);
 
       if (isDuplicate) {
-        showToast("이미 사용중인 아이디 입니다.");
+        alert("이미 사용중인 아이디 입니다.")
         setcheckId(false);
       }
       else {
-        showToast("사용 가능한 아이디 입니다.", "success");
+        alert("사용 가능한 아이디 입니다.")
         setcheckId(true);
       }
     } catch {
       console.log("중복 확인 오류");
-      showToast("중복 확인 중 오류가 발생했습니다.");
+      alert("중복 확인 중 오류 발생")
       setcheckId(false);
     }
   }
@@ -62,27 +61,27 @@ export default function SignupPage() {
     e.preventDefault();
 
     if (!userId || !userPw || !pwConfirm || !name || !phone) {
-      showToast("모든 입력칸을 채워주세요");
+      alert("모든 입력칸을 채워주세요");
       return;
     }
 
     if (!checkId) {
-      showToast("아이디 중복확인을 해주세요");
+      alert("아이디 중복확인을 해주세요");
       return;
     }
 
     if (!isValidPassword(userPw)) {
-      showToast("비밀번호는 영문, 숫자, 특수문자로 구성된 8자리 이상이어야 합니다.");
+      alert("비밀번호는 영문, 숫자, 특수문자로 구성된 8자리 이상이어야 합니다.");
       return;
     }
 
     if (userPw !== pwConfirm) {
-      showToast("비밀번호가 일치하지 않습니다.");
+      alert("비밀번호가 일치하지 않습니다.");
       return;
     }
 
     if (!isValidPhone(phone)) {
-      showToast("휴대폰 번호 11자리를 정확히 입력해주세요");
+      alert("휴대폰 번호 11자리를 정확히 입력해주세요");
       return;
     }
 
@@ -98,19 +97,19 @@ export default function SignupPage() {
       });
 
       if (!result.joinFlag) {
-        showToast(result.message || "회원가입에 실패했습니다.");
+        alert(result.message || "회원가입에 실패했습니다.");
         return;
       }
-      showToast(result.message || "회원가입이 완료되었습니다.", "success");
+      alert(result.message || "회원가입이 완료되었습니다.");
       navigate("/Login");
     } catch (e) {
       const error = e as ApiError;
       console.error("회원가입 오류 : ", error);
       // 백엔드 에러 메시지 표시
       if (error.response?.data?.message) {
-        showToast(error.response.data.message);
+        alert(error.response.data.message);
       } else {
-        showToast("회원가입 처리 중 서버 오류가 발생했습니다.");
+        alert("회원가입 처리 중 서버 오류가 발생했습니다.");
       }
     }
   };

@@ -16,7 +16,6 @@ import base64
 import json
 import os
 import sys
-import threading
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -116,17 +115,11 @@ print("Feely 감정모델 로드 완료 - 입력 개수:", _checkpoint.get("inpu
 # 따로 두고, 상담이 끝나면 정리(release)함
 session_landmarkers: dict = {}
 session_last_timestamp: dict = {}
-# 랜드마커 생성/사용/정리를 한 번에 하나씩만 처리 (1초마다 요청이 겹치면 타임스탬프가 꼬이거나,
-# 상담 종료로 close된 랜드마커를 다른 요청이 쓰다가 서버가 죽는 것 방지)
-# ponytail: 전역 락이라 동시 접속자가 많아지면 세션별 락으로 바꾸면 됨
-_landmarker_lock = threading.Lock()
 
 # 세션별 개인 중립 기준 생성용
-# 시간(100초) 대신 샘플 개수 기준으로 확정함 - 프론트가 몇 초 간격으로 보내든
-# 목표 개수만 모이면 바로 기준점을 계산함 (전송 주기에 대한 가정이 없어짐)
-NEUTRAL_SAMPLE_TARGET = 10
 session_neutral_samples: dict = {}
 session_neutral_baselines: dict = {}
+session_neutral_start_times: dict = {}
 
 
 def _get_session_landmarker(session_id: str):
@@ -148,11 +141,10 @@ def _get_session_landmarker(session_id: str):
 
 def release_session_landmarker(session_id: str) -> None:
     """상담 종료/이탈 시 세션 전용 랜드마커 리소스를 정리함 (안 하면 세션마다 계속 쌓여서 메모리 누수)"""
-    with _landmarker_lock:
-        landmarker = session_landmarkers.pop(session_id, None)
-        if landmarker is not None:
-            landmarker.close()
-        session_last_timestamp.pop(session_id, None)
+    landmarker = session_landmarkers.pop(session_id, None)
+    if landmarker is not None:
+        landmarker.close()
+    session_last_timestamp.pop(session_id, None)
 
 
 def extract_landmark_feature(face_image, session_id: str):
@@ -161,24 +153,18 @@ def extract_landmark_feature(face_image, session_id: str):
     if face_image is None or face_image.size == 0:
         return None
 
+    landmarker = _get_session_landmarker(session_id)
+
     rgb_image = cv2.cvtColor(face_image, cv2.COLOR_BGR2RGB)
     mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_image)
 
-    with _landmarker_lock:
-        # 락을 기다리는 사이 상담이 종료됐으면 랜드마커를 새로 만들지 않음 (정리된 세션 재생성 방지)
-        if session_id not in counsel_sessions:
-            return None
+    # VIDEO 모드는 타임스탬프가 항상 증가해야 해서, 세션별로 마지막 값을 따로 기억해둠
+    timestamp_ms = int(time.monotonic() * 1000)
+    if timestamp_ms <= session_last_timestamp[session_id]:
+        timestamp_ms = session_last_timestamp[session_id] + 1
+    session_last_timestamp[session_id] = timestamp_ms
 
-        landmarker = _get_session_landmarker(session_id)
-
-        # VIDEO 모드는 타임스탬프가 항상 증가해야 해서, 세션별로 마지막 값을 따로 기억해둠
-        timestamp_ms = int(time.monotonic() * 1000)
-        if timestamp_ms <= session_last_timestamp[session_id]:
-            timestamp_ms = session_last_timestamp[session_id] + 1
-        session_last_timestamp[session_id] = timestamp_ms
-
-        result = landmarker.detect_for_video(mp_image, timestamp_ms)
-
+    result = landmarker.detect_for_video(mp_image, timestamp_ms)
     if not result.face_landmarks:
         return None
 
@@ -308,6 +294,27 @@ def make_ver5_expression_feature(base_feature):
     return expression_feature
 
 
+def reduce_to_model_features(base_feature):
+    """1434개 정규화된 랜드마크를 모델 입력 10개 특징으로 바꿈 (make_ver5_expression_feature 그대로 호출)"""
+    return make_ver5_expression_feature(base_feature)
+
+
+def predict_emotion_scores(base_feature):
+    """모델 입력 특징을 표준화한 뒤 모델에 넣어 감정 6개 확률(e01~e06, 합계 1.0)을 계산함.
+    10개 특징 추출 자체가 실패하면(얼굴 각도가 이상하거나 좌표가 이상하면) None을 돌려줌"""
+    model_input = reduce_to_model_features(base_feature)
+    if model_input is None:
+        return None
+
+    input_tensor = (torch.tensor(model_input, dtype=torch.float32) - _feature_mean) / _feature_std
+    input_tensor = input_tensor.unsqueeze(0)
+
+    with torch.no_grad():
+        logits = emotion_model(input_tensor)
+        probabilities = torch.softmax(logits, dim=1)[0]
+
+    return {key: probabilities[i].item() for i, key in enumerate(EMOTION_KEYS)}
+
 def predict_emotion_from_delta(delta_10f):
     # Δ10F가 올바른 10개 특징인지 확인
     if delta_10f is None or delta_10f.shape != (10,):
@@ -354,10 +361,7 @@ def decode_base64_image(data_url: str):
     """프론트가 canvas.toDataURL()로 만든 'data:image/jpeg;base64,...' 문자열을 OpenCV 이미지로 변환"""
     if "," in data_url:
         data_url = data_url.split(",", 1)[1]
-    try:
-        binary = base64.b64decode(data_url)
-    except ValueError:
-        return None
+    binary = base64.b64decode(data_url)
     array = np.frombuffer(binary, dtype=np.uint8)
     return cv2.imdecode(array, cv2.IMREAD_COLOR)
 
@@ -534,11 +538,12 @@ def _summarize_session(session, user_name: str = "") -> str:
 
 
 def _weekly_summary_system_prompt(user_name: str) -> str:
-    who = f"{user_name}님" if user_name else "사용자"
+    # 이름이 있으면 "OOO님을/이라고"(받침 있는 '님' 기준), 없으면 "사용자를/라고"
+    who, eul, ago = (f"{user_name}님", "을", "이라고") if user_name else ("사용자", "를", "라고")
     return (
         "너는 한 주간 진행된 여러 심리상담 세션을 짧게 정리하는 도우미야. "
         "아래는 이번 주 상담 순서대로 나열한 (상담 요약, 그날의 대표 감정) 목록이야. "
-        f"{who}을 지칭할 일이 있으면 '{who}'이라고 불러. "
+        f"{who}{eul} 지칭할 일이 있으면 '{who}'{ago} 불러. "
         "반드시 두세 줄(2~3문장) 이내로, 다음 두 가지만 담아 한국어 존댓말로 담백하게 요약해: "
         "1) 이번 주에 어떤 일들이 있었는지 핵심만 간단히, "
         "2) 한 주 동안 감정이 어떻게 변화했는지. "
@@ -560,12 +565,12 @@ def test_api():
 def emotion_api(data: EmotionRequest):
 
     # 현재 진행 중인 상담인지 먼저 확인
-    # 이미 끝난 상담이면 주기적으로 얼굴 정보가 들어와도 분석하지 않음
+    # 이미 끝난 상담이면 5초마다 얼굴 정보가 들어와도 분석하지 않음
     if data.sessionId not in counsel_sessions:
         print("[확인] 종료된 상담의 얼굴 분석 요청 무시 =", data.sessionId)
         return EmotionResponse(scores=None)
 
-    # 상담 중 주기적으로 카메라 얼굴 정보를 받아 분석
+    # 상담 중 5초마다 카메라 얼굴 정보를 받아 분석
     face_image = decode_base64_image(data.image)
 
     # 얼굴 랜드마크 추출 및 위치/크기 보정
@@ -582,45 +587,109 @@ def emotion_api(data: EmotionRequest):
     if current_10f is None:
         return EmotionResponse(scores=None)
 
-    # 개인 중립 표정 기준이 아직 없으면 샘플을 계속 모으다가,
-    # 목표 개수(NEUTRAL_SAMPLE_TARGET)에 도달하는 즉시 기준점을 확정함
-    # (프론트 전송 주기가 몇 초든 상관없이 '개수'로만 판단)
+    # 상담 시작 후 100초 동안 개인 중립 표정 후보 수집
+    start_time = session_neutral_start_times.get(data.sessionId)
+
+    print("[확인] 현재 sessionId =", data.sessionId)
+    print("[확인] 중립 시작시간 =", start_time)
+
+    if start_time is not None:
+        elapsed_time = time.monotonic() - start_time
+
+        # 상담 시작 후 100초가 지나기 전
+        if elapsed_time < 100:
+            session_neutral_samples.setdefault(
+                data.sessionId,
+                []
+            ).append(
+                current_10f.copy()
+            )
+
+        # 상담 시작 후 100초가 지난 경우
+        else:
+
+            # 이미 개인 중립 기준이 있으면 그대로 사용
+            if data.sessionId in session_neutral_baselines:
+                neutral_10f = session_neutral_baselines[data.sessionId]
+
+            # 아직 개인 중립 기준이 없으면 한 번만 생성
+            else:
+                samples = session_neutral_samples.get(
+                    data.sessionId,
+                    []
+                )
+
+                # 유효한 중립 표정 후보가 최소 10개 필요
+                if len(samples) < 10:
+                    return EmotionResponse(scores=None)
+
+                # 전체 후보의 특징별 중앙값 계산
+                sample_array = np.stack(samples)
+                median_10f = np.median(
+                    sample_array,
+                    axis=0
+                )
+
+                # 각 특징의 변화 폭 계산
+                mad_10f = np.median(
+                    np.abs(sample_array - median_10f),
+                    axis=0
+                )
+
+                # 0으로 나누는 것 방지
+                safe_mad_10f = np.maximum(
+                    mad_10f,
+                    1e-6
+                )
+
+                # 각 후보가 중앙값에서 얼마나 떨어졌는지 계산
+                normalized_diff = (
+                    sample_array - median_10f
+                ) / safe_mad_10f
+
+                distances = np.linalg.norm(
+                    normalized_diff,
+                    axis=1
+                )
+
+                # 중앙값과 가장 가까운 중립 후보 5개 선택
+                nearest_indices = np.argsort(
+                    distances
+                )[:5]
+
+                nearest_5 = sample_array[
+                    nearest_indices
+                ]
+
+                # 선택된 5개의 중앙값을 개인 중립 기준으로 확정
+                neutral_10f = np.median(
+                    nearest_5,
+                    axis=0
+                ).astype(np.float32)
+
+                # 개인 중립 기준 저장
+                session_neutral_baselines[
+                    data.sessionId
+                ] = neutral_10f
+
+                print("[확인] 개인 중립 기준 생성 완료")
+                print("[확인] 전체 중립 후보 개수 =", len(samples))
+                print("[확인] 최종 선택 샘플 개수 =", len(nearest_5))
+                print("[확인] neutral_10f =", neutral_10f)
+
+    # 개인 중립 기준이 아직 만들어지지 않았으면
+    # 얼굴 감정분석을 기다림 (raw 기반 예측은 델타 전용으로 학습된 모델과 표준화 기준이 달라 부정확함)
     if data.sessionId not in session_neutral_baselines:
-        samples = session_neutral_samples.setdefault(data.sessionId, [])
-        samples.append(current_10f.copy())
-
-        if len(samples) < NEUTRAL_SAMPLE_TARGET:
-            # 아직 목표 개수를 못 채움 - 계속 수집만 하고 이번 프레임은 분석하지 않음
-            return EmotionResponse(scores=None)
-
-        # 전체 후보의 특징별 중앙값 계산
-        sample_array = np.stack(samples)
-        median_10f = np.median(sample_array, axis=0)
-
-        # 각 특징의 변화 폭 계산
-        mad_10f = np.median(np.abs(sample_array - median_10f), axis=0)
-
-        # 0으로 나누는 것 방지
-        safe_mad_10f = np.maximum(mad_10f, 1e-6)
-
-        # 각 후보가 중앙값에서 얼마나 떨어졌는지 계산
-        normalized_diff = (sample_array - median_10f) / safe_mad_10f
-        distances = np.linalg.norm(normalized_diff, axis=1)
-
-        # 중앙값과 가장 가까운 중립 후보 5개 선택 -> 그 중앙값을 개인 중립 기준으로 확정
-        nearest_indices = np.argsort(distances)[:5]
-        nearest_5 = sample_array[nearest_indices]
-        neutral_10f = np.median(nearest_5, axis=0).astype(np.float32)
-
-        session_neutral_baselines[data.sessionId] = neutral_10f
-
-        print("[확인] 개인 중립 기준 생성 완료 =", data.sessionId)
-        print("[확인] 수집된 샘플 개수 =", len(samples))
+        return EmotionResponse(scores=None)
 
     # 현재 얼굴 10개 특징에서 개인 중립 기준을 빼서
     # 평소 중립 표정과 비교해 얼마나 변했는지 계산
     neutral_10f = session_neutral_baselines[data.sessionId]
     delta_10f = current_10f - neutral_10f
+
+    print("[확인] 현재 current_10f =", current_10f)
+    print("[확인] 개인 neutral_10f =", neutral_10f)
+    print("[확인] 계산된 delta_10f =", delta_10f)
 
     # 중립 표정과의 변화량을 학습된 6감정 모델에 전달
     scores = predict_emotion_from_delta(delta_10f)
@@ -646,9 +715,10 @@ def counsel_start(data: CounselStartRequest):
         "emotionSamples": [],
     }
 
-    # 개인 중립 기준 수집 시작 (목표 샘플 개수 모이면 emotion_api에서 바로 확정함)
+    # 개인 중립 기준 수집 시작
     session_neutral_samples[data.sessionId] = []
     session_neutral_baselines.pop(data.sessionId, None)
+    session_neutral_start_times[data.sessionId] = time.monotonic()
 
     return {"ok": True}
 
@@ -689,6 +759,7 @@ def counsel_finish(data: CounselFinishRequest):
     # 개인 중립 데이터 삭제
     session_neutral_samples.pop(data.sessionId, None)
     session_neutral_baselines.pop(data.sessionId, None)
+    session_neutral_start_times.pop(data.sessionId, None)
 
     release_session_landmarker(data.sessionId)
 
@@ -708,6 +779,7 @@ def counsel_abort(data: CounselAbortRequest):
     # 개인 중립 데이터 삭제
     session_neutral_samples.pop(data.sessionId, None)
     session_neutral_baselines.pop(data.sessionId, None)
+    session_neutral_start_times.pop(data.sessionId, None)
 
     release_session_landmarker(data.sessionId)
     return {"ok": True}

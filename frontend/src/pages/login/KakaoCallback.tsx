@@ -2,7 +2,6 @@ import { useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { kakaoLogin, kakaoSignup } from "../../API/auth";
 import { setAuthCookies, ApiError } from "../../API/axios";
-import { showToast, showToastAfterReload } from "../../utils/toast";
 
 // 카카오 로그인 콜백 처리: 인가코드로 로그인 시도 -> 신규회원이면 전화번호 없이 바로 가입 처리
 export default function KakaoCallback() {
@@ -22,14 +21,14 @@ export default function KakaoCallback() {
 
     const code = searchParams.get("code");
     if (!code) {
-      showToast("카카오 로그인 정보를 받지 못했습니다.");
+      alert("카카오 로그인 정보를 받지 못했습니다.");
       navigate(fallbackPath);
       return;
     }
 
     const goToMain = (name: string | null, id: string) => {
       setAuthCookies(name || id || "카카오회원");
-      showToastAfterReload(`${name || "회원"}님, 환영합니다!`);
+      alert(`${name || "회원"}님, 환영합니다!`);
       window.location.href = import.meta.env.BASE_URL;
     };
 
@@ -47,18 +46,18 @@ export default function KakaoCallback() {
               goToMain(signupResult.nickname, signupResult.kakaoId || "");
               return;
             }
-            showToast(signupResult.message || "카카오 회원가입에 실패했습니다.");
+            alert(signupResult.message || "카카오 회원가입에 실패했습니다.");
             navigate(fallbackPath);
           });
         }
 
-        showToast(result.message || "카카오 로그인에 실패했습니다.");
+        alert(result.message || "카카오 로그인에 실패했습니다.");
         navigate(fallbackPath);
       })
       .catch((e) => {
         const error = e as ApiError;
         console.error("카카오 로그인 오류 : ", error);
-        showToast("카카오 로그인 처리 중 서버 통신 오류가 발생했습니다.");
+        alert("카카오 로그인 처리 중 서버 통신 오류가 발생했습니다.");
         navigate(fallbackPath);
       });
   }, [searchParams, navigate]);
