@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import Mshop from "./Mshop";
 import { updateMember, logout } from "../../API/auth";
 import { clearAuthCookies, ApiError } from "../../API/axios";
 import { isValidPassword, isValidPhone, sanitizePhoneInput } from "../../utils/validation";
+import { showToast, showToastAfterReload } from "../../utils/toast";
 
 export default function MyPage() {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   // 탭 분기 (profile: 회원정보수정, Mshop: 마일리지샵)
   const activeTab = searchParams.get("tab") === "Mshop" ? "Mshop" : "profile";
@@ -19,22 +19,22 @@ export default function MyPage() {
   // 회원정보 수정 (입력된 값만 전송)
   const handleUpdateMember = async () => {
     if (!password && !phone) {
-      alert("수정할 내용을 입력해주세요.");
+      showToast("수정할 내용을 입력해주세요.");
       return;
     }
 
     if (password && password !== passwordConfirm) {
-      alert("비밀번호와 비밀번호 확인이 일치하지 않습니다.");
+      showToast("비밀번호와 비밀번호 확인이 일치하지 않습니다.");
       return;
     }
 
     if (password && !isValidPassword(password)) {
-      alert("비밀번호는 영문, 숫자, 특수문자로 구성된 8자리 이상이어야 합니다.");
+      showToast("비밀번호는 영문, 숫자, 특수문자로 구성된 8자리 이상이어야 합니다.");
       return;
     }
 
     if (phone && !isValidPhone(phone)) {
-      alert("휴대폰 번호 11자리를 정확히 입력해주세요");
+      showToast("휴대폰 번호 11자리를 정확히 입력해주세요");
       return;
     }
 
@@ -44,7 +44,7 @@ export default function MyPage() {
         pw: password || undefined,
         tel: phone || undefined,
       });
-      alert(result.message ?? "회원정보가 수정되었습니다. 보안을 위해 다시 로그인해주세요.");
+      showToastAfterReload(result.message ?? "회원정보가 수정되었습니다. 보안을 위해 다시 로그인해주세요.");
 
       // 수정 성공 시 로그아웃 후 로그인 페이지로 이동
       try {
@@ -53,13 +53,14 @@ export default function MyPage() {
         console.error("로그아웃 오류:", logoutError);
       } finally {
         clearAuthCookies();
-        navigate("/Login");
+        // 헤더의 로그인 표시까지 갱신되도록 페이지를 새로 불러오며 이동
+        window.location.assign(`${import.meta.env.BASE_URL.replace(/\/$/, "")}/Login`);
       }
     } catch (e) {
       const error = e as ApiError;
       // 401은 axios 인터셉터에서 처리
       if (error?.response?.status !== 401) {
-        alert(error?.response?.data?.message ?? "회원정보 수정 중 오류가 발생했습니다.");
+        showToast(error?.response?.data?.message ?? "회원정보 수정 중 오류가 발생했습니다.");
       }
       console.error("회원정보 수정 오류:", error);
     } finally {

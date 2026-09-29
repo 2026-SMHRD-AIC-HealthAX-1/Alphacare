@@ -3,6 +3,7 @@ import { useState } from "react";
 import { loginUser } from "../../API/auth";
 import { setAuthCookies, ApiError } from "../../API/axios";
 import { getKakaoAuthUrl } from "../../utils/kakao";
+import { showToast, showToastAfterReload } from "../../utils/toast";
 
 export default function LoginPage() {
   const [userId, setUserId] = useState("");
@@ -11,7 +12,7 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!userId.trim() || !userPw.trim()) {
-      alert("아이디와 비밀번호를 모두 입력해주세요.");
+      showToast("아이디와 비밀번호를 모두 입력해주세요.");
       return;
     }
     try {
@@ -26,19 +27,19 @@ export default function LoginPage() {
         // 쿠키에는 아이디가 아니라 실제 이름을 저장 (상담 요약 등에서 이름으로 표시하기 위함)
         const displayName = res.name || userId;
         setAuthCookies(displayName);
-        alert(`${displayName}님, 환영합니다!`);
+        showToastAfterReload(`${displayName}님, 환영합니다!`);
         window.location.href = import.meta.env.BASE_URL;
       } else {
-        alert("아이디 또는 비밀번호가 일치하지 않습니다.");
+        showToast("아이디 또는 비밀번호가 일치하지 않습니다.");
       }
     } catch (e) {
       const error = e as ApiError;
       if (error?.response?.status === 401) {
         // 아이디/비밀번호 불일치
-        alert("아이디 또는 비밀번호가 일치하지 않습니다.");
+        showToast("아이디 또는 비밀번호가 일치하지 않습니다.");
       } else {
         console.error("로그인 오류 :", error);
-        alert("로그인 처리 중 서버 통신 오류가 발생했습니다.");
+        showToast("로그인 처리 중 서버 통신 오류가 발생했습니다.");
       }
     }
   };

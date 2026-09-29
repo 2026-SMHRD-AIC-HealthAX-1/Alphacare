@@ -6,6 +6,7 @@ const FASTAPI_BASE_URL = import.meta.env.VITE_FASTAPI_BASE_URL;
 export interface EmotionRequest {
   sessionId: string;
   image: string; // base64 JPEG (캔버스로 캡처한 웹캠 프레임)
+  finalizeNeutral?: boolean; // true면 질의응답(기분 입력) 종료 시점 - 중립 기준점을 지금까지 모은 샘플로 확정
 }
 
 // 감정 카테고리별 점수 (e01~e06, 얼굴 미검출 시 없음)

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { ApiError } from "../../API/axios";
+import { showToast } from "../../utils/toast";
 import { getMileageProducts, MileageProduct, exchangeMileageProduct } from "../../API/mileage";
 import { getMemberMileage, getMileageHistory, MileageHistoryItem } from "../../API/auth";
 import naverpay_5000 from "../../assets/naverpay_5000.png";
@@ -227,35 +228,14 @@ export default function Mshop() {
                                 </p>
                                 <button
                                     type="button"
-                                    onClick={() => setHistoryOpen((prev) => !prev)}
+                                    onClick={() => setHistoryOpen(true)}
                                     className="ml-2 text-sm text-gray-500 dark:text-gray-400 underline hover:text-teal-500"
                                 >
-                                    {historyOpen ? "내역 닫기" : "내역 보기"}
+                                    내역 보기
                                 </button>
                             </div>
 
                         </div>
-
-                        {/* 마일리지 적립/사용 내역 */}
-                        {historyOpen && (
-                            <div className="max-w-md mx-auto mt-4 border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-100 dark:divide-gray-700 max-h-64 overflow-y-auto">
-                                {mileageHistory.length === 0 ? (
-                                    <p className="text-center text-gray-400 text-sm py-4">내역이 없습니다.</p>
-                                ) : (
-                                    mileageHistory.map((h, idx) => (
-                                        <div key={idx} className="flex items-center justify-between px-4 py-2 text-sm">
-                                            <div>
-                                                <p className="text-gray-700 dark:text-gray-200">{h.reason}</p>
-                                                <p className="text-gray-400 text-xs">{h.createdAt}</p>
-                                            </div>
-                                            <p className={h.type === "EARN" ? "text-green-500 font-semibold" : "text-red-500 font-semibold"}>
-                                                {h.amount > 0 ? `+${h.amount}` : h.amount} P
-                                            </p>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        )}
                     </div>
 
                     {/* 마일리지와 상품권 영역 구분선 */}
@@ -521,6 +501,58 @@ export default function Mshop() {
                     </div>
 
 
+                    {/* 마일리지 내역 모달 */}
+                    {historyOpen && (
+                        <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
+
+                            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 w-[calc(100%-2rem)] max-w-[500px] shadow-lg">
+
+                                <div className="flex justify-between items-center mb-5">
+                                    <h2 className="text-xl font-bold">
+                                        마일리지 내역
+                                    </h2>
+
+                                    <button
+                                        onClick={() => setHistoryOpen(false)}
+                                        className="text-xl text-gray-500 dark:text-gray-400"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+
+                                <div className="max-h-[60vh] overflow-y-auto">
+                                    {mileageHistory.length === 0 ? (
+                                        <p className="text-center text-gray-400 text-sm py-8">내역이 없습니다.</p>
+                                    ) : (
+                                        <table className="w-full text-center border-collapse">
+                                            <thead>
+                                                <tr className="border-b bg-gray-100 dark:bg-gray-700">
+                                                    <th className="py-2">날짜</th>
+                                                    <th>구분</th>
+                                                    <th>포인트</th>
+                                                </tr>
+                                            </thead>
+
+                                            <tbody>
+                                                {mileageHistory.map((h, idx) => (
+                                                    <tr key={idx} className="border-b border-gray-100 dark:border-gray-700">
+                                                        <td className="py-2 text-sm text-gray-500 dark:text-gray-400">{h.createdAt}</td>
+                                                        <td className="text-sm">{h.reason}</td>
+                                                        <td className={h.type === "EARN" ? "text-green-500 font-semibold" : "text-red-500 font-semibold"}>
+                                                            {h.amount > 0 ? `+${h.amount}` : h.amount} P
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    )}
+                                </div>
+
+                            </div>
+
+                        </div>
+                    )}
+
                     {/* 상품 교환 확인 모달 */}
                     {
                         selectedProduct && (
@@ -774,7 +806,7 @@ export default function Mshop() {
                                                                         endDate > maxDate
                                                                     ) {
 
-                                                                        alert(
+                                                                        showToast(
                                                                             "상담 기간은 최대 3개월까지 선택할 수 있습니다."
                                                                         );
 
@@ -886,7 +918,7 @@ export default function Mshop() {
                                                 (!diaryStartDate || !diaryEndDate)
                                             ) {
 
-                                                alert(
+                                                showToast(
                                                     "상담 기간을 선택해주세요."
                                                 );
 

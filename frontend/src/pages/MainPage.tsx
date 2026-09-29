@@ -423,11 +423,18 @@ export default function MainPage() {
     const selectedKey =
       toDateKey(selectedDate);
 
-    return counselLogs.filter(
-      (log) =>
-        splitDttm(log.counselDttm)
-          .datePart === selectedKey
-    );
+    // 최근 상담이 위쪽에 오도록 시간 역순 정렬
+    return counselLogs
+      .filter(
+        (log) =>
+          splitDttm(log.counselDttm)
+            .datePart === selectedKey
+      )
+      .sort(
+        (a, b) =>
+          parseDttm(b.counselDttm).getTime() -
+          parseDttm(a.counselDttm).getTime()
+      );
   }, [
     counselLogs,
     selectedDate,
