@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.Feely.common.MusicResponse;
 import com.Feely.dto.MusicDto;
-import com.Feely.entity.MusicEntity;
 import com.Feely.repository.MemberRepository;
 import com.Feely.service.MusicService;
 

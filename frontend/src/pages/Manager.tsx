@@ -5,6 +5,7 @@ import { checkServerHealth } from '../API/ai';
 import { getAllMusic, createMusic, updateMusic, deleteMusic, MusicRecommendation } from '../API/music';
 import { EMOTION_LABELS } from '../utils/emotion';
 import { ApiError } from '../API/axios';
+import { showToast } from '../utils/toast';
 
 // 서버 에러 응답의 message를 꺼내거나 기본 문구 반환
 const getErrorMessage = (e: unknown): string => {
@@ -48,7 +49,7 @@ export const AdminPage: React.FC = () => {
       setNewMusic({ title: '', singer: '', genre: EMOTION_LABELS[0].label });
       refreshMusic();
     } catch (e) {
-      alert(getErrorMessage(e));
+      showToast(getErrorMessage(e));
     }
   };
 
@@ -56,14 +57,14 @@ export const AdminPage: React.FC = () => {
   const handleMusicSave = async (musicNo: number) => {
     const edit = musicEdits[musicNo];
     if (!edit || !edit.title.trim() || !edit.singer.trim()) {
-      alert('제목과 가수를 입력해주세요.');
+      showToast('제목과 가수를 입력해주세요.');
       return;
     }
     try {
       await updateMusic(musicNo, edit.title.trim(), edit.singer.trim(), edit.genre);
       refreshMusic();
     } catch (e) {
-      alert(getErrorMessage(e));
+      showToast(getErrorMessage(e));
     }
   };
 
@@ -74,7 +75,7 @@ export const AdminPage: React.FC = () => {
       await deleteMusic(musicNo);
       refreshMusic();
     } catch (e) {
-      alert(getErrorMessage(e));
+      showToast(getErrorMessage(e));
     }
   };
 
@@ -97,14 +98,14 @@ export const AdminPage: React.FC = () => {
     if (!edit) return;
     const mileage = parseNonNegativeInt(edit.mileage);
     if (mileage === null) {
-      alert('마일리지를 0 이상의 숫자로 입력해주세요.');
+      showToast('마일리지를 0 이상의 숫자로 입력해주세요.');
       return;
     }
     try {
       const updated = await updateAdminMember(memberNo, { role: edit.role, mileage });
       setRealMembers((prev) => prev.map((m) => (m.memberNo === memberNo ? updated : m)));
     } catch (e) {
-      alert(getErrorMessage(e));
+      showToast(getErrorMessage(e));
     }
   };
 
@@ -143,7 +144,7 @@ export const AdminPage: React.FC = () => {
   const handleProductSave = async (prodNo: number) => {
     const prodPrice = parseNonNegativeInt(priceEdits[prodNo]);
     if (prodPrice === null) {
-      alert('가격을 0 이상의 숫자로 입력해주세요.');
+      showToast('가격을 0 이상의 숫자로 입력해주세요.');
       return;
     }
     try {
@@ -153,13 +154,13 @@ export const AdminPage: React.FC = () => {
       setProducts((prev) => prev.map((p) => (p.prodNo === prodNo ? updated : p)));
       setImageEdits((prev) => ({ ...prev, [prodNo]: null }));
     } catch (e) {
-      alert(getErrorMessage(e));
+      showToast(getErrorMessage(e));
     }
   };
 
   // 실제 회원 필터링 (회원관리 탭에서 사용)
   const filteredRealMembers = realMembers.filter((m) =>
-    m.id.includes(searchTerm) || m.name.includes(searchTerm) || m.phone.includes(searchTerm)
+    m.id.includes(searchTerm) || m.name.includes(searchTerm) || (m.phone ?? '').includes(searchTerm)
   );
 
   return (

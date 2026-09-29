@@ -14,6 +14,7 @@ import { EMOTION_LABELS } from "../utils/emotion";
 import { useNavigate, unstable_usePrompt } from "react-router-dom";
 import Cookies from "js-cookie";
 import FeelyLogo2 from "../assets/Feely_Logo_2.png";
+import { showToast } from "../utils/toast";
 
 // 4-4-4-4 박스 호흡법 단계 (각 4초씩 반복)
 const BREATH_PHASES: { label: string; scale: string }[] = [
@@ -73,9 +74,10 @@ export default function CounselPage() {
   const [isMicOn, setIsMicOn] = useState(false);
   const [inputText, setInputText] = useState("");
 
-  // 초기 모달 단계 (mood: 기분 입력, camera: 카메라 사용 선택)
+  // 초기 모달 단계 (camera: 카메라 사용 선택, mood: 기분 입력) - 카메라를 먼저 물어봐야
+  // 기분을 입력하는 동안 백그라운드에서 표정 기준점 수집을 미리 시작할 수 있음
   const [isInitialModalOpen, setIsInitialModalOpen] = useState(true);
-  const [preCounselStep, setPreCounselStep] = useState<"mood" | "camera">("mood");
+  const [preCounselStep, setPreCounselStep] = useState<"mood" | "camera">("camera");
   const [initialMoodText, setInitialMoodText] = useState("");
 
 
@@ -114,6 +116,10 @@ export default function CounselPage() {
   const summaryRef = useRef<CounselSummaryResult | null>(null);
   // 상담 종료 처리 중 여부 (중복 저장 방지)
   const isFinishingRef = useRef(false);
+  // 상담 종료 후 요약/저장 진행 안내 문구 (null이면 안내창 숨김)
+  const [savingMessage, setSavingMessage] = useState<string | null>(null);
+  // 감정분석 요청이 아직 응답 전인지 (응답이 늦을 때 요청이 계속 쌓이지 않게 함)
+  const emotionRequestPendingRef = useRef(false);
   // 상담 시작 시점 캡처 이미지
   const startImageRef = useRef<string | null>(null);
   // 상담 세션 ID (챗봇 대화/감정 샘플 구분)
@@ -397,17 +403,23 @@ export default function CounselPage() {
   };
 
 
-  // 4. 5초마다 웹캠 프레임 감정분석 후 감정 샘플 전달 (모달 열려있을 땐 중지)
+  // 4. 1초마다 웹캠 프레임 감정분석 후 감정 샘플 전달
+  // 카메라를 켠 순간부터 바로 시작함 - 기분 입력 모달이 떠 있는 동안에도 백그라운드에서
+  // 계속 전송돼서, 개인 중립 표정 기준점(NEUTRAL_SAMPLE_TARGET장)이 그 사이에 다 모임
   useEffect(() => {
-    if (!isCamOn || isInitialModalOpen) return;
+    if (!isCamOn) return;
 
     const intervalId = window.setInterval(() => {
+      // 이전 프레임 응답 대기 중이거나 상담 종료 버튼을 누른 뒤면 보내지 않음
+      if (emotionRequestPendingRef.current || isNormalExit.current) return;
+
       const frame = captureFrame();
       if (!frame) return;
 
+      emotionRequestPendingRef.current = true;
       sendEmotionFrame({ sessionId: chatSessionIdRef.current, image: frame })
         .then((result) => {
-          if (!result.scores) return;
+          if (!result.scores || isNormalExit.current) return;
 
           sendEmotionSample(chatSessionIdRef.current, result.scores).catch((err) => {
             console.debug("감정 샘플 전달 실패:", err);
@@ -425,11 +437,14 @@ export default function CounselPage() {
         .catch((err) => {
           // 감정분석 서버 오류는 상담 진행에 영향 없음
           console.debug("감정분석 서버 응답 없음:", err);
+        })
+        .finally(() => {
+          emotionRequestPendingRef.current = false;
         });
-    }, 5000);
+    }, 1000);
 
     return () => window.clearInterval(intervalId);
-  }, [isCamOn, isInitialModalOpen]);
+  }, [isCamOn]);
 
   // 5. 이탈 경고 및 이탈 시 FastAPI 세션 정리
   useEffect(() => {
@@ -466,21 +481,33 @@ export default function CounselPage() {
     message: "상담 종료 버튼을 누르지 않을 경우 상담 요약이 정상적으로 저장되지 않을 수 있습니다. 그래도 이동하시겠습니까?",
   });
 
-  // 6. 초기 기분 제출 후 카메라 선택 단계로 이동
+  // 6. 카메라 사용 여부 선택 후 기분 입력 단계로 이동 (카메라를 켰다면 이 시점부터
+  // 백그라운드에서 프레임 전송이 시작돼 기분 입력하는 동안 중립 기준점이 모임)
+  const handleCameraChoice = (useCamera: boolean) => {
+    setIsCamOn(useCamera);
+    setPreCounselStep("mood");
+  };
+
+  // 오늘의 기분 제출 -> 실제 상담 시작 (카메라 사용 시 이 시점 프레임 + 기분 텍스트로 첫 감정 계산)
   const handleMoodSubmit = () => {
     if (!initialMoodText.trim()) {
-      alert("오늘의 기분이나 일상을 간단히 입력해주세요!");
+      showToast("오늘의 기분이나 일상을 간단히 입력해주세요!", "info");
       return;
     }
 
-    setPreCounselStep("camera");
-  };
+    if (isCamOn && !cameraError) {
+      const frame = captureFrame();
+      const initialScores = frame
+        ? sendEmotionFrame({ sessionId: chatSessionIdRef.current, image: frame }).then((result) => result.scores)
+        : Promise.resolve(undefined);
 
-  // 카메라 사용 여부 선택 후 상담 시작 (카메라 사용 시 첫 감정은 onLoadedData에서 계산)
-  const handleCameraChoice = (useCamera: boolean) => {
-    setIsCamOn(useCamera);
-
-    if (!useCamera) {
+      initialScores
+        .then((faceScores) => getInitialEmotion(chatSessionIdRef.current, initialMoodText, faceScores ?? undefined))
+        .then((scores) => sendEmotionSample(chatSessionIdRef.current, scores))
+        .catch((err) => {
+          console.debug("첫 감정 계산 실패:", err);
+        });
+    } else if (!isCamOn) {
       counselStartedRef.current = true;
       startCounselWithoutCamera(chatSessionIdRef.current, initialMoodText);
     }
@@ -502,7 +529,7 @@ export default function CounselPage() {
   // 마이크 켜기/끄기 (음성인식 미지원 브라우저는 안내)
   const toggleMic = () => {
     if (!isMicOn && !(window.SpeechRecognition || window.webkitSpeechRecognition)) {
-      alert("이 브라우저는 음성 인식을 지원하지 않습니다. Chrome에서 사용해주세요.");
+      showToast("이 브라우저는 음성 인식을 지원하지 않습니다. Chrome에서 사용해주세요.", "info");
       return;
     }
     setIsMicOn(!isMicOn);
@@ -529,26 +556,29 @@ export default function CounselPage() {
 
     try {
       if (!summaryRef.current) {
+        setSavingMessage("오늘 나눈 이야기를 요약하고 있어요");
         summaryRef.current = await finishCounselSession(
           chatSessionIdRef.current,
           "COMPLETED",
           Cookies.get("userId")
         );
       }
+      setSavingMessage("상담 기록을 저장하고 있어요");
       const result = await saveCounselRecord(summaryRef.current, startImageRef.current, endImage);
       if (!result) return;
 
       if (result.counselFlag) {
-        alert("상담이 정상적으로 종료되었습니다.");
+        showToast("상담이 정상적으로 종료되었습니다.", "success");
         navigate("/");
       } else {
-        alert("상담 데이터 저장에 실패했습니다. 잠시 후 다시 시도해주세요.");
+        showToast("상담 데이터 저장에 실패했습니다. 잠시 후 다시 시도해주세요.");
       }
     } catch (error) {
       console.error("상담 데이터 전송 실패:", error);
-      alert("데이터 전송 중 오류가 발생했습니다.");
+      showToast("데이터 전송 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
     } finally {
       isFinishingRef.current = false;
+      setSavingMessage(null);
     }
   };
 
@@ -646,7 +676,7 @@ export default function CounselPage() {
                   onClick={handleMoodSubmit}
                   className="w-full py-3 bg-[#0D9488] hover:bg-[#0F766E] text-white font-medium rounded-xl transition-all shadow-md active:scale-98"
                 >
-                  다음
+                  상담 시작하기
                 </button>
               </>
             ) : (
@@ -681,6 +711,20 @@ export default function CounselPage() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* 상담 종료 후 요약/저장 중 안내 (저장이 끝날 때까지 화면 조작 막음) */}
+      {savingMessage && (
+        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" role="status" aria-live="polite">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-sm w-full px-6 py-8 shadow-2xl flex flex-col items-center gap-5 text-center">
+            <span className="w-12 h-12 rounded-full border-4 border-[#0D9488]/20 border-t-[#0D9488] animate-spin" />
+            <div>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">저장 중입니다</h2>
+              <p className="mt-1.5 text-sm text-gray-600 dark:text-gray-300">{savingMessage}</p>
+              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">창을 닫거나 이동하지 말고 잠시만 기다려주세요.</p>
+            </div>
           </div>
         </div>
       )}
@@ -773,6 +817,7 @@ export default function CounselPage() {
                     className="w-full h-full object-cover transform -scale-x-100 will-change-transform"
                     onLoadedData={() => {
                       // 첫 프레임을 시작 이미지로 캡처하고 상담 시작 기록
+                      // (첫 감정 계산은 오늘의 기분 제출 시점에 별도로 찍은 프레임으로 처리함)
                       if (!counselStartedRef.current) {
                         const frame = captureFrame();
                         if (frame) {
@@ -781,16 +826,6 @@ export default function CounselPage() {
                           startCounselSession(chatSessionIdRef.current).catch((err) => {
                             console.warn("상담 시작 기록 실패:", err);
                           });
-
-                          // 시작 이미지 표정 점수 + 오늘의 기분 텍스트로 첫 감정 계산
-                          sendEmotionFrame({ sessionId: chatSessionIdRef.current, image: frame })
-                            .then((result) =>
-                              getInitialEmotion(chatSessionIdRef.current, initialMoodText, result.scores)
-                            )
-                            .then((scores) => sendEmotionSample(chatSessionIdRef.current, scores))
-                            .catch((err) => {
-                              console.debug("첫 감정 계산 실패:", err);
-                            });
                         }
                       }
                     }}

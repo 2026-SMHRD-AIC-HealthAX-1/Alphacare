@@ -46,9 +46,9 @@ public record MemberDto(
         return new MemberDto(null, null, null, null, null, false, false, false, message, mileage);
     }
 
-    // 로그인 결과 응답 생성
-    public static MemberDto loginResult(boolean loginFlag, String message, Integer mileage) {
-        return new MemberDto(null, null, null, null, null, false, false, loginFlag, message, mileage);
+    // 로그인 결과 응답 생성 (성공 시 이름 포함)
+    public static MemberDto loginResult(boolean loginFlag, String message, Integer mileage, String name) {
+        return new MemberDto(null, null, name, null, null, false, false, loginFlag, message, mileage);
     }
 
     // 로그아웃 결과 응답 생성

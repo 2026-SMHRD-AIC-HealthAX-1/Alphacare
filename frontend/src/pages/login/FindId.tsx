@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ApiError } from "../../API/axios";
 import { findID } from "../../API/auth";
 import { useNavigate } from "react-router-dom";
+import { showToast } from "../../utils/toast";
 
 export default function FindId() {
 
@@ -15,11 +16,11 @@ export default function FindId() {
   const handleFindId = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !tel.trim()) {
-      alert("이름과 휴대폰 번호를 모두 입력해주세요");
+      showToast("이름과 휴대폰 번호를 모두 입력해주세요");
       return;
     }
     if (tel.length !== 11) {
-      alert("휴대폰 번호 11자리를 정확히 입력해주세요");
+      showToast("휴대폰 번호 11자리를 정확히 입력해주세요");
       return;
     }
 
@@ -27,19 +28,19 @@ export default function FindId() {
     try {
       const result = await findID({ name, tel });
       if (result?.id) {
-        alert(`회원님의 아이디는 ${result.id} 입니다.`);
+        showToast(`회원님의 아이디는 ${result.id} 입니다.`, "success");
         navigate("/Login");
       } else {
-        alert("일치하는 회원 정보가 없습니다.");
+        showToast("일치하는 회원 정보가 없습니다.");
       }
     } catch (e) {
       const error = e as ApiError;
       if (error?.response?.status === 404) {
         // 매칭 실패
-        alert(error.response.data?.message || "일치하는 회원 정보가 없습니다.");
+        showToast(error.response.data?.message || "일치하는 회원 정보가 없습니다.");
       } else {
         // 그 외 오류
-        alert("아이디 찾기 도중 오류가 발생했습니다.");
+        showToast("아이디 찾기 도중 오류가 발생했습니다.");
       }
     } finally {
       setLoading(false);
