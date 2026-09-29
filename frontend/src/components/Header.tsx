@@ -5,6 +5,7 @@ import { logout } from "../API/auth";
 import { clearAuthCookies } from "../API/axios";
 import { getMyRole } from "../API/admin";
 import Cookies from "js-cookie";
+import { showToastAfterReload } from "../utils/toast";
 
 export default function Header() {
   // 로그인 상태 및 사용자 ID (쿠키 기준)
@@ -46,7 +47,7 @@ export default function Header() {
 
       setIsLoggedIn(false);
       setUserId("");
-      alert("로그아웃 되었습니다.")
+      showToastAfterReload("로그아웃 되었습니다.", "success");
       window.location.assign(import.meta.env.BASE_URL);
     }
   };

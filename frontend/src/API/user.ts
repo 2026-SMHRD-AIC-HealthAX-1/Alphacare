@@ -32,6 +32,7 @@ export interface LoginRequest {
 export interface LoginResponse {
   loginFlag : boolean;
   mileage? : number | null;
+  name? : string | null;
 }
 
 // 아이디 찾기

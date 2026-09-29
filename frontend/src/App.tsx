@@ -14,6 +14,7 @@ import RequireAdmin from './components/RequireAdmin';
 import FindId from './pages/login/FindId';
 import FindPw from './pages/login/FindPw';
 import Admin from "./pages/Manager";
+import Toaster from "./components/Toaster";
 
 // createBrowserRouter(data router) 사용: 상담 페이지에서 뒤로가기/앞으로가기까지 막으려면
 // useBlocker/usePrompt가 필요한데 이건 data router에서만 동작해서 BrowserRouter 대신 이걸로 교체함
@@ -31,9 +32,15 @@ const router = createBrowserRouter(
       <Route path="/Admin" element={<RequireAdmin><Admin /></RequireAdmin>} />
     </Route>
   ),
-  { basename: "/Feely" }
+  { basename: "/Alphacare" }
 );
 
 export default function App() {
-  return <RouterProvider router={router} />;
+  // 토스트는 라우터 밖에 두어 페이지를 이동해도 계속 보이게 함
+  return (
+    <>
+      <RouterProvider router={router} />
+      <Toaster />
+    </>
+  );
 }

@@ -17,6 +17,13 @@ spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=true
 spring.jpa.properties.hibernate.format_sql=true
 
-# 카카오 로그인
+# 카카오 로그인 (로컬 개발용 예시 - 본인 로컬 주소로 바꿔서 사용)
 kakao.rest-api-key=카카오_REST_API_키
 kakao.redirect-uri=http://localhost:4000/Feely/Login/kakao/callback
+
+# 배포(github.io <-> cloudflared) 시에는 아래처럼 실제 배포 주소로 바꾸고,
+# 크로스도메인 세션 쿠키 허용 설정도 함께 켜야 함 (로컬 개발 중엔 불필요)
+# kakao.redirect-uri=https://2026-smhrd-aic-healthax-1.github.io/Alphacare/Login/kakao/callback
+# server.servlet.session.cookie.same-site=none
+# server.servlet.session.cookie.secure=true
+# server.forward-headers-strategy=framework

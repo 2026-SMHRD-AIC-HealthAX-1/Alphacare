@@ -78,7 +78,7 @@ public class MemberService {
     // 로그인
     public MemberDto login(MemberDto request, HttpSession session) {
         if (isBlank(request.id()) || isBlank(request.password())) {
-            return MemberDto.loginResult(false, MemberResponse.Message.LOGIN_REQUIRED_INPUT,null);
+            return MemberDto.loginResult(false, MemberResponse.Message.LOGIN_REQUIRED_INPUT, null, null);
         }
 
         MemberEntity member = memberRepository.findMemberById(request.id().trim()).orElse(null);
@@ -86,11 +86,11 @@ public class MemberService {
         boolean passwordMatches = member != null && (member.getPw().equals(hashedPassword) );
 
         if (member == null || !passwordMatches) {
-            return MemberDto.loginResult(false, MemberResponse.Message.LOGIN_FAIL,null);
+            return MemberDto.loginResult(false, MemberResponse.Message.LOGIN_FAIL, null, null);
         }
 
         session.setAttribute("member", toSessionDto(member));
-        return MemberDto.loginResult(true, MemberResponse.Message.LOGIN_SUCCESS, member.getMileage());
+        return MemberDto.loginResult(true, MemberResponse.Message.LOGIN_SUCCESS, member.getMileage(), member.getName());
     }
 
     // 카카오 로그인: 인가코드로 카카오 사용자 정보를 조회한 뒤, 기존 회원이면 로그인, 아니면 추가정보 입력 요청
@@ -227,7 +227,7 @@ public class MemberService {
 
         if (!isBlank(request.phone())) {
             String newPhone = request.phone().trim();
-            if (!member.getPhone().equals(newPhone) && memberRepository.existsByPhone(newPhone)) {
+            if (!newPhone.equals(member.getPhone()) && memberRepository.existsByPhone(newPhone)) {
                 return MemberDto.updateResult(false, MemberResponse.Message.DUPLICATE_PHONE);
             }
             member.setPhone(newPhone);
